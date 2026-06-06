@@ -1,0 +1,64 @@
+# ============================================================
+# .gitignore - Multi-Loop Agent Gabriel Local
+# ============================================================
+
+# Environment - NE PAS pousser le vrai .env mais GARDER .env.example
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Logs
+logs/
+*.log
+
+# Donnees runtime
+data/
+!data/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+docker-compose.override.yml
+
+# Isabelle
+*.heap
+.isabelle/
+
+# Secrets
+*.key
+*.pem
+credentials.json
+*token.json*
+
+# Reference du vieil agent (lourd, deja sur disque local)
+reference_old_agent/

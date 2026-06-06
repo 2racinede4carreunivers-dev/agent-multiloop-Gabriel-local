@@ -35,6 +35,7 @@ $ContainerName = "llm-agent-multiloop-run"
 $ServiceMain   = "llm-agent-multiloop"
 $EnvFile       = Join-Path $ProjectRoot ".env"
 $EnvExample    = Join-Path $ProjectRoot ".env.example"
+$EnvExampleAlt = Join-Path $ProjectRoot "env.example.txt"  # fallback si .env.example filtre par git
 $TheoriesDir   = Join-Path $ProjectRoot "theories"
 $DataDir       = Join-Path $ProjectRoot "data"
 $LogsDir       = Join-Path $ProjectRoot "logs"
@@ -117,13 +118,20 @@ Write-OK "docker-compose.yml present"
 Write-Step "Verification du fichier .env"
 if (-not (Test-Path $EnvFile)) {
     Write-Warn ".env absent."
+    $source = $null
     if (Test-Path $EnvExample) {
-        Copy-Item $EnvExample $EnvFile
-        Write-OK ".env cree a partir de .env.example."
+        $source = $EnvExample
+    } elseif (Test-Path $EnvExampleAlt) {
+        $source = $EnvExampleAlt
+        Write-Warn "Utilisation de env.example.txt (fallback)."
+    }
+    if ($source) {
+        Copy-Item $source $EnvFile
+        Write-OK ".env cree a partir de $source."
         Write-Warn "IMPORTANT : Editez $EnvFile et ajoutez vos cles (OPENAI_API_KEY, etc.) puis relancez."
         exit 1
     } else {
-        Write-Err ".env.example introuvable. Creez un .env manuellement."
+        Write-Err "Ni .env.example ni env.example.txt introuvables. Creez un .env manuellement."
         exit 1
     }
 }

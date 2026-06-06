@@ -41,6 +41,13 @@ pipeline:
   enable_theorem_discovery: false   # optionnel
   enable_hol_generation: true
   enable_isabelle_validation: false # active si conteneur Isabelle accessible
+  enable_wolfram_verification: true # 6e moteur : verifie via Wolfram si App ID present
+
+# === Wolfram|Alpha (verification numerique independante) ===
+wolfram:
+  enabled: true
+  app_id_env: "WOLFRAM_APP_ID"
+  timeout_seconds: 15
 
 # === Donnees ===
 data:

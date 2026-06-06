@@ -26,6 +26,7 @@ from ..engines.abstraction import AbstractionLayer
 from ..engines.concept_navigation import Navigator
 from ..engines.generalization import Generalizer
 from ..engines.meta_reasoning import GoalAnalyzer, ProofPlanner, StrategySelector
+from ..engines.numerical_verification import NumericalVerifier
 from ..engines.theorem_discovery import DiscoveryLoop
 from ..multiloop import Critic, RefinementLoop
 from ..spectral import (
@@ -54,6 +55,7 @@ class Pipeline:
         self.critic = Critic(self.llm)
         self.refinement = RefinementLoop(self.llm, self.critic, config)
         self.isabelle = IsabelleAdapter(config)
+        self.verifier = NumericalVerifier()  # 6e moteur : Wolfram (optionnel)
         self.corpus = TheoryLoader(config.get("data", {}).get("hol_dir", "/theories"))
         self.corpus.load_all()
 
@@ -79,6 +81,14 @@ class Pipeline:
         if goal["needs_computation"]:
             precomputed_facts = self._compute_spectral(ctx, plan)
             logger.info("Q[%s] calculs spectraux directs : %s", qid, list(precomputed_facts)[:5])
+
+            # 4.bis Verification independante via Wolfram (si configure)
+            if self.verifier.is_available and goal["intent"] == "reconstruction":
+                p_val = precomputed_facts.get("p")
+                if isinstance(p_val, int):
+                    wolfram_check = await self.verifier.verify_prime(p_val)
+                    precomputed_facts["wolfram_verification"] = wolfram_check
+                    logger.info("Q[%s] Wolfram check: %s", qid, wolfram_check.get("outcome"))
 
         # 5. Generalisation
         general = self.generalizer.generalize(

@@ -1,0 +1,62 @@
+# ===========================================
+# Multi-Loop Math Agent - Dockerfile
+# Python 3.11 + Isabelle/HOL + dependances
+# ===========================================
+
+FROM python:3.11-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONFAULTHANDLER=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8
+
+# ===========================================
+# Dependances systeme
+# ===========================================
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        git \
+        wget \
+        unzip \
+        ca-certificates \
+        openjdk-21-jdk-headless \
+    && rm -rf /var/lib/apt/lists/*
+
+# ===========================================
+# Installation d'Isabelle/HOL (local)
+# Optionnel : peut etre commente si on utilise uniquement le service isabelle de docker-compose
+# ===========================================
+RUN wget -q https://isabelle.in.tum.de/website-Isabelle2025-2/dist/Isabelle2025-2_linux.tar.gz -O /tmp/isabelle.tar.gz \
+    && tar -xzf /tmp/isabelle.tar.gz -C /opt \
+    && rm /tmp/isabelle.tar.gz
+
+ENV ISABELLE_HOME=/opt/Isabelle2025-2
+ENV PATH="$ISABELLE_HOME/bin:$PATH"
+
+# ===========================================
+# User non-root
+# ===========================================
+RUN useradd --create-home --shell /bin/bash agent
+WORKDIR /home/agent/app
+
+# ===========================================
+# Dependances Python
+# ===========================================
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ===========================================
+# Code applicatif
+# ===========================================
+COPY --chown=agent:agent . .
+RUN mkdir -p data logs theories && chown -R agent:agent .
+
+USER agent
+
+VOLUME ["/home/agent/app/data", "/home/agent/app/logs", "/theories"]
+
+CMD ["python", "main_cli.py"]

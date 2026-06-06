@@ -1,0 +1,106 @@
+# ============================================================
+# Multi-Loop Math Agent - docker-compose.yml
+# Services : agent (multiloop), ollama, ollama-init, isabelle
+# ============================================================
+
+services:
+
+  # ===========================================
+  # SERVICE PRINCIPAL : llm-agent-multiloop
+  # ===========================================
+  llm-agent-multiloop:
+    build:
+      context: .
+      dockerfile: Dockerfile.cli
+    container_name: llm-agent-multiloop-run
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - DEFAULT_LANGUAGE=fr
+      - ISABELLE_HOME=/opt/Isabelle2025-2
+
+    stdin_open: true
+    tty: true
+
+    command: ["python", "main_cli.py"]
+
+    volumes:
+      - ./src:/home/agent/app/src
+      - ./main.py:/home/agent/app/main.py:ro
+      - ./main_cli.py:/home/agent/app/main_cli.py:ro
+      - ./config.yaml:/home/agent/app/config.yaml:ro
+      - ./theories:/theories
+      - agent-data:/home/agent/app/data
+      - agent-logs:/home/agent/app/logs
+
+    networks:
+      - agent-network
+
+    depends_on:
+      - ollama
+      - isabelle
+
+  # ===========================================
+  # SERVICE : OLLAMA (LLM primaire local)
+  # ===========================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - agent-network
+
+  # ===========================================
+  # SERVICE : OLLAMA INIT (telecharge le modele)
+  # ===========================================
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: ollama-init
+    depends_on:
+      - ollama
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      "
+      echo 'Attente du demarrage d Ollama...'
+      sleep 30
+      OLLAMA_HOST=http://ollama:11434 ollama pull llama3.2 || true
+      echo 'Modeles telecharges.'
+      "
+    networks:
+      - agent-network
+    restart: "no"
+
+  # ===========================================
+  # SERVICE : ISABELLE/HOL
+  # ===========================================
+  isabelle:
+    image: makarius/isabelle:latest
+    container_name: isabelle
+    restart: unless-stopped
+    volumes:
+      - ./theories:/theories
+      - isabelle-heaps:/home/isabelle/.isabelle/heaps
+    working_dir: /theories
+    networks:
+      - agent-network
+    entrypoint: ["/bin/bash"]
+    command: ["-c", "echo 'Isabelle/HOL pret' && tail -f /dev/null"]
+
+# ===========================================
+volumes:
+  agent-data:
+  agent-logs:
+  ollama-data:
+  isabelle-heaps:
+
+networks:
+  agent-network:
+    driver: bridge

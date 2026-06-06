@@ -1,0 +1,99 @@
+"""Chargement de la configuration YAML + variables d'environnement."""
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from typing import Any
+
+import yaml
+from dotenv import load_dotenv
+
+
+_ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+def _load_env() -> None:
+    """Charge le fichier .env le plus pertinent."""
+    candidates = [
+        Path.cwd() / ".env",
+        _ROOT / ".env",
+        Path("/home/agent/app/.env"),
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            load_dotenv(candidate)
+            return
+
+
+_load_env()
+
+
+def load_config(path: str | Path | None = None) -> dict[str, Any]:
+    """Charge config.yaml et merge les variables d'environnement critiques."""
+    if path is None:
+        for candidate in (
+            Path.cwd() / "config.yaml",
+            _ROOT / "config.yaml",
+            Path("/home/agent/app/config.yaml"),
+        ):
+            if candidate.exists():
+                path = candidate
+                break
+    if path is None or not Path(path).exists():
+        return _default_config()
+
+    with open(path, "r", encoding="utf-8") as fh:
+        config: dict[str, Any] = yaml.safe_load(fh) or {}
+
+    # Injection des variables d'environnement
+    llm_cfg = config.setdefault("llm", {})
+    ollama_cfg = llm_cfg.setdefault("ollama", {})
+    openai_cfg = llm_cfg.setdefault("openai", {})
+
+    if env_host := os.environ.get("OLLAMA_HOST"):
+        ollama_cfg["base_url"] = env_host
+    if env_model := os.environ.get("OLLAMA_MODEL"):
+        ollama_cfg["model"] = env_model
+    if env_oai_model := os.environ.get("OPENAI_MODEL"):
+        openai_cfg["model"] = env_oai_model
+
+    # Cles API : on ne les stocke pas dans le YAML, on les lit a la demande
+    openai_cfg["api_key_env"] = "OPENAI_API_KEY"
+
+    # Multiloop overrides
+    ml_cfg = config.setdefault("multiloop", {})
+    if (env_iter := os.environ.get("MULTILOOP_MAX_ITERATIONS")):
+        ml_cfg["max_iterations"] = int(env_iter)
+    if (env_score := os.environ.get("MULTILOOP_MIN_SCORE")):
+        ml_cfg["min_acceptance_score"] = float(env_score)
+
+    return config
+
+
+def _default_config() -> dict[str, Any]:
+    return {
+        "agent": {"name": "Multi-Loop Math Agent", "language": "fr", "user_name": "Philippe"},
+        "llm": {
+            "primary": "ollama",
+            "fallback": "openai",
+            "ollama": {"model": "llama3.2", "base_url": os.environ.get("OLLAMA_HOST", "http://ollama:11434")},
+            "openai": {"model": "gpt-5.4", "api_key_env": "OPENAI_API_KEY"},
+        },
+        "multiloop": {"max_iterations": 3, "min_acceptance_score": 8.0, "num_candidates_per_round": 2},
+        "pipeline": {
+            "enable_abstraction": True,
+            "enable_meta_reasoning": True,
+            "enable_concept_navigation": True,
+            "enable_generalization": True,
+            "enable_hol_generation": True,
+        },
+        "data": {"hol_dir": "/theories"},
+    }
+
+
+def get_openai_key() -> str | None:
+    return os.environ.get("OPENAI_API_KEY")
+
+
+def get_ollama_url() -> str:
+    return os.environ.get("OLLAMA_HOST", "http://ollama:11434")

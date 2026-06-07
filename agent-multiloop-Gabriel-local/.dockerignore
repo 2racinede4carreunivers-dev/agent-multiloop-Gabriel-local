@@ -1,0 +1,129 @@
+# =============================================================================
+# .dockerignore - Multi-Loop Agent Gabriel Local
+#
+# OBJECTIF: garder le contexte de build < 5 Mo
+# Tout ce qui n'est PAS necessaire au build de l'image est ignore.
+# =============================================================================
+
+# ---------- Git ----------
+.git
+.gitignore
+.gitattributes
+.gitconfig
+
+# ---------- Docker files (pas besoin dans le build context) ----------
+.dockerignore
+docker-compose*.yml
+docker-compose*.yaml
+
+# ---------- Emergent / IDE / OS ----------
+.emergent/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+*.egg
+build/
+dist/
+
+# ---------- Node / JavaScript (frontend non utilise par l'agent CLI) ----------
+node_modules/
+**/node_modules/
+.yarn/
+.npm/
+*.log
+
+# ---------- Frontend complet (pas necessaire pour l'agent CLI) ----------
+frontend/
+
+# ---------- Backend FastAPI (pas necessaire pour l'agent CLI) ----------
+backend/
+
+# ---------- Reference de l'ancien agent (gros, deja sur disque local) ----------
+reference_old_agent/
+
+# ---------- Donnees runtime (montees en volume, pas copiees) ----------
+data/
+logs/
+**/data/
+**/logs/
+
+# ---------- Theories HOL (montees en volume) ----------
+theories/
+
+# ---------- Tests, docs, examples (pas necessaires au runtime) ----------
+tests/
+docs/
+examples/
+
+# ---------- Memory et test_reports (specifiques Emergent) ----------
+memory/
+test_reports/
+test_result.md
+
+# ---------- Secrets - NE JAMAIS envoyer au build ----------
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials.json
+
+# ---------- Isabelle local heaps (peut etre tres lourd) ----------
+.isabelle/
+*.heap
+
+# ---------- Archives ----------
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# ---------- IDEs Python ----------
+*.iml
+.spyderproject
+.spyproject
+
+# ---------- Scripts PowerShell (pas necessaires dans l'image Linux) ----------
+*.ps1
+*.bat
+*.cmd
+
+# ---------- Documentation racine ----------
+README.md
+*.md
+!requirements*.txt
+
+# ---------- Fichiers temporaires ----------
+*.tmp
+*.bak
+*.old
+
+# =============================================================================
+# CE QUI EST INCLUS (whitelist implicite) :
+#   - main.py, main_cli.py
+#   - config.yaml
+#   - requirements.txt
+#   - Dockerfile.cli (lu mais pas copie dans l'image)
+#   - src/  (le code de l'agent, ~200 Ko)
+# =============================================================================

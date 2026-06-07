@@ -1,0 +1,85 @@
+# ============================================================
+# Agent Multi-Loop Mathematique - Configuration YAML
+# ============================================================
+
+agent:
+  name: "Multi-Loop Mathematical Agent"
+  version: "1.0.0"
+  language: "fr"
+  user_name: "Philippe"
+
+# === LLM : Ollama primaire, OpenAI fallback ===
+llm:
+  primary: "ollama"
+  fallback: "openai"
+  ollama:
+    model: "llama3.2"
+    base_url: "http://ollama:11434"  # Service Docker Compose
+    timeout_seconds: 60
+    temperature: 0.2
+  openai:
+    model: "gpt-5.4"          # gpt-5.4 / gpt-5.5 / gpt-4o / o3-pro
+    temperature: 0.2
+    max_tokens: 4096
+    timeout_seconds: 90
+
+# === Multi-loop self-critique ===
+multiloop:
+  max_iterations: 3            # nb max de cycles critique-amelioration
+  min_acceptance_score: 8.0    # score 0-10 minimum pour valider
+  num_candidates_per_round: 2  # genere N candidats par tour, garde le meilleur
+  enable_critique: true
+  enable_self_improvement: true
+  enable_grounded_check: true  # verifie que la reponse s'appuie sur le corpus
+
+# === Pipeline cognitif ===
+pipeline:
+  enable_abstraction: true
+  enable_meta_reasoning: true
+  enable_concept_navigation: true
+  enable_generalization: true
+  enable_theorem_discovery: false   # optionnel
+  enable_hol_generation: true
+  enable_isabelle_validation: false # active si conteneur Isabelle accessible
+  enable_wolfram_verification: true # 6e moteur : verifie via Wolfram si App ID present
+
+# === Wolfram|Alpha (verification numerique independante) ===
+wolfram:
+  enabled: true
+  app_id_env: "WOLFRAM_APP_ID"
+  timeout_seconds: 15
+
+# === Donnees ===
+data:
+  hol_dir: "/theories"
+  pdf_dir: "/workspace/corpus_actions/pdf"
+  tex_dir: "/workspace/corpus_actions/tex"
+  data_dir: "/home/agent/app/data"
+
+# === Isabelle/HOL ===
+isabelle:
+  enabled: true
+  home: "/opt/Isabelle2025-2"
+  heap: "HOL"
+  service_url: "isabelle"      # nom du service Docker Compose
+  theory_dir: "/theories"
+
+# === Domaines mathematiques supportes ===
+domains:
+  - "methode_spectrale_savard"
+  - "rapport_spectral_1_2"
+  - "rapport_spectral_1_3"
+  - "rapport_spectral_1_4"
+  - "suites_mixtes"
+  - "suites_negatives"
+  - "geometrie_spectrale"
+  - "plan_trifocal"
+  - "hypothese_riemann"
+  - "isabelle_hol"
+
+# === Logging ===
+logging:
+  level: "INFO"
+  log_dir: "/home/agent/app/logs"
+  log_file: "agent_cli.log"
+  format: "[%(asctime)s] [%(levelname)s] %(name)s: %(message)s"

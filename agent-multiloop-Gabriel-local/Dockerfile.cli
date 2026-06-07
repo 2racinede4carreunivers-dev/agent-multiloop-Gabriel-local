@@ -1,7 +1,16 @@
-# ===========================================
-# Multi-Loop Math Agent - Dockerfile
-# Python 3.11 + Isabelle/HOL + dependances
-# ===========================================
+# =============================================================================
+# Multi-Loop Math Agent - Dockerfile.cli (SLIM)
+#
+# Optimisations vs version precedente :
+#   - PAS d'installation d'Isabelle dans l'agent (utilise le service Docker
+#     isabelle qui tourne en parallele - communique via volume partage)
+#   - Dependances systeme minimales (build-essential + curl + git seulement)
+#   - User non-root cree tot
+#   - Cache pip optimise (requirements.txt copie en premier)
+#   - .dockerignore strict garantit un contexte < 5 Mo
+#
+# Taille image attendue : ~250-400 Mo (au lieu de 4+ Go avec Isabelle inclus)
+# =============================================================================
 
 FROM python:3.11-slim AS base
 
@@ -13,46 +22,27 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8
 
-# ===========================================
-# Dependances systeme
-# ===========================================
+# Dependances systeme minimales (PAS Isabelle ici - service Docker separe)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential \
         curl \
-        git \
-        wget \
-        unzip \
         ca-certificates \
-        openjdk-21-jdk-headless \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# ===========================================
-# Installation d'Isabelle/HOL (local)
-# Optionnel : peut etre commente si on utilise uniquement le service isabelle de docker-compose
-# ===========================================
-RUN wget -q https://isabelle.in.tum.de/website-Isabelle2025-2/dist/Isabelle2025-2_linux.tar.gz -O /tmp/isabelle.tar.gz \
-    && tar -xzf /tmp/isabelle.tar.gz -C /opt \
-    && rm /tmp/isabelle.tar.gz
-
-ENV ISABELLE_HOME=/opt/Isabelle2025-2
-ENV PATH="$ISABELLE_HOME/bin:$PATH"
-
-# ===========================================
-# User non-root
-# ===========================================
+# User non-root cree tot
 RUN useradd --create-home --shell /bin/bash agent
 WORKDIR /home/agent/app
 
-# ===========================================
-# Dependances Python
-# ===========================================
+# Cache layer : requirements en premier (rebuild rapide si seul le code change)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && find /usr/local/lib/python3.11 -name "*.pyc" -delete \
+    && find /usr/local/lib/python3.11 -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
-# ===========================================
-# Code applicatif
-# ===========================================
-COPY --chown=agent:agent . .
+# Code applicatif (apres pip pour bon caching)
+COPY --chown=agent:agent main.py main_cli.py config.yaml ./
+COPY --chown=agent:agent src/ ./src/
+
+# Dossiers runtime (theories, data, logs montes via volumes)
 RUN mkdir -p data logs theories && chown -R agent:agent .
 
 USER agent

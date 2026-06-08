@@ -15,13 +15,13 @@ llm:
   ollama:
     model: "llama3.2"
     base_url: "http://ollama:11434"  # Service Docker Compose
-    timeout_seconds: 60
+    timeout_seconds: 10              # 10s max par appel (au lieu de 60s)
     temperature: 0.2
   openai:
     model: "gpt-5.4"          # gpt-5.4 / gpt-5.5 / gpt-4o / o3-pro
     temperature: 0.2
     max_tokens: 4096
-    timeout_seconds: 90
+    timeout_seconds: 30       # 30s max OpenAI (au lieu de 90s)
 
 # === Multi-loop self-critique ===
 multiloop:

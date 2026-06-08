@@ -26,10 +26,11 @@ from src.core.types import AsymmetryKind, GapKind
 # =============================================================
 
 @pytest.mark.parametrize("n,p,SA_exp,SB_exp,dgm_exp", [
-    (10, 29, 1662, 3262, 1406),
-    (11, 31, 3326, 6590, 4606),
-    (12, 37, 6654, 13246, 10878),
-    (13, 41, 13310, 26558, 23934),
+    (9, 23, 830, 1598, 126),       # 23 = 9e premier, 9 termes
+    (10, 29, 1662, 3262, 1406),    # 29 = 10e premier, 10 termes
+    (11, 31, 3326, 6590, 4606),    # 31 = 11e premier, 11 termes
+    (12, 37, 6654, 13246, 10878),  # 37 = 12e premier, 12 termes
+    (13, 41, 13310, 26558, 23934), # 41 = 13e premier, 13 termes
 ])
 def test_reconstruction_modele_1_2(n, p, SA_exp, SB_exp, dgm_exp):
     r = verify_prime_equation(n, p, "1/2")
@@ -38,6 +39,19 @@ def test_reconstruction_modele_1_2(n, p, SA_exp, SB_exp, dgm_exp):
     assert r["digamma_calc"] == Fraction(dgm_exp)
     assert r["reconstructed_p"] == Fraction(p)
     assert r["equation_holds"] is True
+
+
+def test_regle_n_egale_position_premier_1_2():
+    """REGLE FONDAMENTALE : pour rapport 1/2, n = position du premier dans la sequence."""
+    # 2 (1er), 3 (2e), 5 (3e), 7 (4e), 11 (5e), 13 (6e), 17 (7e), 19 (8e), 23 (9e), 29 (10e), 31 (11e)
+    primes_with_position = [(1, 2), (2, 3), (3, 5), (4, 7), (5, 11), (6, 13),
+                            (7, 17), (8, 19), (9, 23), (10, 29), (11, 31)]
+    # Pour rapport 1/2 : n = position. Test sur les valeurs verifiees du corpus.
+    for n, p in [(9, 23), (10, 29), (11, 31), (12, 37), (13, 41)]:
+        r = verify_prime_equation(n, p, "1/2")
+        assert r["equation_holds"], (
+            f"n={n} = position du {p}e premier doit reconstruire p={p} (rapport 1/2)"
+        )
 
 
 def test_reconstruction_explicative_29():

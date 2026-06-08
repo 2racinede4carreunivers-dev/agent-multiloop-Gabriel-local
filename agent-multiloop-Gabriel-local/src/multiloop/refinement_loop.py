@@ -13,35 +13,25 @@ from typing import Any
 
 from ..core.llm_manager import LLMManager
 from ..core.types import CandidateAnswer, FinalAnswer, QuestionContext
+from ..spectral.spectral_knowledge import build_grounded_system_prompt
 from .critic import Critic
 
 
 logger = logging.getLogger(__name__)
 
 
-GROUNDED_SYSTEM_PROMPT = """Tu es Math-Agent, expert de la METHODE SPECTRALE de Philippe Thomas Savard.
-Tu maitrises :
-- Les suites SA(n) = (3.25/2)*2^n - 2 et SB(n) = (6.5/2)*2^n - 66
-- Les suites A_1_3, B_1_3, A_1_4, B_1_4 (rapports 1/3 et 1/4)
-- Le digamma_calc(n,p) = SB(n) - factor*p (factor = 64, 729 ou 4096)
-- L'equation prime_equation(n,p) = (SB(n) - digamma_calc(n,p)) / factor = p
-- Les 4 configurations du rapport spectral : 1x1, n*n, asymetrique ordonnee, asymetrique chaotique
-- La formule de gap : gap_equation = (A_next - B_high + D_high - D_low) / factor
-
-IMPERATIFS :
-1. NE JAMAIS inventer de chiffres. Si des CHIFFRES CALCULES sont fournis dans le contexte, UTILISE-LES textuellement.
-2. Explique en francais, clairement, en t'appuyant sur les formules du corpus.
-3. Cite les concepts du corpus par leur nom officiel.
-"""
+GROUNDED_SYSTEM_PROMPT = build_grounded_system_prompt()
 
 
-REFINEMENT_INSTRUCTION = """Voici la critique de ta reponse precedente :
+REFINEMENT_INSTRUCTION = """Voici la critique constructive de ta reponse precedente :
 ---
 {critique}
 ---
 Score precedent : {score}/10.
 
-Ameliore ta reponse en corrigeant les points souleves. RESTE FIDELE AUX CHIFFRES CALCULES."""
+Ameliore ta reponse en tenant compte de ces remarques.
+RAPPEL CRITIQUE : utilise UNIQUEMENT les chiffres calcules fournis, n'invente RIEN.
+Reste bienveillant et ne dis JAMAIS que la methode est incoherente."""
 
 
 class RefinementLoop:

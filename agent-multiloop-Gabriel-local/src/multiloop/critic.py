@@ -19,18 +19,23 @@ from ..core.types import CandidateAnswer, QuestionContext
 logger = logging.getLogger(__name__)
 
 
-CRITIQUE_SYSTEM_PROMPT = """Tu es un critique mathematique expert en methode spectrale.
-Evalue rigoureusement la reponse fournie selon ces criteres :
+CRITIQUE_SYSTEM_PROMPT = """Tu es un critique mathematique BIENVEILLANT, expert de la methode spectrale de Philippe Thomas Savard.
+Tu evalues une reponse candidate selon ces criteres :
 
 1. CORRECTION MATHEMATIQUE (0-3 pts) : les chiffres et formules sont-ils exacts ?
-2. ANCRAGE CORPUS (0-3 pts) : la reponse s'appuie-t-elle sur le corpus Savard (SA, SB, digamma, RsP) ?
-3. COMPLETUDE (0-2 pts) : repond-elle bien a la question ?
-4. CLARTE (0-2 pts) : explication claire et pedagogique ?
+   IMPORTANT : la methode est MATHEMATIQUEMENT VALIDE. Si la reponse dit
+   "la methode est incoherente / contradictoire / sans fondement", -3 pts automatique.
+2. ANCRAGE CORPUS (0-3 pts) : la reponse s'appuie-t-elle sur les chiffres calcules
+   fournis et sur les formules du corpus (SA, SB, digamma, RsP) ?
+3. COMPLETUDE (0-2 pts) : repond-elle bien a la question, en explicitant le lien
+   n = position du premier (rapport 1/2) vs n != position (autres rapports) ?
+4. TON ET BIENVEILLANCE (0-2 pts) : reste-t-elle respectueuse de Philippe Thomas Savard
+   et de sa methode ? Pas d'affirmations cassantes ni de "c'est faux/absurde".
 
 Sortie OBLIGATOIRE au format :
 SCORE: <X.Y>/10
-ANALYSE: <bref diagnostic>
-AMELIORATIONS: <suggestions concretes>
+ANALYSE: <bref diagnostic, ce qui va bien et ce qui peut etre ameliore>
+AMELIORATIONS: <suggestions concretes pour la prochaine iteration>
 """
 
 
@@ -70,7 +75,20 @@ class Critic:
         for key, val in ground_truth.items():
             if isinstance(val, (int, float)) and str(int(val) if float(val).is_integer() else val) in text:
                 score += 0.5
-        return min(score, 3.0)
+        # Penalite pour vocabulaire problematique (l'agent ne doit JAMAIS dire ca)
+        forbidden = [
+            "incoherente", "incohérente", "incoherent", "incohérent",
+            "algebriquement incoherent", "algébriquement incohérent",
+            "sans fondement", "absurde", "contradictoire",
+            "n'a pas de sens", "n a pas de sens", "fausse methode",
+        ]
+        text_low = text.lower()
+        for word in forbidden:
+            if word in text_low:
+                score -= 1.5
+                logger.warning("Vocabulaire interdit detecte : '%s' (-1.5)", word)
+                break
+        return min(max(score, 0.0), 3.0)
 
     def _build_critique_prompt(self, candidate: CandidateAnswer, ctx: QuestionContext, ground_truth: dict[str, Any] | None) -> str:
         gt_str = ""

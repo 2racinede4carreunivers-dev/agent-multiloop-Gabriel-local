@@ -34,13 +34,18 @@ from ..spectral import (
     compute_spectral_ratio,
     verify_prime_equation,
 )
+from .spectral_core import (
+    SpectralMethodCore,
+    AntiHallucinationValidator,
+    SpectralRatio,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
 class Pipeline:
-    """Pipeline complet du Multi-Loop Agent."""
+    """Pipeline complet du Multi-Loop Agent avec compréhension spectrale stricte."""
 
     def __init__(self, config: dict[str, Any]):
         self.config = config
@@ -58,6 +63,11 @@ class Pipeline:
         self.verifier = NumericalVerifier()  # 6e moteur : Wolfram (optionnel)
         self.corpus = TheoryLoader(config.get("data", {}).get("hol_dir", "/theories"))
         self.corpus.load_all()
+        
+        # NOUVEAU: Moteur spectral core (compréhension stricte)
+        self.spectral_core = SpectralMethodCore()
+        self.anti_hallucination = AntiHallucinationValidator()
+        logger.info("✓ Pipeline initialized with SpectralMethodCore (INVARIANT: n=position=num_termes)")
 
     async def process(self, question: str) -> FinalAnswer:
         """Traite une question end-to-end via le pipeline."""
@@ -79,8 +89,8 @@ class Pipeline:
         # 4. Calcul direct (le coeur de la verite mathematique)
         precomputed_facts: dict[str, Any] = {}
         if goal["needs_computation"]:
-            precomputed_facts = self._compute_spectral(ctx, plan)
-            logger.info("Q[%s] calculs spectraux directs : %s", qid, list(precomputed_facts)[:5])
+            precomputed_facts = self._compute_spectral(ctx, plan, qid)
+            logger.info("Q[%s] calculs spectraux directs : %s", qid, list(precomputed_facts.keys())[:5])
 
             # 4.bis Verification independante via Wolfram (si configure)
             if self.verifier.is_available and goal["intent"] == "reconstruction":
@@ -103,6 +113,22 @@ class Pipeline:
         # 6. Construction du prompt grounded + Multi-loop self-critique
         base_prompt = self._build_base_prompt(ctx, plan, general, expanded)
         final = await self.refinement.run(ctx, precomputed_facts, base_prompt)
+        
+        # NOUVEAU: Validation anti-hallucination sur la réponse LLM
+        is_valid, feedback = self.anti_hallucination.validate_answer(question, final.answer_text)
+        if not is_valid:
+            logger.warning(f"Q[{qid}] HALLUCINATION DETECTED: {feedback}")
+            final.answer_text = f"""⚠️ CORRECTION MANDATORY:
+{feedback}
+
+INVARIANT SPECTRAL (non-négociable):
+  Position du nombre premier = n = Nombre de termes dans A et B
+
+Votre question parlait de position {self.anti_hallucination._extract_position(question)}, 
+donc n DOIT être {self.anti_hallucination._extract_position(question)}, pas une autre valeur.
+
+Réponse corrigée:
+{final.answer_text}"""
 
         # 7. Generation HOL si demandee
         if goal["needs_hol_generation"] and precomputed_facts.get("equation_holds"):
@@ -119,23 +145,45 @@ class Pipeline:
 
         return final
 
-    def _compute_spectral(self, ctx: QuestionContext, plan: dict[str, Any]) -> dict[str, Any]:
-        """Calcule directement via le module spectral selon l'intent."""
+    def _compute_spectral(self, ctx: QuestionContext, plan: dict[str, Any], qid: str) -> dict[str, Any]:
+        """
+        Calcule directement via le module spectral selon l'intent.
+        
+        FORCE: position = n = num_termes (INVARIANT STRICT)
+        """
         intent = ctx.metadata.get("intent")
         model = plan.get("model", "1/2")
         numbers = ctx.metadata.get("numbers_mentioned", [])
 
         try:
             if intent == "reconstruction":
-                if len(numbers) >= 2:
-                    n, p = numbers[0], numbers[1]
-                elif len(numbers) == 1:
-                    # Suppose p donne, n par defaut
-                    p = numbers[0]
-                    n = 10  # defaut
+                # NOUVEAU: Utiliser spectral_core pour reconstruction
+                if len(numbers) >= 1:
+                    position = numbers[0]
+                    logger.info(f"Q[{qid}] Reconstruction via spectral_core: position={position}")
+                    
+                    # Appel stricte du core
+                    data = self.spectral_core.reconstruct_prime_1_2(position)
+                    
+                    if data is None:
+                        return {"error": f"Cannot reconstruct prime at position {position}"}
+                    
+                    # Retourner les données validées
+                    return {
+                        "position": data.position,
+                        "n": data.position,  # INVARIANT: n = position
+                        "num_terms": data.num_terms,  # INVARIANT: num_terms = position
+                        "p": data.prime_value,
+                        "prime": data.prime_value,
+                        "SA_float": data.SA_sum,
+                        "SB_float": data.SB_sum,
+                        "digamma_calc_float": data.digamma_calc,
+                        "equation_holds": data.validated,
+                        "explanation": self.spectral_core.explain_reconstruction(position),
+                        "model": "1/2",
+                    }
                 else:
-                    return {"error": "Aucun nombre mentionne pour reconstruction."}
-                return verify_prime_equation(n, p, model)
+                    return {"error": "No position mentioned for reconstruction"}
 
             if intent == "ratio":
                 # Heuristique : moitie des nombres -> A, moitie -> B
@@ -158,7 +206,7 @@ class Pipeline:
                     }
                 return {"error": "Deux premiers requis pour calculer un ecart."}
         except Exception as exc:
-            logger.error("Erreur calcul spectral : %s", exc)
+            logger.error(f"Q[{qid}] Erreur calcul spectral : %s", exc, exc_info=True)
             return {"error": str(exc)}
         return {}
 
@@ -179,4 +227,9 @@ FORME GENERALE :
 
 EXTENSIONS POSSIBLES :
   {general.get('extension_hint', 'N/A')}
+
+⚠️ INVARIANT SPECTRAL (RAPPEL MANDATORY):
+  Pour TOUTE reconstruction:
+    position du nombre premier = n = nombre de termes dans A et B
+  PAS D'EXCEPTION. PAS D'ALTERNATIVE.
 """

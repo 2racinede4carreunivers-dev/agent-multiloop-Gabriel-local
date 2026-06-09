@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class OllamaClient:
     """Client async simple pour l'API Ollama."""
 
-    def __init__(self, base_url: str | None = None, model: str = "llama3.2", timeout: float = 60.0):
+    def __init__(self, base_url: str | None = None, model: str = "llama3.2", timeout: float = 10.0):
         self.base_url = (base_url or os.environ.get("OLLAMA_HOST", "http://ollama:11434")).rstrip("/")
         self.model = model
         self.timeout = timeout
@@ -21,7 +21,7 @@ class OllamaClient:
     async def is_available(self) -> bool:
         """Verifie si Ollama est joignable et que le modele est present."""
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
+            async with httpx.AsyncClient(timeout=3.0) as client:
                 resp = await client.get(f"{self.base_url}/api/tags")
                 if resp.status_code != 200:
                     return False

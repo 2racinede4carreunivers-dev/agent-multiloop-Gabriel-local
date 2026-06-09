@@ -183,7 +183,23 @@ Réponse corrigée:
                         "model": "1/2",
                     }
                 else:
+                    return {"error": "Aucun nombre mentionne pour reconstruction."}
+                result = verify_prime_equation(n, p, model)
+                # Annotation pedagogique : la regle critique n=position pour 1/2
+                if model == "1/2":
+                    result["regle_n_position"] = (
+                        f"Rapport 1/2 : n = {n} correspond AUSSI a la position du premier "
+                        f"p = {p} dans la sequence des nombres premiers."
+                    )
+                else:
+                    result["regle_n_position"] = (
+                        f"Rapport {model} : n = {n} est le nombre de termes dans A et B, "
+                        f"mais n N'EST PAS egal a la position du premier p = {p}."
+                    )
+                return result
+
                     return {"error": "No position mentioned for reconstruction"}
+
 
             if intent == "ratio":
                 # Heuristique : moitie des nombres -> A, moitie -> B

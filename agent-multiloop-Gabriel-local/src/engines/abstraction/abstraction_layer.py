@@ -113,7 +113,16 @@ class AbstractionLayer:
         domain = "methode_spectrale_savard" if concepts else "general"
 
         # Extraction des nombres mentionnes (p, n, indices)
-        numbers = [int(m) for m in re.findall(r"\b\d+\b", raw_question)]
+        # On retire d'abord les motifs de rapport 1/2, 1/3, 1/4, 1/k pour ne pas les capter
+        cleaned = re.sub(r'\b1\s*/\s*[0-9]+\b', ' ', raw_question)
+        cleaned = re.sub(r'\brapport\s+[0-9]+\s*/\s*[0-9]+\b', ' ', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'modele?\s+\d+\s*/\s*\d+', ' ', cleaned, flags=re.IGNORECASE)
+        # On retire les fractions du type 13/4, 13/8, etc. (constantes du corpus)
+        cleaned = re.sub(r'\b13\s*/\s*\d+\b', ' ', cleaned)
+        cleaned = re.sub(r'\b3\.25\s*/\s*\d+\b', ' ', cleaned)
+        cleaned = re.sub(r'\b6\.5\s*/\s*\d+\b', ' ', cleaned)
+        # Extraction (pas \b qui rate "26ième" - on prend tous les entiers non collés à un point/digit)
+        numbers = [int(m) for m in re.findall(r'(?<![\d.])\d+(?![\d.])', cleaned)]
 
         ctx = QuestionContext(
             question_id=question_id,

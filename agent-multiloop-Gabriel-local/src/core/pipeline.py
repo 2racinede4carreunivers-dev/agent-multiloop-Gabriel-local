@@ -30,8 +30,12 @@ from ..engines.numerical_verification import NumericalVerifier
 from ..engines.theorem_discovery import DiscoveryLoop
 from ..multiloop import Critic, RefinementLoop
 from ..spectral import (
+    PRIMES,
     compute_gap,
     compute_spectral_ratio,
+    is_known_prime,
+    nth_prime,
+    prime_position,
     verify_prime_equation,
 )
 from .spectral_core import (
@@ -154,9 +158,52 @@ Réponse corrigée:
         intent = ctx.metadata.get("intent")
         model = plan.get("model", "1/2")
         numbers = ctx.metadata.get("numbers_mentioned", [])
+        question_low = ctx.raw_question.lower()
 
         try:
             if intent == "reconstruction":
+
+                n: int | None = None
+                p: int | None = None
+
+                # Detection "Neme premier" - le user mentionne une position avec mot-clef
+                position_kw = any(kw in question_low for kw in [
+                    "ieme premier", "ième premier", "eme premier", "ème premier",
+                    "n-ieme", "n-ième", "neme nombre", "n ieme", "n ième",
+                    "position", "rang",
+                ])
+
+                if position_kw and len(numbers) >= 1:
+                    # Le premier nombre est la position
+                    candidate_n = numbers[0]
+                    p_lookup = nth_prime(candidate_n)
+                    if p_lookup is not None:
+                        n = candidate_n
+                        p = p_lookup if model == "1/2" else p_lookup
+                elif len(numbers) >= 2:
+                    n, p = numbers[0], numbers[1]
+                elif len(numbers) == 1:
+                    # Un seul nombre : si c'est un premier connu, le supposer
+                    num = numbers[0]
+                    if is_known_prime(num):
+                        p = num
+                        n = prime_position(num) if model == "1/2" else None
+                        if n is None:
+                            n = 10
+                    else:
+                        # Sinon supposer que c'est une position
+                        p_lookup = nth_prime(num)
+                        if p_lookup:
+                            n = num
+                            p = p_lookup
+
+                if n is None or p is None:
+                    return {
+                        "error": "Question ambigue. Precisez : 'le N-ieme premier' OU 'le premier P avec n=X'.",
+                        "hint": "Exemple : 'reconstruis le 26eme premier' ou 'p=29 et n=10 modele 1/2'.",
+                    }
+
+
                 # NOUVEAU: Utiliser spectral_core pour reconstruction
                 if len(numbers) >= 1:
                     position = numbers[0]
@@ -185,11 +232,12 @@ Réponse corrigée:
                 else:
                     return {"error": "Aucun nombre mentionne pour reconstruction."}
                 result = verify_prime_equation(n, p, model)
-                # Annotation pedagogique : la regle critique n=position pour 1/2
+                result["n_used"] = n
+                result["p_used"] = p
                 if model == "1/2":
                     result["regle_n_position"] = (
                         f"Rapport 1/2 : n = {n} correspond AUSSI a la position du premier "
-                        f"p = {p} dans la sequence des nombres premiers."
+                        f"p = {p} ({n}e nombre premier dans la sequence)."
                     )
                 else:
                     result["regle_n_position"] = (
@@ -202,7 +250,6 @@ Réponse corrigée:
 
 
             if intent == "ratio":
-                # Heuristique : moitie des nombres -> A, moitie -> B
                 if len(numbers) >= 2:
                     half = len(numbers) // 2
                     A = numbers[:half]
@@ -213,7 +260,6 @@ Réponse corrigée:
             if intent == "gap":
                 if len(numbers) >= 2:
                     p_high, p_low = max(numbers[:2]), min(numbers[:2])
-                    # Sans valeurs spectrales explicites, on retourne juste les premiers
                     return {
                         "p_high": p_high,
                         "p_low": p_low,

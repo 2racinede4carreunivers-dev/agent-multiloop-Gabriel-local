@@ -14,6 +14,7 @@ from .gaps import (
     detect_gap_kind, compute_gap,
 )
 from .reconstructor import reconstruct_pth_prime_full, reconstruct_from_blocks
+from .prime_table import PRIMES, nth_prime, prime_position, is_known_prime, max_position
 
 __all__ = [
     # Suites
@@ -32,4 +33,6 @@ __all__ = [
     "detect_gap_kind", "compute_gap",
     # Reconstructor
     "reconstruct_pth_prime_full", "reconstruct_from_blocks",
+    # Prime table
+    "PRIMES", "nth_prime", "prime_position", "is_known_prime", "max_position",
 ]

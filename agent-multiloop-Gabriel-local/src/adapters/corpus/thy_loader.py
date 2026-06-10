@@ -61,3 +61,31 @@ class TheoryLoader:
                 f"{len(info['theorems'])} theoremes, {len(info['axioms'])} axiomes"
             )
         return "\n".join(lines)
+
+    def detailed_view(self) -> str:
+        """Vue detaillee : sections + definitions + lemmes par fichier."""
+        if not self.theories:
+            return "Corpus HOL vide. Placez vos .thy dans /theories."
+        out: list[str] = []
+        for name, info in self.theories.items():
+            out.append(f"\n=== {name}.thy ({info.get('raw_size', 0)} octets) ===")
+            if info.get('sections'):
+                out.append("  SECTIONS :")
+                for sec in info['sections']:
+                    out.append(f"    - {sec}")
+            if info.get('definitions'):
+                defs = info['definitions']
+                out.append(f"  DEFINITIONS ({len(defs)}) : "
+                           + ", ".join(defs[:8]) + (" ..." if len(defs) > 8 else ""))
+            if info.get('lemmas'):
+                lems = info['lemmas']
+                out.append(f"  LEMMES ({len(lems)}) : "
+                           + ", ".join(lems[:8]) + (" ..." if len(lems) > 8 else ""))
+            if info.get('theorems'):
+                ths = info['theorems']
+                out.append(f"  THEOREMES ({len(ths)}) : "
+                           + ", ".join(ths[:5]) + (" ..." if len(ths) > 5 else ""))
+            if info.get('axioms'):
+                axs = info['axioms']
+                out.append(f"  AXIOMES ({len(axs)}) : " + ", ".join(axs[:6]))
+        return "\n".join(out)

@@ -30,7 +30,10 @@ HELP_TEXT = """
   ----------------------------------------------------------
   aide / help      Affiche ce menu
   quitter / quit   Quitte le programme
-  corpus           Liste les fichiers .thy du corpus
+  corpus           Resume des fichiers .thy charges
+  corpus detail    Vue detaillee : sections, defs, lemmes par fichier
+  primes           Statut de la table des nombres premiers
+  prime <N>        Donne le N-ieme nombre premier (ex: 'prime 26' -> 101)
   contexte         Affiche le contexte mathematique actuel
   memoire          Affiche les echanges en memoire
   version          Affiche la version
@@ -72,6 +75,32 @@ class CLIInterface:
             return True
         if c == "corpus":
             console.print("\n  " + self.orchestrator.pipeline.corpus.summary() + "\n", style="cyan")
+            return True
+        if c in {"corpus detail", "corpus details", "corpus -d"}:
+            console.print(self.orchestrator.pipeline.corpus.detailed_view(), style="cyan")
+            return True
+        if c == "primes":
+            from ..spectral import max_position, nth_prime
+            mp = max_position()
+            console.print(
+                f"\n  Table des premiers : {mp} entrees disponibles.\n"
+                f"  Premier (n=1) = {nth_prime(1)}, dernier (n={mp}) = {nth_prime(mp)}.\n"
+                f"  Exemples : n=26 -> {nth_prime(26)}, n=100 -> {nth_prime(100)}, "
+                f"n=500 -> {nth_prime(500)}, n=501 -> {nth_prime(501)}.\n",
+                style="cyan",
+            )
+            return True
+        if c.startswith("prime "):
+            try:
+                from ..spectral import nth_prime, max_position
+                n = int(c.split()[1])
+                p = nth_prime(n)
+                if p is not None:
+                    console.print(f"\n  Le {n}-ieme nombre premier est : [bold green]{p}[/bold green]\n")
+                else:
+                    console.print(f"\n  [yellow]N={n} hors limites (table : 1..{max_position()})[/yellow]\n")
+            except (ValueError, IndexError):
+                console.print("\n  Usage : prime <N>  (ex : prime 26)\n", style="yellow")
             return True
         if c == "contexte":
             console.print(f"\n  Contexte : {self.orchestrator.get_context()}\n", style="cyan")

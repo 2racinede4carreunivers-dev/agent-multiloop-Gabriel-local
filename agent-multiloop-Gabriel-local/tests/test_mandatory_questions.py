@@ -54,6 +54,32 @@ def test_regle_n_egale_position_premier_1_2():
         )
 
 
+def test_table_premiers_lookup():
+    """La table doit donner correctement le N-ieme premier."""
+    from src.spectral import nth_prime, prime_position
+    assert nth_prime(1) == 2
+    assert nth_prime(10) == 29
+    assert nth_prime(11) == 31
+    assert nth_prime(26) == 101  # critique : exemple du bug rapporte
+    assert prime_position(2) == 1
+    assert prime_position(29) == 10
+    assert prime_position(101) == 26
+
+
+def test_reconstruction_26eme_premier():
+    """Le 26e premier est 101. Sa reconstruction doit etre exacte (n=26, p=101)."""
+    r = verify_prime_equation(26, 101, "1/2")
+    # SA(26) = (3.25/2) * 2^26 - 2
+    # SB(26) = (6.5/2) * 2^26 - 66
+    # digamma = SB(26) - 64*101
+    expected_SA = (Fraction(13, 8) * Fraction(2) ** 26) - Fraction(2)
+    expected_SB = (Fraction(13, 4) * Fraction(2) ** 26) - Fraction(66)
+    assert r["SA"] == expected_SA
+    assert r["SB"] == expected_SB
+    assert r["reconstructed_p"] == Fraction(101)
+    assert r["equation_holds"] is True
+
+
 def test_reconstruction_explicative_29():
     r = reconstruct_pth_prime_full(n=10, p=29, model="1/2")
     assert r["equation_holds"]

@@ -32,6 +32,15 @@ multiloop:
   enable_self_improvement: true
   enable_grounded_check: true  # verifie que la reponse s'appuie sur le corpus
 
+# === Audit silencieux post-pipeline (anti-hallucination actif) ===
+# Apres le multi-loop, audite la reponse contre la verite spectrale.
+# Si une violation est detectee, re-prompte silencieusement le LLM
+# avec les valeurs correctes injectees.
+audit:
+  enabled: true                # active la boucle audit silencieuse
+  max_retries: 2               # nombre max de re-prompts si hallucination
+  temperature: 0.1             # temperature basse pour corrections factuelles
+
 # === Pipeline cognitif ===
 pipeline:
   enable_abstraction: true

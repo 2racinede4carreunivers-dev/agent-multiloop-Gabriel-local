@@ -26,10 +26,21 @@ Agent IA multi-loop pour les mathematiques (Methode Spectrale Philippe Thomas Sa
 - Mini-fix `explain_reconstruction()` pour inclure "INVARIANT" (test_spectral_gabriel test 5)
 - **Protection .vhdx renforcee** : .dockerignore + .gitignore bloquent explicitement `*.vhdx`, `*.vhd`, `**/DockerDesktopWSL/**`, `**/data.vhdx`, `**/ext4.vhdx` pour eviter les contextes Docker >> 200 Go
 
+### Feb 2026 - Silent Audit Loop (anti-hallucination actif)
+- **2026-02-13** : Implementation du **mode audit silencieux** post-pipeline
+- Nouveau fichier `src/multiloop/silent_audit.py` : classe `SilentAuditLoop`
+- `AntiHallucinationValidator.audit()` enrichi avec 3 regles :
+  1. Prime correct doit apparaitre dans la reponse si une position est citee
+  2. INVARIANT 1/2 : si rapport 1/2, alors n = position (sinon violation)
+  3. Vocabulaire dismissif interdit (incoherent, absurde, faux, etc.)
+- Re-prompt silencieux automatique avec verite terrain injectee (max_retries configurable)
+- Config dans `config.yaml` : section `audit:` avec enabled/max_retries/temperature
+- 11 nouveaux tests `tests/test_silent_audit.py` couvrant audit() + SilentAuditLoop avec LLM mock
+
 ## Tests (Feb 2026)
-- 22/22 pytest passent
+- 33/33 pytest passent (22 anciens + 11 silent_audit)
 - 5/5 test_spectral_gabriel.py passent (Sieve, Invariant 1/2, Anti-hallucination, Ratio, Explanation)
-- Contexte Docker simule : 232 Ko (< 5 Mo cible)
+- Contexte Docker simule : 252 Ko (< 5 Mo cible)
 
 ## Pour le user
 - Pull depuis GitHub propre

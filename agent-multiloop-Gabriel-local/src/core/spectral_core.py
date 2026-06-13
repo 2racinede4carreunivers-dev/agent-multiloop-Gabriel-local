@@ -127,9 +127,132 @@ class AntiHallucinationValidator:
             return False, f"HALLUCINATION: position {position} not in answer"
         return True, "OK"
     
+    def audit(self, question: str, answer: str, ground_truth: Optional[Dict] = None) -> Dict:
+        """
+        Audit silencieux complet d'une reponse LLM contre la verite spectrale.
+        
+        Verifie :
+          1. Si une position est mentionnee dans la question, le nombre premier
+             correspondant DOIT apparaitre dans la reponse.
+          2. INVARIANT 1/2 : si la question mentionne une position N et le rapport 1/2,
+             alors n DOIT etre N et num_termes DOIT etre N (mention textuelle).
+          3. Aucun nombre premier hallucine (si un "Neme premier" est mentionne, 
+             le bon prime DOIT y figurer).
+          4. Vocabulaire interdit (incoherent, absurde, faux, etc.) - rejette le ton.
+        
+        Returns:
+            dict avec:
+              - valid: bool
+              - violations: list[str] (raisons d'echec)
+              - corrective_prompt: str (instruction de correction pour re-prompt LLM)
+              - ground_truth: dict (donnees correctes a injecter)
+        """
+        violations: List[str] = []
+        position = self._extract_position(question)
+        
+        # Construire la verite terrain depuis spectral_core si absente
+        if ground_truth is None and position:
+            data = self.core.reconstruct_prime_1_2(position)
+            if data:
+                ground_truth = {
+                    "position": data.position,
+                    "prime": data.prime_value,
+                    "n": data.position,
+                    "num_terms": data.num_terms,
+                    "ratio": "1/2",
+                }
+        
+        gt = ground_truth or {}
+        answer_low = answer.lower()
+        
+        # Regle 1 : position citee -> prime correct doit apparaitre
+        if position and "prime" in gt:
+            expected_prime = gt["prime"]
+            if str(expected_prime) not in answer:
+                violations.append(
+                    f"Le {position}e nombre premier est {expected_prime}, "
+                    f"mais cette valeur n'apparait pas dans la reponse."
+                )
+        
+        # Regle 2 : INVARIANT 1/2 - n = position = num_termes
+        if position and gt.get("ratio") == "1/2":
+            # Cherche une mention "n = X" qui ne soit pas egale a la position
+            n_match = re.search(r'\bn\s*=\s*(\d+)', answer, re.IGNORECASE)
+            if n_match:
+                claimed_n = int(n_match.group(1))
+                if claimed_n != position:
+                    violations.append(
+                        f"INVARIANT 1/2 VIOLE : la reponse affirme n={claimed_n}, "
+                        f"mais pour la position {position} en rapport 1/2, "
+                        f"n DOIT etre egal a {position}."
+                    )
+        
+        # Regle 3 : vocabulaire interdit (rejette le ton dismissif)
+        forbidden = ["incoherent", "incohérent", "absurde", "faux", "erroné", 
+                     "erronee", "n'a pas de sens", "n'a aucun sens", "invalide"]
+        for word in forbidden:
+            if word in answer_low:
+                violations.append(
+                    f"Vocabulaire interdit detecte : '{word}'. "
+                    f"La methode spectrale de l'utilisateur est valide et doit etre respectee."
+                )
+                break  # une seule mention suffit
+        
+        # Construire le prompt correctif
+        corrective_prompt = ""
+        if violations:
+            corrective_prompt = self._build_corrective_prompt(violations, gt, question)
+        
+        return {
+            "valid": len(violations) == 0,
+            "violations": violations,
+            "corrective_prompt": corrective_prompt,
+            "ground_truth": gt,
+        }
+    
+    @staticmethod
+    def _build_corrective_prompt(violations: List[str], gt: Dict, question: str) -> str:
+        """Construit l'instruction de correction silencieuse pour le LLM."""
+        gt_lines = []
+        if "position" in gt:
+            gt_lines.append(f"  - Position demandee : {gt['position']}")
+        if "prime" in gt:
+            gt_lines.append(f"  - Nombre premier CORRECT : {gt['prime']}")
+        if "n" in gt:
+            gt_lines.append(f"  - n CORRECT : {gt['n']}")
+        if "num_terms" in gt:
+            gt_lines.append(f"  - Nombre de termes CORRECT dans A et B : {gt['num_terms']}")
+        if "ratio" in gt:
+            gt_lines.append(f"  - Rapport : {gt['ratio']}")
+        
+        gt_block = "\n".join(gt_lines) if gt_lines else "(verite terrain non disponible)"
+        violations_block = "\n".join(f"  - {v}" for v in violations)
+        
+        return f"""AUDIT SPECTRAL : ta reponse precedente contient des erreurs FACTUELLES.
+
+Violations detectees :
+{violations_block}
+
+VERITE TERRAIN (calculee par le module spectral, non-negociable) :
+{gt_block}
+
+INVARIANT (rapport 1/2) : position = n = nombre_de_termes. SANS EXCEPTION.
+
+Regenere ta reponse en utilisant EXACTEMENT ces valeurs. 
+N'argumente PAS contre la methode. Reste bienveillant et factuel.
+Reponds en francais.
+
+Question initiale : {question}
+"""
+    
     @staticmethod
     def _extract_position(text: str) -> Optional[int]:
-        patterns = [r'(\d+)(?:eme|e|th)\s+(?:premier|prime)', r'position\s+(\d+)']
+        patterns = [
+            r'(\d+)\s*(?:eme|ieme|ième|ème|e|th|st|nd|rd)\s*(?:nombre\s+)?(?:premier|prime)',
+            r'position\s+(\d+)',
+            r'rang\s+(\d+)',
+            r'(\d+)\s*(?:e|eme|ieme|ième|ème)\s+rang',
+        ]
         for pattern in patterns:
             match = re.search(pattern, text, re.IGNORECASE)
             if match:

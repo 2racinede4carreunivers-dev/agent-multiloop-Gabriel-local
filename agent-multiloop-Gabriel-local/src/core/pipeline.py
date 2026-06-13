@@ -28,7 +28,7 @@ from ..engines.generalization import Generalizer
 from ..engines.meta_reasoning import GoalAnalyzer, ProofPlanner, StrategySelector
 from ..engines.numerical_verification import NumericalVerifier
 from ..engines.theorem_discovery import DiscoveryLoop
-from ..multiloop import Critic, RefinementLoop
+from ..multiloop import Critic, RefinementLoop, SilentAuditLoop
 from ..spectral import (
     PRIMES,
     compute_gap,
@@ -71,7 +71,11 @@ class Pipeline:
         # NOUVEAU: Moteur spectral core (compréhension stricte)
         self.spectral_core = SpectralMethodCore()
         self.anti_hallucination = AntiHallucinationValidator()
+        # NOUVEAU: Audit silencieux post-pipeline (anti-hallucination actif)
+        self.silent_audit = SilentAuditLoop(self.llm, config)
         logger.info("✓ Pipeline initialized with SpectralMethodCore (INVARIANT: n=position=num_termes)")
+        logger.info("✓ Silent Audit Loop enabled: %s (max_retries=%d)",
+                    self.silent_audit.enabled, self.silent_audit.max_retries)
 
     async def process(self, question: str) -> FinalAnswer:
         """Traite une question end-to-end via le pipeline."""
@@ -118,21 +122,14 @@ class Pipeline:
         base_prompt = self._build_base_prompt(ctx, plan, general, expanded)
         final = await self.refinement.run(ctx, precomputed_facts, base_prompt)
         
-        # NOUVEAU: Validation anti-hallucination sur la réponse LLM
-        is_valid, feedback = self.anti_hallucination.validate_answer(question, final.answer_text)
-        if not is_valid:
-            logger.warning(f"Q[{qid}] HALLUCINATION DETECTED: {feedback}")
-            final.answer_text = f"""⚠️ CORRECTION MANDATORY:
-{feedback}
-
-INVARIANT SPECTRAL (non-négociable):
-  Position du nombre premier = n = Nombre de termes dans A et B
-
-Votre question parlait de position {self.anti_hallucination._extract_position(question)}, 
-donc n DOIT être {self.anti_hallucination._extract_position(question)}, pas une autre valeur.
-
-Réponse corrigée:
-{final.answer_text}"""
+        # 6.bis NOUVEAU: Audit silencieux post-pipeline (anti-hallucination)
+        # Si la reponse contient une violation factuelle, le LLM est re-prompte
+        # silencieusement avec les valeurs correctes injectees, jusqu'a N tentatives.
+        final = await self.silent_audit.audit_and_correct(
+            question=question,
+            final=final,
+            precomputed_facts=precomputed_facts,
+        )
 
         # 7. Generation HOL si demandee
         if goal["needs_hol_generation"] and precomputed_facts.get("equation_holds"):
@@ -245,9 +242,6 @@ Réponse corrigée:
                         f"mais n N'EST PAS egal a la position du premier p = {p}."
                     )
                 return result
-
-                    return {"error": "No position mentioned for reconstruction"}
-
 
             if intent == "ratio":
                 if len(numbers) >= 2:

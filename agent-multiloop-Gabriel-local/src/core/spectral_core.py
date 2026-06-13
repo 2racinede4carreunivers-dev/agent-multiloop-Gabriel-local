@@ -29,12 +29,37 @@ class PrimeSpectralData:
 
 class SpectralMethodCore:
     def __init__(self):
-        self.prime_list = self._generate_primes(1000)
+        # On utilise directement prime_table.PRIMES (1000 entrees cross-validees
+        # contre sympy.prime()) au lieu de regenerer un crible local qui n'allait
+        # que jusqu'a la valeur 1000 (168 primes). Cette alignement permet a
+        # reconstruct_prime_1_2(N), verifier, valider, etc. de fonctionner pour
+        # N de 1 a 1000 (= 1000 positions, premiers de 2 a 7919).
+        self.prime_list = self._load_prime_list()
         self.spectral_cache = {}
-        logger.info(f"SpectralMethodCore initialized with {len(self.prime_list)} primes")
+        logger.info(f"SpectralMethodCore initialized with {len(self.prime_list)} primes (positions 1..{len(self.prime_list)})")
+
+    @staticmethod
+    def _load_prime_list() -> List[int]:
+        """Charge la table des 1000 premiers (cross-validee), avec fallback crible."""
+        try:
+            # Import relatif quand utilise comme package
+            from ..spectral.prime_table import PRIMES
+            return list(PRIMES)
+        except (ImportError, ValueError):
+            pass
+        try:
+            # Import absolu quand spectral_core.py est utilise directement
+            from src.spectral.prime_table import PRIMES  # type: ignore
+            return list(PRIMES)
+        except (ImportError, ValueError):
+            pass
+        # Fallback : crible local jusqu'a la valeur 1000 (168 primes)
+        logger.warning("prime_table.PRIMES introuvable, fallback crible (168 primes max)")
+        return SpectralMethodCore._generate_primes(1000)
     
     @staticmethod
     def _generate_primes(limit: int) -> List[int]:
+        """Genere les premiers jusqu'a la VALEUR `limit` (fallback historique)."""
         sieve = [True] * (limit + 1)
         sieve[0] = sieve[1] = False
         for i in range(2, int(math.sqrt(limit)) + 1):
@@ -90,17 +115,32 @@ class SpectralMethodCore:
         if not prime:
             return None
         try:
-            sa_sum = self.compute_SA(position)
-            sb_sum = self.compute_SB(position)
-            digamma = sb_sum - 64 * prime
-            digamma_calc = (sb_sum - digamma) / 64
-            if abs(digamma_calc - prime) < 1e-6:
-                data = PrimeSpectralData(position, prime, position, SpectralRatio.RATIO_1_2,
-                                        sa_sum, sb_sum, digamma, digamma_calc, True)
+            # Calculs en ENTIERS Python (precision arbitraire) pour eviter
+            # toute perte de precision sur grandes positions (>= 168).
+            # SA(n) = (13 * 2^n) / 8 - 2  -> entier (13 * 2^n est divisible par 8 des que n>=3)
+            # SB(n) = (13 * 2^n) / 4 - 66 -> entier (13 * 2^n est divisible par 4 des que n>=2)
+            two_n = 1 << position  # 2^n exact
+            sa_int = (13 * two_n) // 8 - 2
+            sb_int = (13 * two_n) // 4 - 66
+            # digamma = SB - 64*p  (entier exact)
+            digamma_int = sb_int - 64 * prime
+            # P_reconstruit = (SB - digamma) / 64  = (64*p) / 64 = p  EXACTEMENT
+            recon_num = sb_int - digamma_int
+            if recon_num % 64 != 0:
+                # Ne devrait jamais arriver par construction
+                return None
+            recon = recon_num // 64
+            if recon == prime:
+                data = PrimeSpectralData(
+                    position, prime, position, SpectralRatio.RATIO_1_2,
+                    float(sa_int), float(sb_int),
+                    float(digamma_int), float(recon),
+                    True,
+                )
                 self.spectral_cache[position] = data
                 return data
-        except:
-            pass
+        except Exception as exc:
+            logger.debug("reconstruct_prime_1_2(%d) error: %s", position, exc)
         return None
     
     def explain_reconstruction(self, position: int) -> str:

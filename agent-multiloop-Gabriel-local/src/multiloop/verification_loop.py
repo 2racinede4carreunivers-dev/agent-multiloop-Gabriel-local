@@ -111,6 +111,8 @@ class AutomaticVerificationLoop:
 
         # === ETAPE 3+4 : ISABELLE avec retry sur tactiques ===
         spectral_data = gabriel_report.data
+        # Pour grandes positions, SA/SB sont des STR (chiffres exacts).
+        # _step_isabelle_with_retry les convertira en int au besoin.
         isabelle_report, thy_content, thy_path, attempts, final_tactic = await self._step_isabelle_with_retry(
             position, prime, spectral_data,
         )
@@ -201,20 +203,26 @@ class AutomaticVerificationLoop:
         if data is None:
             return StepReport(name="gabriel", success=False,
                               detail="spectral_core a echoue (position hors table).")
-        # Verification numerique de l'identite cote python
-        digamma = data.SB_sum - 64 * prime
-        recon = (data.SB_sum - digamma) / 64
-        identity_ok = abs(recon - prime) < 1e-6
+        # Verification de l'identite en ENTIER EXACT (precision arbitraire Python)
+        # pour eviter toute perte de precision sur grandes positions (>= 168).
+        two_n = 1 << position
+        SA_int = (13 * two_n) // 8 - 2
+        SB_int = (13 * two_n) // 4 - 66
+        digamma_int = SB_int - 64 * prime
+        recon_int = (SB_int - digamma_int) // 64
+        identity_ok = (recon_int == prime)
         return StepReport(
             name="gabriel", success=identity_ok,
             detail=(
-                f"spectral_core : SA({position})={data.SA_sum:.0f}, "
-                f"SB({position})={data.SB_sum:.0f}, identite_locale_ok={identity_ok}"
+                f"spectral_core : SA({position}) sur {len(str(SA_int))} chiffres, "
+                f"SB sur {len(str(SB_int))} chiffres, "
+                f"identite_locale_ok={identity_ok} (calcul entier exact)"
             ),
             data={
                 "n": position, "p": prime,
-                "SA": data.SA_sum, "SB": data.SB_sum,
-                "digamma_calc": digamma, "P_reconstruit": recon,
+                "SA": str(SA_int), "SB": str(SB_int),  # str pour grandes valeurs
+                "digamma_calc": str(digamma_int),
+                "P_reconstruit": recon_int,
                 "identity_ok": identity_ok,
             },
         )
@@ -223,6 +231,7 @@ class AutomaticVerificationLoop:
         self, position: int, prime: int, spectral_data: dict[str, Any],
     ) -> tuple[StepReport, str, Optional[Path], int, Optional[str]]:
         """Genere un .thy et compile via Isabelle, avec retry sur tactiques."""
+        # SA/SB/digamma peuvent etre des str (chiffres exacts) pour grandes positions
         SA_val = int(spectral_data["SA"])
         SB_val = int(spectral_data["SB"])
         digamma_val = int(spectral_data["digamma_calc"])

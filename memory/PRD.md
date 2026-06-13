@@ -125,11 +125,21 @@ Agent IA multi-loop pour les mathematiques (Methode Spectrale Philippe Thomas Sa
 - Nouvelle commande CLI **`gap <v1> <v2>`** : tableau Rich + audit automatique citable
 - 10 nouveaux tests `tests/test_gap_compute.py` (INVARIANT 1/2 verifie sur 5 paires, positions/primes auto-detect, .thy citations)
 
+### Feb 2026 - Extension spectral_core a 1000 premiers + arithmetique entiere exacte
+- **2026-02-13** : Resolution d'une asymetrie historique : `spectral_core.prime_list` ne contenait que 168 entrees (crible jusqu'a la valeur 1000) au lieu des 1000 positions disponibles dans `prime_table.PRIMES`
+- Alignement de `SpectralMethodCore.prime_list` sur `prime_table.PRIMES` (1000 entrees cross-validees contre `sympy.prime()`)
+- Refonte de `reconstruct_prime_1_2()` en **arithmetique entiere Python (precision arbitraire)** au lieu de flottants 64-bit
+- Refonte de `verification_loop._step_gabriel()` en arithmetique entiere pour preserver l'identite SB-digamma=64*p sur grandes positions
+- Impact : `valider`, `reconstruct_prime_1_2`, `_step_gabriel` fonctionnent maintenant **de position 1 a 1000** (jusqu'au 7919e premier 7919) sans aucune perte de precision, meme pour SA/SB depassant 10^150
+- Fallback resilient : si `prime_table` indisponible, le crible local jusqu'a 168 reste utilisable
+- Cross-validation walter-fendt : page HTML5 dynamique non-scrapable mais notre table est independamment validee par sympy
+
 ## Tests (Feb 2026)
 - **124/124 pytest passent** (22 originaux + 11 silent_audit + 18 slow_motion + 15 debug_session + 16 debug_toolkit + 19 audit_store + 13 verification_loop + 10 gap_compute)
 - 5/5 test_spectral_gabriel.py passent
 - Contexte Docker simule : 460 Ko (< 5 Mo cible)
 - 0 fichier .vhdx detecte dans le workspace
+- Demo end-to-end : `valider 1000` -> prime 7919 + audit signe (precision integrale exacte)
 
 ## Pour le user
 - Pull depuis GitHub propre

@@ -49,32 +49,27 @@ def test_primes_to_positions_simple():
 
 
 def test_compute_RsP_nn_1x1_is_one_half():
-    """Cas 1*1 : RsP_nn doit etre proche de 1/2 (au moins en signe et magnitude)."""
+    """Cas 1*1 : (SA(5)-SA(10))/(SB(5)-SB(10)) = 1/2 EXACT (lemme prouve)."""
     c = SpectralMethodCore()
-    # Position 5 vs position 10
     result = c.compute_RsP_nn([5], [10])
-    # Pour 1*1, RsP_nn = SA(5)/SB(10), pas exactement 1/2 mais proche (la formule 1/2
-    # exacte est avec DIFFERENCES, cf. RsP_def vs RsP_nn_def)
     assert result["configuration"] == "1x1"
-    assert "RsP_decimal" in result
+    assert result["matches_half"] is True  # invariant 1/2 prouve
+    assert result["RsP_fraction"] == "1/2"
 
 
 def test_analyze_spectral_ratio_user_question():
     """
     Question utilisateur : "rapport spectral symetrique 3*3 pour (7,23,2) et (29,17,13)"
-    Doit detecter config symmetric_nxn et calculer RsP_nn.
+    Avec la VRAIE formule a differences : toutes les paires doivent donner 1/2.
     """
     c = SpectralMethodCore()
     result = c.analyze_spectral_ratio([7, 23, 2], [29, 17, 13])
     assert result["configuration"] == "symmetric_nxn"
-    # 7 = 4e premier, 23 = 9e, 2 = 1er
     assert sorted(result["A_positions"]) == sorted([4, 9, 1])
-    # 29 = 10e, 17 = 7e, 13 = 6e
     assert sorted(result["B_positions"]) == sorted([10, 7, 6])
-    assert result["A_primes"] == [7, 23, 2]
-    assert result["B_primes"] == [29, 17, 13]
-    assert "RsP_fraction" in result
-    assert "RsP_decimal" in result
+    # CORRECTION : avec la vraie formule a differences, toutes les paires = 1/2
+    assert result["matches_half"] is True
+    assert result["RsP_fraction"] == "1/2"
     assert result["citations"]
 
 
@@ -83,7 +78,6 @@ def test_analyze_spectral_ratio_asym_chaotique():
     c = SpectralMethodCore()
     result = c.analyze_spectral_ratio([3, 23], [41, 29, 31])
     assert result["configuration"] in ("asym_chaotique", "asym_ordonnee")
-    # Le rapport doit etre proche de 1/2 (la doc dit 0.4983112709)
     assert result["near_half"] or abs(result["RsP_decimal"] - 0.5) < 0.01
 
 

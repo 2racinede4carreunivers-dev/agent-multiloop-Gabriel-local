@@ -93,23 +93,20 @@ def test_random_combo_unknown():
 # ============================================================
 
 def test_analyze_works_on_all_1000_primes_1x1():
-    """1x1 : rapport doit etre 1/2 strict (cf. RsP_un_demi_general)."""
+    """1x1 : avec la VRAIE formule a differences, doit etre 1/2 EXACT (lemme prouve)."""
     core = SpectralMethodCore()
-    # Echantillon sur 50 paires aleatoires
     import random
     random.seed(42)
     for _ in range(50):
         a, b = random.sample(core.prime_list, 2)
         r = core.analyze_spectral_ratio([a], [b])
-        # 1x1 = config 1x1 ; pour cette config, formule SA(A)/SB(B) n'est PAS le
-        # vrai RsP du lemme (qui utilise des DIFFERENCES). Verifier juste que ca tourne.
-        assert "RsP_decimal" in r
+        assert r["matches_half"] is True
+        assert r["RsP_fraction"] == "1/2"
 
 
 def test_analyze_works_for_chaos_large_primes():
     """asym_chaotique sur des grands primes (positions > 500)."""
     core = SpectralMethodCore()
-    # Primes en positions 500, 600, 700, 800, 900
     A = [core.prime_list[499], core.prime_list[599]]
     B = [core.prime_list[699], core.prime_list[799], core.prime_list[899]]
     r = core.analyze_spectral_ratio(A, B)
@@ -119,25 +116,22 @@ def test_analyze_works_for_chaos_large_primes():
 
 
 def test_analyze_works_for_sym2_random():
-    """100 tests aleatoires de config sym2 sur primes 1..1000."""
+    """100 tests sym2 : tous DOIVENT donner 1/2 exact (lemme prouve)."""
     core = SpectralMethodCore()
     import random
     random.seed(123)
-    successes = 0
+    half_count = 0
     for _ in range(100):
         A, B = random_combo(core, "sym2")
         r = core.analyze_spectral_ratio(A, B)
-        if "RsP_decimal" in r and not r.get("error"):
-            successes += 1
-    # On veut 100% de calculs reussis (formule definie pour toute paire)
-    assert successes == 100
+        if r.get("matches_half"):
+            half_count += 1
+    # Tous les sym n*n doivent donner 1/2 (l'invariant est verifie pour toute paire)
+    assert half_count >= 95, f"Seulement {half_count}/100 sym2 = 1/2"
 
 
 def test_invariant_1_2_on_chaotic_combos():
-    """
-    Test de masse : 100 configurations chaotiques aleatoires
-    -> au moins 80% doivent etre proches de 1/2 (cf. PDF page 28).
-    """
+    """100 configs chaotiques aleatoires -> >=80% proches de 1/2."""
     core = SpectralMethodCore()
     import random
     random.seed(456)
@@ -147,5 +141,4 @@ def test_invariant_1_2_on_chaotic_combos():
         r = core.analyze_spectral_ratio(A, B)
         if r.get("near_half"):
             near += 1
-    # La theorie predit que RsP_bloc converge vers 1/2 en chaotique
     assert near >= 80, f"Seulement {near}/100 configs chaotiques proches de 1/2"

@@ -34,6 +34,8 @@ HELP_TEXT = """
   corpus detail    Vue detaillee : sections, defs, lemmes par fichier
   primes           Statut de la table des nombres premiers
   prime <N>        Donne le N-ieme nombre premier (ex: 'prime 26' -> 101)
+  aligner <expr>   7e moteur : traduit l'expression Savard vers Wolfram + Isabelle
+  formaliser <concept>  Genere un fichier .thy complet dans theories/generated/
   contexte         Affiche le contexte mathematique actuel
   memoire          Affiche les echanges en memoire
   version          Affiche la version
@@ -101,6 +103,44 @@ class CLIInterface:
                     console.print(f"\n  [yellow]N={n} hors limites (table : 1..{max_position()})[/yellow]\n")
             except (ValueError, IndexError):
                 console.print("\n  Usage : prime <N>  (ex : prime 26)\n", style="yellow")
+            return True
+        if c.startswith("aligner "):
+            expression = cmd[len("aligner "):].strip()
+            adapter = self.orchestrator.pipeline.spectral_adapter
+            try:
+                result = await adapter.aligner_complet(expression, generer_isabelle=True)
+                console.print(f"\n  [cyan]Requete originale :[/cyan] {result.original_query}")
+                console.print(f"  [cyan]Traduite Wolfram  :[/cyan] {result.wolfram_query}")
+                console.print(f"  [cyan]Statut Wolfram    :[/cyan] {result.wolfram_status}")
+                if result.wolfram_result:
+                    console.print(f"  [green]Resultat Wolfram :[/green] {result.wolfram_result}")
+                if result.isabelle_block:
+                    from rich.panel import Panel
+                    console.print(Panel(result.isabelle_block, title="[yellow]Bloc Isabelle/HOL genere[/yellow]", border_style="yellow"))
+            except Exception as exc:
+                console.print(f"\n  [red]Erreur adaptateur : {exc}[/red]\n")
+            return True
+        if c.startswith("formaliser "):
+            concept = cmd[len("formaliser "):].strip()
+            adapter = self.orchestrator.pipeline.spectral_adapter
+            theories_dir = self.config.get("data", {}).get("hol_dir", "/theories")
+            try:
+                info = await adapter.formaliser_et_ecrire_fichier(
+                    concept_nom=concept,
+                    theories_dir=theories_dir,
+                )
+                console.print(f"\n  [green]Fichier .thy genere :[/green] {info['file_path']}")
+                console.print(f"  [cyan]Concept :[/cyan] {info['concept']}")
+                console.print(f"  [cyan]Theory :[/cyan] {info['theory_name']}")
+                console.print(f"  [cyan]Wolfram status :[/cyan] {info['wolfram_status']}")
+                if info['wolfram_result']:
+                    console.print(f"  [cyan]Wolfram resultat :[/cyan] {info['wolfram_result']}")
+                console.print(f"  [dim]Taille : {info['block_size_chars']} caracteres[/dim]")
+                # Recharge le corpus pour que l'agent voie le nouveau fichier
+                self.orchestrator.pipeline.corpus.load_all()
+                console.print("  [dim]Corpus recharge - le nouveau fichier est accessible.[/dim]\n")
+            except Exception as exc:
+                console.print(f"\n  [red]Erreur formaliser : {exc}[/red]\n")
             return True
         if c == "contexte":
             console.print(f"\n  Contexte : {self.orchestrator.get_context()}\n", style="cyan")

@@ -23,6 +23,7 @@ from ..adapters.hol_isabelle.isabelle_adapter import IsabelleAdapter
 from ..core.llm_manager import LLMManager
 from ..core.types import FinalAnswer, QuestionContext, SpectralModel
 from ..engines.abstraction import AbstractionLayer
+from ..engines.cognitive_alignment import AdaptateurCognitifSpectral
 from ..engines.concept_navigation import Navigator
 from ..engines.generalization import Generalizer
 from ..engines.meta_reasoning import GoalAnalyzer, ProofPlanner, StrategySelector
@@ -60,6 +61,7 @@ class Pipeline:
         self.refinement = RefinementLoop(self.llm, self.critic, config)
         self.isabelle = IsabelleAdapter(config)
         self.verifier = NumericalVerifier()  # 6e moteur : Wolfram (optionnel)
+        self.spectral_adapter = AdaptateurCognitifSpectral(self.verifier.wolfram)  # 7e moteur
         self.corpus = TheoryLoader(config.get("data", {}).get("hol_dir", "/theories"))
         self.corpus.load_all()
 

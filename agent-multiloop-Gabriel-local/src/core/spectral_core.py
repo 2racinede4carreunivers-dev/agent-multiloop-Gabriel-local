@@ -163,13 +163,29 @@ class SpectralMethodCore:
 
     @staticmethod
     def _SA_int(n: int) -> int:
-        """SA(n) exact en entier : (13 * 2^n) / 8 - 2."""
+        """SA(n) exact en entier : (13 * 2^n) / 8 - 2.
+        Pour n>=3, division entiere exacte. Pour n=1,2 on garde la valeur exacte 
+        en utilisant la representation SCALEE *8 quand necessaire (cf. _SA_scaled).
+        """
         return (13 * (1 << n)) // 8 - 2
 
     @staticmethod
     def _SB_int(n: int) -> int:
-        """SB(n) exact en entier : (13 * 2^n) / 4 - 66."""
+        """SB(n) exact en entier : (13 * 2^n) / 4 - 66.
+        Pour n>=2, division entiere exacte.
+        """
         return (13 * (1 << n)) // 4 - 66
+
+    @staticmethod
+    def _SA_scaled_x8(n: int) -> int:
+        """SA(n) * 8 = 13 * 2^n - 16. Toujours exact en entier.
+        Utilise pour comparer des ratios sans perte de precision pour n=1,2."""
+        return 13 * (1 << n) - 16
+
+    @staticmethod
+    def _SB_scaled_x8(n: int) -> int:
+        """SB(n) * 8 = 26 * 2^n - 528. Toujours exact en entier."""
+        return 26 * (1 << n) - 528
 
     def primes_to_positions(self, primes_or_positions: List[int]) -> Tuple[List[int], List[bool]]:
         """
@@ -258,8 +274,10 @@ class SpectralMethodCore:
         pair_results = []
         sample_pair = None
         for (n_i, n_j) in pairs:
-            sa_i, sa_j = self._SA_int(n_i), self._SA_int(n_j)
-            sb_i, sb_j = self._SB_int(n_i), self._SB_int(n_j)
+            # On utilise les valeurs SCALEES *8 pour preserver l'exactitude
+            # quand n=1 ou 2 (sinon division entiere perd .25 ou .5)
+            sa_i, sa_j = self._SA_scaled_x8(n_i), self._SA_scaled_x8(n_j)
+            sb_i, sb_j = self._SB_scaled_x8(n_i), self._SB_scaled_x8(n_j)
             num = sa_i - sa_j
             den = sb_i - sb_j
             if den == 0:

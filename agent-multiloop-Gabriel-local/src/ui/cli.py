@@ -38,6 +38,7 @@ HELP_TEXT = """
   gap <v1> <v2>    Ecart spectral direct entre 2 positions/primes (sans LLM)
   rsp <A> <B>      Rapport spectral direct (auto-detect 1x1, nxn, chaos, ord)
   rsp-test <cfg> <N>  N tests aleatoires de config (1x1|sym2|sym3|sym5|chaos|ord)
+  rsp-courbe <cfg> [kmax]  Courbe ASCII RsP en fonction de k (config: 1x1|sym|chaos|ord)
   debug "<q>"      Mode debugger manuel pedagogique (decompose, bypass, comment)
   verifier <N>     Validation toolkit + creation d'audit citable (rapport 1/2)
   valider <N>      Boucle complete Wolfram <-> Gabriel <-> Isabelle (.thy auto-compile)
@@ -192,6 +193,37 @@ class CLIInterface:
                 )
             except (ValueError, RuntimeError) as exc:
                 console.print(f"\n  [red]Erreur gap : {exc}[/red]\n")
+            return True
+        if c.startswith("rsp-courbe"):
+            parts = cmd.strip().split()
+            if len(parts) < 2:
+                console.print(
+                    "\n  [yellow]Usage : rsp-courbe <config> [kmax]\n"
+                    "  config = 1x1 | sym | chaos | ord\n"
+                    "  kmax = nombre de points (defaut 50, max 500)[/yellow]\n"
+                )
+                return True
+            config = parts[1]
+            try:
+                kmax = int(parts[2]) if len(parts) >= 3 else 50
+                kmax = max(2, min(500, kmax))
+            except ValueError:
+                kmax = 50
+            from src.spectral.rsp_curve import compute_rsp_curve, render_ascii_curve, summarize_curve
+            core = self.orchestrator.pipeline.spectral_core
+            try:
+                points = compute_rsp_curve(core, config, k_max=kmax)
+            except ValueError as exc:
+                console.print(f"\n  [red]Erreur : {exc}[/red]\n")
+                return True
+            from rich.panel import Panel as _Panel
+            graph = render_ascii_curve(points, width=64, height=18, target=0.5)
+            summary = summarize_curve(points)
+            console.print(_Panel(
+                graph + "\n\n" + summary,
+                title=f"[cyan]Courbe rsp-{config} (k=1..{kmax}) — convergence vers 1/2[/cyan]",
+                border_style="cyan",
+            ))
             return True
         if c.startswith("rsp-test"):
             parts = cmd.strip().split()

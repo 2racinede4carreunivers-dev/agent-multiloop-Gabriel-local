@@ -49,10 +49,28 @@ Agent IA multi-loop pour les mathematiques (Methode Spectrale Philippe Thomas Sa
 - Config dans `config.yaml` : section `slow_motion:` avec enabled/coherence_threshold
 - 18 nouveaux tests `tests/test_slow_motion_debugger.py` couvrant CertaintyKernel + Decomposer + Detector + Debugger end-to-end
 
+### Feb 2026 - Mode Debugger Manuel Pedagogique (terminal interactif)
+- **2026-02-13** : Implementation de la **commande CLI `debug "<question>"`**
+- Nouveau **DebugSession** (`src/ui/debug_session.py`) : session interactive en mode terminal
+- **Limites de longueur strictes** :
+  - Requete initiale : **1600 caracteres** max
+  - Commentaire (ajout en cours de session) : **400 caracteres** max
+  - Total combine : **2000 caracteres** max (empeche un commentaire de changer le sens de la requete au point de re-declencher une boucle d'incoherence)
+- **UX terminal pedagogique** :
+  - Tableau Rich avec lettres **A-Z** pour chaque segment + etat (GARDE ✓ / BYPASS ✗) + type + valeur + raison
+  - Compteurs `requete=N/1600ch` et `commentaire=N/400ch` en temps reel
+  - Apercu de la requete canonique mise a jour en direct
+  - Menu : **[A-Z]** toggle segment (majuscule strict), **c** commentaire, **r** re-decompose, **e** execute, **q** annule
+  - Commandes en minuscules / segments en majuscules pour eviter les ambiguites
+- Validation strict des longueurs avec messages d'erreur clairs en francais
+- Limite globale appliquee aussi aux requetes normales (max 2000 caracteres)
+- 15 nouveaux tests `tests/test_debug_session.py` couvrant validations, toggle, commentaires, annulation, execution
+
 ## Tests (Feb 2026)
-- **51/51 pytest passent** (22 originaux + 11 silent_audit + 18 slow_motion)
+- **66/66 pytest passent** (22 originaux + 11 silent_audit + 18 slow_motion + 15 debug_session)
 - 5/5 test_spectral_gabriel.py passent
-- Contexte Docker simule : 320 Ko (< 5 Mo cible)
+- Contexte Docker simule : 340 Ko (< 5 Mo cible)
+- 0 fichier .vhdx detecte dans le workspace
 
 ## Pour le user
 - Pull depuis GitHub propre

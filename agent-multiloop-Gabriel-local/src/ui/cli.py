@@ -11,6 +11,7 @@ from rich.text import Text
 from ..core.config import load_config
 from ..core.orchestrator import Orchestrator
 from ..core.types import FinalAnswer
+from .debug_session import DebugSession, MAX_REQUEST_CHARS, MAX_COMMENT_CHARS
 
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,7 @@ HELP_TEXT = """
   corpus detail    Vue detaillee : sections, defs, lemmes par fichier
   primes           Statut de la table des nombres premiers
   prime <N>        Donne le N-ieme nombre premier (ex: 'prime 26' -> 101)
+  debug "<q>"      Mode debugger manuel pedagogique (decompose, bypass, comment)
   contexte         Affiche le contexte mathematique actuel
   memoire          Affiche les echanges en memoire
   version          Affiche la version
@@ -58,6 +60,19 @@ class CLIInterface:
         self.config = load_config()
         self.user_name = self.config.get("agent", {}).get("user_name", "Philippe")
         self.orchestrator = Orchestrator(self.config)
+        # Mode debug manuel : partage le kernel et spectral_core du pipeline
+        self._debug_session: DebugSession | None = None
+
+    def _get_debug_session(self) -> DebugSession:
+        """Lazy init : reutilise le kernel/core du pipeline pour eviter de re-charger les .thy."""
+        if self._debug_session is None:
+            pipeline = self.orchestrator.pipeline
+            self._debug_session = DebugSession(
+                console=console,
+                certainty_kernel=pipeline.certainty_kernel,
+                spectral_core=pipeline.spectral_core,
+            )
+        return self._debug_session
 
     def banner(self) -> None:
         console.print(Text(BANNER, style="bold magenta"))
@@ -107,6 +122,35 @@ class CLIInterface:
             return True
         if c == "memoire":
             console.print(f"\n  Memoire :\n{self.orchestrator.get_memory()}\n", style="cyan")
+            return True
+        if c.startswith("debug "):
+            # Mode debugger manuel : extrait la question (avec ou sans guillemets)
+            raw = cmd.strip()[len("debug "):].strip()
+            if raw.startswith('"') and raw.endswith('"') and len(raw) >= 2:
+                question = raw[1:-1]
+            elif raw.startswith("'") and raw.endswith("'") and len(raw) >= 2:
+                question = raw[1:-1]
+            else:
+                question = raw
+            if not question:
+                console.print(
+                    f"\n  [yellow]Usage : debug \"<question>\"  "
+                    f"(max {MAX_REQUEST_CHARS} caracteres ; "
+                    f"jusqu'a {MAX_COMMENT_CHARS} caracteres de commentaire ajoutables)[/yellow]\n"
+                )
+                return True
+            session = self._get_debug_session()
+            result = await session.run(question)
+            if result is not None:
+                self._display_answer(result)
+            return True
+        if c == "debug":
+            console.print(
+                f"\n  [yellow]Usage : debug \"<question>\"  "
+                f"(ex : debug \"Reconstruis le 26eme premier en rapport 1/2\")  "
+                f"\n  Limites : requete <= {MAX_REQUEST_CHARS} ch, "
+                f"commentaire <= {MAX_COMMENT_CHARS} ch[/yellow]\n"
+            )
             return True
         return False
 
@@ -159,6 +203,16 @@ class CLIInterface:
                 continue
 
             try:
+                # Limite de longueur pour eviter des requetes monstrueuses
+                # (compatible avec la limite du mode debug : 1600 + 400 = 2000)
+                if len(user_input) > MAX_REQUEST_CHARS + MAX_COMMENT_CHARS:
+                    console.print(
+                        f"\n  [yellow][Requete trop longue] "
+                        f"{len(user_input)} caracteres (max {MAX_REQUEST_CHARS + MAX_COMMENT_CHARS}). "
+                        f"Reformulez plus brievement ou utilisez 'debug \"<question>\"' "
+                        f"pour ajouter un commentaire structure.[/yellow]\n"
+                    )
+                    continue
                 console.print("\n  [dim]Reflexion en cours (multi-loop self-critique)...[/dim]")
                 answer = await self.orchestrator.ask(user_input)
                 self._display_answer(answer)

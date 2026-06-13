@@ -25,13 +25,14 @@ from __future__ import annotations
 
 import string
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Optional
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
 from ..adapters.corpus.certainty_kernel import CertaintyKernel
+from ..audit import AuditStore
 from ..core.spectral_core import SpectralMethodCore
 from ..core.types import CandidateAnswer, FinalAnswer
 from ..debug_toolkit import (
@@ -57,6 +58,8 @@ class _DebugState:
     # True = forcer bypass (segment ignore meme s'il etait coherent)
     # False = laisser etat initial (cohérent ou incoherent selon le decomposer)
     forced_bypass: dict[str, bool] = field(default_factory=dict)
+    # Rapports collectes par la commande 't' (toolkit) au cours de la session
+    last_toolkit_reports: dict[str, Any] = field(default_factory=dict)
 
     @property
     def combined_question(self) -> str:
@@ -80,15 +83,18 @@ class DebugSession:
         console: Console,
         certainty_kernel: Optional[CertaintyKernel] = None,
         spectral_core: Optional[SpectralMethodCore] = None,
+        audit_store: Optional[AuditStore] = None,
     ):
         self.console = console
         self.kernel = certainty_kernel or CertaintyKernel()
         self.core = spectral_core or SpectralMethodCore()
+        self.audit_store = audit_store
         self.decomposer = RequestDecomposer()
         self.detector = CoherenceDetector(threshold=0.99)  # toujours actif en mode manuel
         self.debugger = SlowMotionDebugger(
             certainty_kernel=self.kernel,
             spectral_core=self.core,
+            audit_store=self.audit_store,
         )
         # Toolkit de vrais debuggers (lazy : registry detecte ce qui est installe)
         self.toolkit_registry = ToolkitRegistry()
@@ -279,7 +285,8 @@ class DebugSession:
                 continue
 
             if cmd == "t":
-                self._run_toolkit(decomposed)
+                # Stocke les rapports toolkit pour les inclure dans l'audit final
+                state.last_toolkit_reports = self._run_toolkit(decomposed)
                 continue
 
             if cmd == "e":
@@ -289,9 +296,10 @@ class DebugSession:
 
     # ---------- Toolkit (vrais debuggers : sympy, mpmath, z3) ----------
 
-    def _run_toolkit(self, decomposed: DecomposedRequest) -> None:
+    def _run_toolkit(self, decomposed: DecomposedRequest) -> dict[str, Any]:
         """
         Lance les vrais outils de verification sur la position deduite.
+        Retourne un dict des rapports collectes (pour audit ulterieur).
         Si position absente -> affiche juste l'etat du toolkit.
         """
         # Etat du toolkit
@@ -308,12 +316,13 @@ class DebugSession:
             if s.kind == "position":
                 position = s.value
                 break
+        collected: dict[str, Any] = {}
         if position is None:
             self.console.print(
                 "[yellow]Aucune position detectee dans la requete -> "
                 "le toolkit affiche uniquement son etat.[/yellow]"
             )
-            return
+            return collected
 
         # Prime attendu pour cross-validation
         from ..spectral.prime_table import nth_prime
@@ -329,6 +338,7 @@ class DebugSession:
             if self._sympy is None:
                 self._sympy = SympyValidator()
             report = self._sympy.validate(position, ratio, expected_prime)
+            collected["sympy"] = report
             self.console.print(Panel(
                 self._sympy.render(report),
                 title="[green]sympy : validation symbolique[/green]",
@@ -340,6 +350,7 @@ class DebugSession:
             if self._mpmath is None:
                 self._mpmath = MpmathValidator()
             report = self._mpmath.validate(position, ratio, expected_prime)
+            collected["mpmath"] = report
             self.console.print(Panel(
                 self._mpmath.render(report),
                 title="[blue]mpmath : precision arbitraire[/blue]",
@@ -351,11 +362,81 @@ class DebugSession:
             if self._z3 is None:
                 self._z3 = Z3Prover()
             report = self._z3.validate(position, ratio, expected_prime)
+            collected["z3"] = report
             self.console.print(Panel(
                 self._z3.render(report),
                 title="[magenta]z3 : preuve formelle SMT[/magenta]",
                 border_style="magenta",
             ))
+
+        return collected
+
+    async def verifier_position(self, position: int, ratio: str = "1/2") -> Optional[str]:
+        """
+        Commande CLI directe : lance le toolkit et cree un audit citable
+        SANS passer par toute la session interactive.
+        
+        Returns:
+            L'id de l'audit cree (ou None si echec).
+        """
+        if ratio != "1/2":
+            self.console.print(
+                f"[yellow]La commande 'verifier' supporte uniquement le rapport 1/2 "
+                f"pour le moment (recu : {ratio}).[/yellow]"
+            )
+            return None
+        from ..spectral.prime_table import nth_prime
+        expected_prime = nth_prime(position)
+        if expected_prime is None:
+            self.console.print(f"[red]Position {position} hors table (1..1000).[/red]")
+            return None
+        # Construit une DecomposedRequest minimale
+        dec = DecomposedRequest(
+            original=f"verifier {position} {ratio}",
+            detected_intent="reconstruction",
+            detected_ratio=ratio,
+        )
+        dec.segments.append(Segment(
+            kind="position", text=f"{position}", value=position, coherent=True,
+        ))
+        dec.segments.append(Segment(
+            kind="ratio", text=ratio, value=ratio, coherent=True,
+        ))
+        toolkit_reports = self._run_toolkit(dec)
+        # Sauvegarde l'audit si store disponible
+        if self.audit_store is None:
+            self.console.print("[yellow]Audit non sauvegarde (audit_store absent).[/yellow]")
+            return None
+        try:
+            citations = [
+                "methode_spectral.thy::prime_equation_identity",
+                "geometrie_spectre_premier.thy::reconstruction_P",
+                "plan_cognitif::INVARIANT_1_2",
+            ]
+            record = AuditStore.build_record(
+                intervention_type="verifier",
+                question=f"verifier {position} {ratio}",
+                certified_answer=(
+                    f"Le {position}-eme nombre premier est {expected_prime}. "
+                    f"En rapport {ratio}, n = {position} (INVARIANT)."
+                ),
+                position=position,
+                prime_value=expected_prime,
+                citations_thy=citations,
+                toolkit_reports=toolkit_reports,
+                ratio=ratio,
+            )
+            path = self.audit_store.save(record)
+            self.console.print(
+                f"\n[green]Audit cree : id={record.id}  ->  {path.name}[/green]"
+            )
+            self.console.print(
+                f"[dim]Pour citer cet audit : tapez 'citer {record.id}'[/dim]\n"
+            )
+            return record.id
+        except Exception as exc:
+            self.console.print(f"[red]Erreur lors de la sauvegarde de l'audit : {exc}[/red]")
+            return None
 
     # ---------- Exécution finale ----------
 
@@ -411,6 +492,7 @@ class DebugSession:
                 final=final,
                 coherence_report=manual_report,
                 precomputed_facts=None,
+                skip_auto_audit=True,   # on cree notre propre audit "debug_manual"
             )
         finally:
             self.debugger.decomposer.decompose = original_decompose
@@ -419,7 +501,51 @@ class DebugSession:
         result.structured_data["manual_debug"] = True
         if state.comment:
             result.structured_data["user_comment"] = state.comment
-        result.structured_data["forced_bypass"] = [
-            l for l, v in state.forced_bypass.items() if v
-        ]
+        forced_list = [l for l, v in state.forced_bypass.items() if v]
+        result.structured_data["forced_bypass"] = forced_list
+
+        # Sauvegarde de l'audit "debug_manual" avec toutes les infos saisies
+        if self.audit_store is not None:
+            certified = result.structured_data.get("certified", {})
+            timeline_data = result.structured_data.get("debug_timeline", [])
+            # Reconstitue un DebugTimeline-like pour passer au _maybe_save_audit
+            try:
+                record = AuditStore.build_record(
+                    intervention_type="debug_manual",
+                    question=state.combined_question,
+                    certified_answer=result.answer_text,
+                    position=self._extract_position_from_segments(effective),
+                    prime_value=certified.get("value"),
+                    decomposition=result.structured_data.get("decomposition", {}),
+                    timeline=timeline_data,
+                    citations_thy=certified.get("citations", []),
+                    toolkit_reports=state.last_toolkit_reports or {},
+                    user_comment=state.comment if state.comment else None,
+                    forced_bypass=forced_list,
+                    ratio=effective.detected_ratio or "1/2",
+                )
+                path = self.audit_store.save(record)
+                result.structured_data["audit_id"] = record.id
+                result.structured_data["audit_path"] = str(path)
+                self.console.print(
+                    f"\n[green]Audit cree : id={record.id}  ->  {path.name}[/green]"
+                )
+                self.console.print(
+                    f"[dim]Pour citer cet audit : tapez 'citer {record.id}'[/dim]\n"
+                )
+            except ValueError as exc:
+                # ratio non-1/2 -> on saute silencieusement (en v1)
+                self.console.print(f"[dim]{exc}[/dim]")
+            except Exception as exc:
+                self.console.print(f"[red]Audit non sauve : {exc}[/red]")
         return result
+
+    @staticmethod
+    def _extract_position_from_segments(dec: DecomposedRequest) -> Optional[int]:
+        for s in dec.segments:
+            if s.kind == "position" and s.coherent:
+                try:
+                    return int(s.value)
+                except (TypeError, ValueError):
+                    return None
+        return None

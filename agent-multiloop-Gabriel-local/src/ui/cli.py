@@ -36,6 +36,10 @@ HELP_TEXT = """
   primes           Statut de la table des nombres premiers
   prime <N>        Donne le N-ieme nombre premier (ex: 'prime 26' -> 101)
   debug "<q>"      Mode debugger manuel pedagogique (decompose, bypass, comment)
+  verifier <N>     Validation toolkit + creation d'audit citable (rapport 1/2)
+  historique       Liste des 20 derniers audits sauvegardes
+  audit <id>       Affiche le contenu complet d'un audit (JSON)
+  citer <id> [fmt] Genere une citation (fmt = markdown | latex | text)
   contexte         Affiche le contexte mathematique actuel
   memoire          Affiche les echanges en memoire
   version          Affiche la version
@@ -64,13 +68,14 @@ class CLIInterface:
         self._debug_session: DebugSession | None = None
 
     def _get_debug_session(self) -> DebugSession:
-        """Lazy init : reutilise le kernel/core du pipeline pour eviter de re-charger les .thy."""
+        """Lazy init : reutilise le kernel/core/audit_store du pipeline pour eviter de re-charger les .thy."""
         if self._debug_session is None:
             pipeline = self.orchestrator.pipeline
             self._debug_session = DebugSession(
                 console=console,
                 certainty_kernel=pipeline.certainty_kernel,
                 spectral_core=pipeline.spectral_core,
+                audit_store=pipeline.audit_store,
             )
         return self._debug_session
 
@@ -151,6 +156,101 @@ class CLIInterface:
                 f"\n  Limites : requete <= {MAX_REQUEST_CHARS} ch, "
                 f"commentaire <= {MAX_COMMENT_CHARS} ch[/yellow]\n"
             )
+            return True
+        if c.startswith("verifier ") or c.startswith("verifier"):
+            parts = cmd.strip().split()
+            if len(parts) < 2:
+                console.print(
+                    "\n  [yellow]Usage : verifier <position> [ratio]  "
+                    "(ex : verifier 26  -- rapport 1/2 par defaut)[/yellow]\n"
+                )
+                return True
+            try:
+                position = int(parts[1])
+            except ValueError:
+                console.print(f"\n  [yellow]Position invalide : '{parts[1]}'[/yellow]\n")
+                return True
+            ratio = parts[2] if len(parts) >= 3 else "1/2"
+            session = self._get_debug_session()
+            await session.verifier_position(position, ratio)
+            return True
+        if c == "historique":
+            store = self.orchestrator.pipeline.audit_store
+            records = store.list_records(limit=20)
+            if not records:
+                console.print("\n  [yellow]Aucun audit sauvegarde pour le moment.[/yellow]\n")
+            else:
+                from src.audit import AuditStore as _AS
+                console.print(Panel(
+                    _AS.summary_table(records),
+                    title=f"[cyan]Historique des audits ({len(records)} affiches)[/cyan]",
+                    border_style="cyan",
+                ))
+            return True
+        if c.startswith("historique "):
+            store = self.orchestrator.pipeline.audit_store
+            arg = cmd.strip()[len("historique "):].strip()
+            # filtre : soit un entier (position) soit un ratio "1/2"
+            kwargs = {"limit": 20}
+            if arg in {"1/2", "1/3", "1/4"}:
+                kwargs["ratio"] = arg
+            else:
+                try:
+                    kwargs["position"] = int(arg)
+                except ValueError:
+                    console.print(f"\n  [yellow]Filtre invalide : '{arg}'[/yellow]\n")
+                    return True
+            records = store.list_records(**kwargs)
+            from src.audit import AuditStore as _AS
+            if not records:
+                console.print(f"\n  [yellow]Aucun audit pour le filtre '{arg}'.[/yellow]\n")
+            else:
+                console.print(Panel(
+                    _AS.summary_table(records),
+                    title=f"[cyan]Historique filtre ({arg}) — {len(records)} resultats[/cyan]",
+                    border_style="cyan",
+                ))
+            return True
+        if c.startswith("audit "):
+            audit_id = cmd.strip().split()[1] if len(cmd.strip().split()) > 1 else ""
+            if not audit_id:
+                console.print("\n  [yellow]Usage : audit <id>[/yellow]\n")
+                return True
+            store = self.orchestrator.pipeline.audit_store
+            record = store.get(audit_id)
+            if not record:
+                console.print(f"\n  [yellow]Audit '{audit_id}' introuvable.[/yellow]\n")
+                return True
+            import json as _json
+            payload = record.to_dict()
+            payload["signature_sha256"] = record.signature_sha256
+            payload["signature_valid"] = store.verify(record)
+            console.print(Panel(
+                _json.dumps(payload, indent=2, ensure_ascii=False),
+                title=f"[cyan]Audit {record.id}[/cyan]",
+                border_style="cyan",
+            ))
+            return True
+        if c.startswith("citer "):
+            parts = cmd.strip().split()
+            if len(parts) < 2:
+                console.print(
+                    "\n  [yellow]Usage : citer <id> [markdown|latex|text]  "
+                    "(markdown par defaut)[/yellow]\n"
+                )
+                return True
+            audit_id = parts[1]
+            fmt = parts[2] if len(parts) >= 3 else "markdown"
+            if fmt not in {"markdown", "latex", "text"}:
+                console.print(f"\n  [yellow]Format invalide : '{fmt}' (markdown|latex|text)[/yellow]\n")
+                return True
+            store = self.orchestrator.pipeline.audit_store
+            citation = store.cite(audit_id, format=fmt)
+            console.print(Panel(
+                citation,
+                title=f"[green]Citation audit {audit_id} ({fmt})[/green]",
+                border_style="green",
+            ))
             return True
         return False
 

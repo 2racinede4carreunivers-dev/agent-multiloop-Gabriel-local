@@ -80,11 +80,33 @@ Agent IA multi-loop pour les mathematiques (Methode Spectrale Philippe Thomas Sa
 - 16 nouveaux tests `tests/test_debug_toolkit.py` (registry, chaque validateur isole, accord 3-outils)
 - Impact taille image Docker : +41 Mo (z3 wheel) ; image totale attendue ~330-450 Mo (toujours < 500 Mo)
 
+### Feb 2026 - AuditStore : base d'audits JSON signes citables (rapport 1/2 v1)
+- **2026-02-13** : Implementation d'une base d'audits citables pour archivage et reference scientifique
+- Nouveau module **`src/audit/`** :
+  - `AuditRecord` : dataclass avec id (8 hex), timestamp UTC, intervention_type, question, position, prime_value, decomposition, timeline, citations_thy, toolkit_reports, user_comment, forced_bypass, signature_sha256
+  - `AuditStore` : persistance JSON dans `/home/agent/app/data/audits/YYYY-MM-DD_HHMMSS_<id>.json`
+  - Signature **SHA-256** sur JSON canonique (cles triees) -> detection de toute modification ulterieure (test `test_verify_detects_tampering`)
+  - Citations Markdown / LaTeX / texte prets a coller dans un article scientifique
+  - Filtrage par position, ratio, intervention_type
+- **PERIMETRE STRICT v1** : rapport 1/2 uniquement (decision utilisateur pour faciliter l'assimilation par les critiques)
+- **Branchement automatique** aux 3 points clefs :
+  - `SlowMotionDebugger.debug()` -> audit auto type `slow_motion_auto`
+  - `DebugSession._execute()` (touche `e`) -> audit type `debug_manual` avec commentaire et bypass forces
+  - `DebugSession.verifier_position()` -> audit type `verifier`
+- **4 nouvelles commandes CLI** :
+  - `verifier <N> [ratio]` -> lance le toolkit + cree un audit (commande rapide)
+  - `historique [filtre]` -> liste les 20 derniers audits (filtre par position ou ratio)
+  - `audit <id>` -> affiche le JSON complet
+  - `citer <id> [markdown|latex|text]` -> genere un bloc citable (Markdown par defaut)
+- Aucun nouveau package requis (`hashlib`, `json`, `uuid` sont dans la stdlib)
+- 19 nouveaux tests `tests/test_audit_store.py` (signature deterministe, detection de tampering, filtres, citations 3 formats, integration debugger + session + verifier)
+
 ## Tests (Feb 2026)
-- **82/82 pytest passent** (22 originaux + 11 silent_audit + 18 slow_motion + 15 debug_session + 16 debug_toolkit)
+- **101/101 pytest passent** (22 originaux + 11 silent_audit + 18 slow_motion + 15 debug_session + 16 debug_toolkit + 19 audit_store)
 - 5/5 test_spectral_gabriel.py passent
 - Contexte Docker simule : 372 Ko (< 5 Mo cible)
 - 0 fichier .vhdx detecte dans le workspace
+- Demo verifier 26 -> audit signe sha256 + citation Markdown/LaTeX validee end-to-end
 
 ## Pour le user
 - Pull depuis GitHub propre

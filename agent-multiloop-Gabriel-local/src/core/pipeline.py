@@ -36,6 +36,7 @@ from ..multiloop import (
     SlowMotionDebugger,
 )
 from ..adapters.corpus.certainty_kernel import CertaintyKernel
+from ..audit import AuditStore
 from ..spectral import (
     PRIMES,
     compute_gap,
@@ -87,9 +88,13 @@ class Pipeline:
         theories_dir = config.get("data", {}).get("hol_dir", "/theories")
         self.certainty_kernel = CertaintyKernel(theories_dir=theories_dir)
         self.coherence_detector = CoherenceDetector(threshold=coherence_threshold)
+        # NOUVEAU: AuditStore pour sauvegarde JSON signe des interventions
+        audit_dir = config.get("data", {}).get("audit_dir", "/home/agent/app/data/audits")
+        self.audit_store = AuditStore(base_dir=audit_dir)
         self.slow_motion = SlowMotionDebugger(
             certainty_kernel=self.certainty_kernel,
             spectral_core=self.spectral_core,
+            audit_store=self.audit_store,
         )
         logger.info("✓ Pipeline initialized with SpectralMethodCore (INVARIANT: n=position=num_termes)")
         logger.info("✓ Silent Audit Loop enabled: %s (max_retries=%d)",

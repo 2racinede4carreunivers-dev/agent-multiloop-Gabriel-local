@@ -28,6 +28,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from ..adapters.corpus.certainty_kernel import CertaintyKernel
+from ..audit import AuditStore
 from ..core.spectral_core import SpectralMethodCore
 from ..core.types import FinalAnswer
 from ..spectral.prime_table import nth_prime
@@ -81,13 +82,16 @@ class SlowMotionDebugger:
         self,
         certainty_kernel: Optional[CertaintyKernel] = None,
         spectral_core: Optional[SpectralMethodCore] = None,
+        audit_store: Optional[AuditStore] = None,
     ):
         self.kernel = certainty_kernel or CertaintyKernel()
         self.core = spectral_core or SpectralMethodCore()
         self.decomposer = RequestDecomposer()
+        self.audit_store = audit_store  # peut etre None -> pas d'audit auto
         logger.info(
-            "SlowMotionDebugger initialise : %d certitudes, %d premiers en table",
+            "SlowMotionDebugger initialise : %d certitudes, %d premiers en table, audit=%s",
             len(self.kernel.certainties), len(self.core.prime_list),
+            "ON" if self.audit_store else "OFF",
         )
 
     def debug(
@@ -96,6 +100,7 @@ class SlowMotionDebugger:
         final: FinalAnswer,
         coherence_report: CoherenceReport,
         precomputed_facts: Optional[dict[str, Any]] = None,
+        skip_auto_audit: bool = False,
     ) -> FinalAnswer:
         """
         Execute la procedure complete du Slow-Motion Debugger.
@@ -186,7 +191,65 @@ class SlowMotionDebugger:
             "reformulations": suggestions,
             "debug_timeline": timeline.to_dict(),
         })
+
+        # NOUVEAU : sauvegarde automatique d'audit pour le rapport 1/2
+        if not skip_auto_audit:
+            self._maybe_save_audit(
+                intervention_type="slow_motion_auto",
+                question=question,
+                final=final,
+                decomposed=decomposed,
+                certified=certified,
+                timeline=timeline,
+            )
         return final
+
+    def _maybe_save_audit(
+        self,
+        intervention_type: str,
+        question: str,
+        final: FinalAnswer,
+        decomposed: DecomposedRequest,
+        certified: dict[str, Any],
+        timeline: DebugTimeline,
+        user_comment: Optional[str] = None,
+        forced_bypass: Optional[list[str]] = None,
+        toolkit_reports: Optional[dict[str, Any]] = None,
+    ) -> None:
+        """Sauvegarde un audit JSON signe SI rapport=1/2 et audit_store dispo."""
+        if self.audit_store is None:
+            return
+        # Periode strict : rapport 1/2 uniquement
+        ratio = decomposed.detected_ratio or "1/2"
+        if ratio != "1/2":
+            logger.debug("Audit saute : rapport %s non supporte (v1 = 1/2 only)", ratio)
+            return
+        position = None
+        for s in decomposed.coherent_segments:
+            if s.kind == "position":
+                position = s.value
+                break
+        try:
+            record = AuditStore.build_record(
+                intervention_type=intervention_type,
+                question=question,
+                certified_answer=final.answer_text,
+                position=position,
+                prime_value=certified.get("value"),
+                decomposition=final.structured_data.get("decomposition", {}),
+                timeline=timeline.to_dict(),
+                citations_thy=certified.get("citations", []),
+                toolkit_reports=toolkit_reports or {},
+                user_comment=user_comment,
+                forced_bypass=forced_bypass or [],
+                ratio="1/2",
+            )
+            path = self.audit_store.save(record)
+            final.structured_data["audit_id"] = record.id
+            final.structured_data["audit_path"] = str(path)
+            logger.info("Audit cree : id=%s path=%s", record.id, path.name)
+        except Exception as exc:
+            logger.error("Echec sauvegarde audit : %s", exc, exc_info=True)
 
     # ---------- Etapes internes ----------
 

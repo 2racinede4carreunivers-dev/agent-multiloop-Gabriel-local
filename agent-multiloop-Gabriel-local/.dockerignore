@@ -99,6 +99,23 @@ credentials.json
 *.rar
 *.7z
 
+# ---------- Docker Desktop / WSL virtual disks (TRES LOURD - JAMAIS dans le build) ----------
+# Ces fichiers (souvent > 10 Go) sont la cause principale des contextes 200 Go.
+# Ne JAMAIS les copier dans l'image, ni les versionner.
+*.vhdx
+*.vhd
+*.vmdk
+*.qcow2
+*.img
+**/DockerDesktopWSL/**
+**/Docker*Desktop*WSL/**
+**/wsl/**/ext4.vhdx
+**/wsl/**/data.vhdx
+**/Docker/wsl/**
+**/DockerData*
+**/data.vhdx
+**/ext4.vhdx
+
 # ---------- IDEs Python ----------
 *.iml
 .spyderproject

@@ -107,7 +107,13 @@ class SpectralMethodCore:
         data = self.reconstruct_prime_1_2(position)
         if not data:
             return f"Cannot reconstruct prime at position {position}"
-        return f"Position {data.position}: Prime={data.prime_value}, n={data.position}, Terms={data.num_terms}"
+        return (
+            f"Position {data.position}: Prime={data.prime_value}, "
+            f"n={data.position}, Terms={data.num_terms}\n"
+            f"INVARIANT (ratio 1/2): position = n = number_of_terms = {data.position}\n"
+            f"SA_sum={data.SA_sum:.6f}, SB_sum={data.SB_sum:.6f}, "
+            f"digamma={data.digamma:.6f}"
+        )
 
 class AntiHallucinationValidator:
     def __init__(self):

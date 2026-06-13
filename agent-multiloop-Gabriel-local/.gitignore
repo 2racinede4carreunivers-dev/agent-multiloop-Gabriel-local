@@ -62,3 +62,23 @@ credentials.json
 
 # Reference du vieil agent (lourd, deja sur disque local)
 reference_old_agent/
+
+# ============================================================
+# Docker Desktop / WSL virtual disks - JAMAIS dans le repo
+# ============================================================
+# Ces fichiers (data.vhdx, ext4.vhdx) peuvent depasser 10 Go
+# et sont la cause des contextes Docker > 200 Go.
+# Ne JAMAIS les committer ni les inclure dans le build.
+*.vhdx
+*.vhd
+*.vmdk
+*.qcow2
+*.img
+**/DockerDesktopWSL/**
+**/Docker*Desktop*WSL/**
+**/wsl/**/ext4.vhdx
+**/wsl/**/data.vhdx
+**/Docker/wsl/**
+**/DockerData*
+**/data.vhdx
+**/ext4.vhdx

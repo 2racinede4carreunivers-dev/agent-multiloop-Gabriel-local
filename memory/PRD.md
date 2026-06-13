@@ -60,16 +60,30 @@ Agent IA multi-loop pour les mathematiques (Methode Spectrale Philippe Thomas Sa
   - Tableau Rich avec lettres **A-Z** pour chaque segment + etat (GARDE ✓ / BYPASS ✗) + type + valeur + raison
   - Compteurs `requete=N/1600ch` et `commentaire=N/400ch` en temps reel
   - Apercu de la requete canonique mise a jour en direct
-  - Menu : **[A-Z]** toggle segment (majuscule strict), **c** commentaire, **r** re-decompose, **e** execute, **q** annule
+  - Menu : **[A-Z]** toggle segment (majuscule strict), **c** commentaire, **r** re-decompose, **t** toolkit, **e** execute, **q** annule
   - Commandes en minuscules / segments en majuscules pour eviter les ambiguites
 - Validation strict des longueurs avec messages d'erreur clairs en francais
 - Limite globale appliquee aussi aux requetes normales (max 2000 caracteres)
 - 15 nouveaux tests `tests/test_debug_session.py` couvrant validations, toggle, commentaires, annulation, execution
 
+### Feb 2026 - Debug Toolkit (vrais outils de verification embarques dans Docker)
+- **2026-02-13** : Trois vrais outils de debugging scientifique installes via `requirements.txt`
+- Nouveau module **`src/debug_toolkit/`** :
+  - `registry.py` : detecte les outils installes au runtime
+  - `sympy_validator.py` : validation **symbolique exacte** des formules SA, SB, digamma (fractions Rational, pas flottants)
+  - `mpmath_validator.py` : recalcul a **precision arbitraire 100 chiffres** (critique pour grandes positions)
+  - `z3_prover.py` : **preuve formelle SMT** de l'INVARIANT 1/2 et de l'identite de reconstruction
+- Packages ajoutes a `requirements.txt` : `mpmath>=1.3.0`, `z3-solver>=4.12.0` (sympy etait deja la)
+- Wheels precompiles manylinux disponibles -> aucun build natif requis dans Docker
+- Commande `t` ajoutee au menu de DebugSession : lance les 3 validateurs sur la position courante avec rendu Rich code par couleur (vert/bleu/magenta)
+- Cross-validation prouvee sur position=26 -> les 3 outils confirment p=101 independamment
+- 16 nouveaux tests `tests/test_debug_toolkit.py` (registry, chaque validateur isole, accord 3-outils)
+- Impact taille image Docker : +41 Mo (z3 wheel) ; image totale attendue ~330-450 Mo (toujours < 500 Mo)
+
 ## Tests (Feb 2026)
-- **66/66 pytest passent** (22 originaux + 11 silent_audit + 18 slow_motion + 15 debug_session)
+- **82/82 pytest passent** (22 originaux + 11 silent_audit + 18 slow_motion + 15 debug_session + 16 debug_toolkit)
 - 5/5 test_spectral_gabriel.py passent
-- Contexte Docker simule : 340 Ko (< 5 Mo cible)
+- Contexte Docker simule : 372 Ko (< 5 Mo cible)
 - 0 fichier .vhdx detecte dans le workspace
 
 ## Pour le user

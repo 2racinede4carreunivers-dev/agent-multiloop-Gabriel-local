@@ -34,6 +34,9 @@ from rich.table import Table
 from ..adapters.corpus.certainty_kernel import CertaintyKernel
 from ..core.spectral_core import SpectralMethodCore
 from ..core.types import CandidateAnswer, FinalAnswer
+from ..debug_toolkit import (
+    MpmathValidator, SympyValidator, ToolkitRegistry, Z3Prover,
+)
 from ..multiloop.coherence_detector import CoherenceDetector, CoherenceReport
 from ..multiloop.request_decomposer import (
     DecomposedRequest, RequestDecomposer, Segment,
@@ -87,6 +90,11 @@ class DebugSession:
             certainty_kernel=self.kernel,
             spectral_core=self.core,
         )
+        # Toolkit de vrais debuggers (lazy : registry detecte ce qui est installe)
+        self.toolkit_registry = ToolkitRegistry()
+        self._sympy: Optional[SympyValidator] = None
+        self._mpmath: Optional[MpmathValidator] = None
+        self._z3: Optional[Z3Prover] = None
 
     # ---------- Validation des limites ----------
 
@@ -173,6 +181,7 @@ class DebugSession:
             "  [bold magenta][A-Z][/bold magenta]  bascule le segment correspondant (GARDE <-> BYPASS)\n"
             "  [bold magenta]c[/bold magenta]      ajoute / remplace le commentaire (max 400 caracteres)\n"
             "  [bold magenta]r[/bold magenta]      re-decompose apres ajout du commentaire\n"
+            "  [bold magenta]t[/bold magenta]      lance le toolkit (sympy / mpmath / z3) sur la position courante\n"
             "  [bold magenta]e[/bold magenta]      execute le debugger avec la configuration actuelle\n"
             "  [bold magenta]q[/bold magenta]      annule et retourne au prompt principal"
         )
@@ -269,10 +278,84 @@ class DebugSession:
                 self.console.print("[dim]Re-decomposition...[/dim]")
                 continue
 
+            if cmd == "t":
+                self._run_toolkit(decomposed)
+                continue
+
             if cmd == "e":
                 return await self._execute(state, decomposed, letters)
 
             self.console.print(f"[red]Commande inconnue : '{choice}'[/red]")
+
+    # ---------- Toolkit (vrais debuggers : sympy, mpmath, z3) ----------
+
+    def _run_toolkit(self, decomposed: DecomposedRequest) -> None:
+        """
+        Lance les vrais outils de verification sur la position deduite.
+        Si position absente -> affiche juste l'etat du toolkit.
+        """
+        # Etat du toolkit
+        self.console.print(Panel(
+            self.toolkit_registry.render_table(),
+            title="[cyan]Toolkit installe[/cyan]",
+            border_style="cyan",
+        ))
+
+        # Trouve position et ratio
+        position = None
+        ratio = decomposed.detected_ratio or "1/2"
+        for s in decomposed.coherent_segments:
+            if s.kind == "position":
+                position = s.value
+                break
+        if position is None:
+            self.console.print(
+                "[yellow]Aucune position detectee dans la requete -> "
+                "le toolkit affiche uniquement son etat.[/yellow]"
+            )
+            return
+
+        # Prime attendu pour cross-validation
+        from ..spectral.prime_table import nth_prime
+        expected_prime = nth_prime(position)
+
+        self.console.print(
+            f"\n[bold]Validation croisee pour position={position}, ratio={ratio}, "
+            f"prime_attendu={expected_prime}[/bold]\n"
+        )
+
+        # 1. sympy
+        if self.toolkit_registry.is_available("sympy"):
+            if self._sympy is None:
+                self._sympy = SympyValidator()
+            report = self._sympy.validate(position, ratio, expected_prime)
+            self.console.print(Panel(
+                self._sympy.render(report),
+                title="[green]sympy : validation symbolique[/green]",
+                border_style="green",
+            ))
+
+        # 2. mpmath
+        if self.toolkit_registry.is_available("mpmath"):
+            if self._mpmath is None:
+                self._mpmath = MpmathValidator()
+            report = self._mpmath.validate(position, ratio, expected_prime)
+            self.console.print(Panel(
+                self._mpmath.render(report),
+                title="[blue]mpmath : precision arbitraire[/blue]",
+                border_style="blue",
+            ))
+
+        # 3. z3
+        if self.toolkit_registry.is_available("z3"):
+            if self._z3 is None:
+                self._z3 = Z3Prover()
+            report = self._z3.validate(position, ratio, expected_prime)
+            self.console.print(Panel(
+                self._z3.render(report),
+                title="[magenta]z3 : preuve formelle SMT[/magenta]",
+                border_style="magenta",
+            ))
 
     # ---------- Exécution finale ----------
 

@@ -36,6 +36,8 @@ HELP_TEXT = """
   primes           Statut de la table des nombres premiers
   prime <N>        Donne le N-ieme nombre premier (ex: 'prime 26' -> 101)
   gap <v1> <v2>    Ecart spectral direct entre 2 positions/primes (sans LLM)
+  rsp <A> <B>      Rapport spectral direct (auto-detect 1x1, nxn, chaos, ord)
+  rsp-test <cfg> <N>  N tests aleatoires de config (1x1|sym2|sym3|sym5|chaos|ord)
   debug "<q>"      Mode debugger manuel pedagogique (decompose, bypass, comment)
   verifier <N>     Validation toolkit + creation d'audit citable (rapport 1/2)
   valider <N>      Boucle complete Wolfram <-> Gabriel <-> Isabelle (.thy auto-compile)
@@ -190,6 +192,138 @@ class CLIInterface:
                 )
             except (ValueError, RuntimeError) as exc:
                 console.print(f"\n  [red]Erreur gap : {exc}[/red]\n")
+            return True
+        if c.startswith("rsp-test"):
+            parts = cmd.strip().split()
+            if len(parts) < 3:
+                console.print(
+                    "\n  [yellow]Usage : rsp-test <config> <N>\n"
+                    "  config = 1x1 | sym2 | sym3 | sym5 | chaos | ord\n"
+                    "  N = nombre de tests aleatoires (ex : rsp-test sym3 100)[/yellow]\n"
+                )
+                return True
+            config = parts[1]
+            try:
+                n_tests = int(parts[2])
+            except ValueError:
+                console.print(f"\n  [yellow]N invalide : '{parts[2]}'[/yellow]\n")
+                return True
+            from src.spectral.rsp_command import random_combo
+            from src.core.spectral_core import SpectralMethodCore
+            core = self.orchestrator.pipeline.spectral_core
+            results_near = 0
+            results_exact = 0
+            results_far = 0
+            errors = 0
+            samples = []
+            for i in range(n_tests):
+                try:
+                    A, B = random_combo(core, config)
+                    r = core.analyze_spectral_ratio(A, B)
+                    if "error" in r:
+                        errors += 1
+                        continue
+                    if r.get("matches_half"):
+                        results_exact += 1
+                    elif r.get("near_half"):
+                        results_near += 1
+                    else:
+                        results_far += 1
+                    if i < 5:
+                        samples.append((A, B, r["RsP_fraction"], r["RsP_decimal"]))
+                except Exception as exc:
+                    errors += 1
+            from rich.panel import Panel as _Panel
+            body = [
+                f"Configuration testee : [bold]{config}[/bold]   N = {n_tests}",
+                "",
+                f"  Egal a 1/2 exact   : {results_exact} ({100*results_exact/max(n_tests,1):.1f}%)",
+                f"  Proche de 1/2 (5%) : {results_near} ({100*results_near/max(n_tests,1):.1f}%)",
+                f"  Eloigne de 1/2     : {results_far} ({100*results_far/max(n_tests,1):.1f}%)",
+                f"  Erreurs            : {errors}",
+                "",
+                "Echantillons (5 premiers) :",
+            ]
+            for A, B, frac, dec in samples:
+                body.append(f"  {A} vs {B} -> {frac} ({dec:.6f})")
+            console.print(_Panel("\n".join(body),
+                                 title=f"[cyan]rsp-test {config} ({n_tests} echantillons)[/cyan]",
+                                 border_style="cyan"))
+            return True
+        if c.startswith("rsp "):
+            from src.spectral.rsp_command import parse_rsp_args
+            raw_args = cmd.strip()[len("rsp "):]
+            parsed = parse_rsp_args(raw_args)
+            if parsed is None:
+                console.print(
+                    "\n  [yellow]Usage : rsp <A> <B>\n"
+                    "  Exemples :\n"
+                    "    rsp 7,23,2 29,17,13       (config 3x3 symetrique)\n"
+                    "    rsp (7,23,2) (29,17,13)   (idem avec parentheses)\n"
+                    "    rsp 2 3                    (config 1x1)\n"
+                    "    rsp 2,3 5,7,11             (asymetrique ordonnee)\n"
+                    "    rsp 3,23 41,29,31          (asymetrique chaotique)[/yellow]\n"
+                )
+                return True
+            A, B = parsed
+            try:
+                core = self.orchestrator.pipeline.spectral_core
+                r = core.analyze_spectral_ratio(A, B)
+                if "error" in r:
+                    console.print(f"\n  [red]rsp : {r['error']}[/red]\n")
+                    return True
+                from rich.panel import Panel as _Panel
+                style = "green" if r.get("matches_half") or r.get("near_half") else "yellow"
+                mark = ("= 1/2 EXACT" if r.get("matches_half")
+                        else "~= 1/2 (proche)" if r.get("near_half")
+                        else "ECARTE de 1/2")
+                lines = [
+                    f"Configuration : [bold]{r['configuration']}[/bold]",
+                    f"  Methode      : {r['method']}",
+                    "",
+                    f"  Bloc A (primes)  : {r['A_input']}",
+                    f"  Bloc A (positions): {r['A_positions']}",
+                    f"  Bloc B (primes)  : {r['B_input']}",
+                    f"  Bloc B (positions): {r['B_positions']}",
+                ]
+                if "sum_SA" in r:  # config nxn
+                    lines.append(f"  sum(SA(A)) = {r['sum_SA']}")
+                    lines.append(f"  sum(SB(B)) = {r['sum_SB']}")
+                if "numerator" in r:  # config asym
+                    lines.append(f"  num (sum_SA(A) - sum_SA(B)) = {r['numerator']}")
+                    lines.append(f"  den (sum_SB(A) - sum_SB(B)) = {r['denominator']}")
+                lines += [
+                    "",
+                    f"  RsP = [bold]{r['RsP_fraction']}[/bold] ({r['RsP_decimal']:.10f})  {mark}",
+                    "",
+                    "Citations :",
+                ]
+                for c_text in r.get("citations", []):
+                    lines.append(f"  • {c_text}")
+                console.print(_Panel("\n".join(lines),
+                                     title=f"[{style}]Rapport spectral {r['configuration']}[/{style}]",
+                                     border_style=style))
+                # Audit auto
+                from src.audit import AuditStore as _AS
+                store = self.orchestrator.pipeline.audit_store
+                record = _AS.build_record(
+                    intervention_type="rsp",
+                    question=f"rsp {A} {B}",
+                    certified_answer=(
+                        f"Configuration {r['configuration']}, "
+                        f"RsP = {r['RsP_fraction']} ({r['RsP_decimal']:.6f}), "
+                        f"egal_1_2={r.get('matches_half')}, proche_1_2={r.get('near_half')}"
+                    ),
+                    position=None,
+                    prime_value=None,
+                    citations_thy=r.get("citations", []),
+                    toolkit_reports={"spectral_core_analysis": r},
+                    ratio="1/2",
+                )
+                store.save(record)
+                console.print(f"\n[dim]Audit : id={record.id} (citer {record.id} pour bloc citable)[/dim]\n")
+            except (ValueError, RuntimeError) as exc:
+                console.print(f"\n  [red]Erreur rsp : {exc}[/red]\n")
             return True
         if c == "contexte":
             console.print(f"\n  Contexte : {self.orchestrator.get_context()}\n", style="cyan")

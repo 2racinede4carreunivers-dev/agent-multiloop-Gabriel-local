@@ -304,10 +304,38 @@ class SpectralMethodCore:
         if config in ("1x1", "symmetric_nxn"):
             result = self.compute_RsP_nn(A_pos, B_pos)
             citations = [
-                "methode_spectral.thy::RsP_def (cas 1x1)",
-                "methode_spectral.thy::RsP_nn (generalisation symetrique)",
+                "methode_spectral.thy::RsP_def (cas 1x1, formule a differences)",
+                "methode_spectral.thy::RsP_nn (definition sum_list, pas la formule prouvee)",
                 "analyse_hypothese_riemann_savard.pdf::page_26 (comparaison 1*1)",
             ]
+            # NOTE INTERPRETATIVE : la formule RsP_nn (sum/sum) n'est pas la formule
+            # a differences qui prouve 1/2 ; on ajoute donc le rapport a differences
+            # pour le cas 1x1 (qui DOIT etre 1/2).
+            if config == "1x1" and len(A_pos) == 1 and len(B_pos) == 1:
+                sa1 = self._SA_int(A_pos[0])
+                sa2 = self._SA_int(B_pos[0])
+                sb1 = self._SB_int(A_pos[0])
+                sb2 = self._SB_int(B_pos[0])
+                from fractions import Fraction
+                if sb1 - sb2 != 0:
+                    rsP_diff = Fraction(sa1 - sa2, sb1 - sb2)
+                    result["RsP_a_differences"] = f"{rsP_diff.numerator}/{rsP_diff.denominator}"
+                    result["RsP_a_differences_decimal"] = (sa1 - sa2) / (sb1 - sb2)
+                    result["RsP_a_differences_is_one_half"] = (rsP_diff == Fraction(1, 2))
+                    result["note_interpretative"] = (
+                        "Cas 1x1 : la formule a DIFFERENCES (SA(n1)-SA(n2))/(SB(n1)-SB(n2)) "
+                        f"= {rsP_diff} (lemme RsP_un_demi_general PROUVE EN ISABELLE). "
+                        f"La formule sum/sum (RsP_nn) donne {result['RsP_fraction']} "
+                        "et n'est qu'une projection algebrique non equivalente."
+                    )
+            elif config == "symmetric_nxn":
+                result["note_interpretative"] = (
+                    "Configuration n*n : la formule RsP_nn = sum(SA)/sum(SB) est definie "
+                    "dans methode_spectral.thy:155 mais n'est PAS la formule a differences "
+                    "qui prouve l'invariant 1/2. Le rapport peut s'ecarter de 1/2 sans "
+                    "violer l'invariant spectral fondamental (lequel utilise des differences "
+                    "et est confirme par les configurations chaotiques)."
+                )
         elif config in ("asym_ordonnee", "asym_chaotique"):
             result = self.compute_RsP_bloc_asym(A_pos, B_pos)
             citations = [

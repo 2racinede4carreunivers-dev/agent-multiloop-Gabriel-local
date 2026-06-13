@@ -28,7 +28,14 @@ from ..engines.generalization import Generalizer
 from ..engines.meta_reasoning import GoalAnalyzer, ProofPlanner, StrategySelector
 from ..engines.numerical_verification import NumericalVerifier
 from ..engines.theorem_discovery import DiscoveryLoop
-from ..multiloop import Critic, RefinementLoop, SilentAuditLoop
+from ..multiloop import (
+    Critic,
+    RefinementLoop,
+    SilentAuditLoop,
+    CoherenceDetector,
+    SlowMotionDebugger,
+)
+from ..adapters.corpus.certainty_kernel import CertaintyKernel
 from ..spectral import (
     PRIMES,
     compute_gap,
@@ -73,9 +80,23 @@ class Pipeline:
         self.anti_hallucination = AntiHallucinationValidator()
         # NOUVEAU: Audit silencieux post-pipeline (anti-hallucination actif)
         self.silent_audit = SilentAuditLoop(self.llm, config)
+        # NOUVEAU: Slow-Motion Debugger (declenche si incoherence detectee)
+        slowmo_cfg = config.get("slow_motion", {}) if config else {}
+        self.slowmo_enabled = bool(slowmo_cfg.get("enabled", True))
+        coherence_threshold = float(slowmo_cfg.get("coherence_threshold", 0.55))
+        theories_dir = config.get("data", {}).get("hol_dir", "/theories")
+        self.certainty_kernel = CertaintyKernel(theories_dir=theories_dir)
+        self.coherence_detector = CoherenceDetector(threshold=coherence_threshold)
+        self.slow_motion = SlowMotionDebugger(
+            certainty_kernel=self.certainty_kernel,
+            spectral_core=self.spectral_core,
+        )
         logger.info("✓ Pipeline initialized with SpectralMethodCore (INVARIANT: n=position=num_termes)")
         logger.info("✓ Silent Audit Loop enabled: %s (max_retries=%d)",
                     self.silent_audit.enabled, self.silent_audit.max_retries)
+        logger.info("✓ Slow-Motion Debugger enabled: %s (coherence_threshold=%.2f, %d certitudes)",
+                    self.slowmo_enabled, coherence_threshold,
+                    len(self.certainty_kernel.certainties))
 
     async def process(self, question: str) -> FinalAnswer:
         """Traite une question end-to-end via le pipeline."""
@@ -122,7 +143,31 @@ class Pipeline:
         base_prompt = self._build_base_prompt(ctx, plan, general, expanded)
         final = await self.refinement.run(ctx, precomputed_facts, base_prompt)
         
-        # 6.bis NOUVEAU: Audit silencieux post-pipeline (anti-hallucination)
+        # 6.bis NOUVEAU: Detection d'incoherence post-multiloop
+        # Si la sortie multiloop est potentiellement incoherente, on declenche
+        # le Slow-Motion Debugger qui by-pass les segments problematiques et
+        # se replie sur le CertaintyKernel. Sinon, audit silencieux classique.
+        if self.slowmo_enabled:
+            coherence = self.coherence_detector.evaluate(
+                question=question,
+                candidates=final.candidates or [],
+                best_answer_text=final.answer_text,
+                precomputed_facts=precomputed_facts,
+            )
+            logger.info("Q[%s] coherence=%.2f signals=%s",
+                        qid, coherence.score, coherence.signals[:3])
+            if coherence.incoherent:
+                logger.warning("Q[%s] INCOHERENCE => Slow-Motion Debugger active", qid)
+                final = self.slow_motion.debug(
+                    question=question,
+                    final=final,
+                    coherence_report=coherence,
+                    precomputed_facts=precomputed_facts,
+                )
+                # Apres slow-motion : la reponse est certifiee, on saute l'audit
+                return final
+        
+        # 6.ter Audit silencieux post-pipeline (anti-hallucination)
         # Si la reponse contient une violation factuelle, le LLM est re-prompte
         # silencieusement avec les valeurs correctes injectees, jusqu'a N tentatives.
         final = await self.silent_audit.audit_and_correct(

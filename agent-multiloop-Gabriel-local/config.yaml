@@ -41,6 +41,16 @@ audit:
   max_retries: 2               # nombre max de re-prompts si hallucination
   temperature: 0.1             # temperature basse pour corrections factuelles
 
+# === Slow-Motion Debugger (mode ralenti anti-incoherence) ===
+# Se declenche AUTOMATIQUEMENT si la sortie multi-loop est jugee
+# incoherente. Decompose la requete, bypass les segments problematiques,
+# se replie sur le CertaintyKernel (3 sources : methode_spectral.thy,
+# geometrie_spectre_premier.thy, plan cognitif), produit une reponse
+# courte mais CERTAINE avec timeline.
+slow_motion:
+  enabled: true                # active le debugger ralenti
+  coherence_threshold: 0.55    # seuil sous lequel on declenche (0..1)
+
 # === Pipeline cognitif ===
 pipeline:
   enable_abstraction: true

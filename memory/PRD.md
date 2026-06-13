@@ -37,10 +37,22 @@ Agent IA multi-loop pour les mathematiques (Methode Spectrale Philippe Thomas Sa
 - Config dans `config.yaml` : section `audit:` avec enabled/max_retries/temperature
 - 11 nouveaux tests `tests/test_silent_audit.py` couvrant audit() + SilentAuditLoop avec LLM mock
 
+### Feb 2026 - Slow-Motion Debugger (mode ralenti anti-incoherence)
+- **2026-02-13** : Implementation du **mode debugger ralenti automatique**
+- Remplacement de `geometrie_spectre_premier.thy` par la v2 (317 lignes : comparaisons 1x1, nxn, asym ordonnee/chaotique, SA/SB signes)
+- Nouveau **CertaintyKernel** (`src/adapters/corpus/certainty_kernel.py`) : noyau distillant 31 certitudes depuis les 3 sources (methode_spectral.thy + geometrie_spectre_premier.thy + plan cognitif) avec PROVENANCE traçable
+- Nouveau **CoherenceDetector** (`src/multiloop/coherence_detector.py`) : analyse les candidats multiloop selon 5 signaux (scores bas, variance, vocabulaire interdit, audit anti-hallucination, contradiction interne)
+- Nouveau **RequestDecomposer** (`src/multiloop/request_decomposer.py`) : decoupe la requete en segments logiques (position, ratio, nombres, intent) et flag ceux qui violent l'INVARIANT 1/2
+- Nouveau **SlowMotionDebugger** (`src/multiloop/slow_motion_debugger.py`) : orchestre la procedure 8 etapes (REQUETE_RECUE -> INCOHERENCE_DETECTEE -> DECOMPOSITION -> BYPASS_SEGMENTS -> REQUETE_CANONIQUE -> RESOLUTION_CERTIFIEE -> REFORMULATIONS -> REPONSE_CERTIFIEE), avec timeline ASCII traçable
+- Resolution **sans LLM** (uniquement spectral_core + kernel) garantissant zero hallucination
+- Integration pipeline : si coherence < 0.55 -> slow-motion debugger, sinon silent_audit classique
+- Config dans `config.yaml` : section `slow_motion:` avec enabled/coherence_threshold
+- 18 nouveaux tests `tests/test_slow_motion_debugger.py` couvrant CertaintyKernel + Decomposer + Detector + Debugger end-to-end
+
 ## Tests (Feb 2026)
-- 33/33 pytest passent (22 anciens + 11 silent_audit)
-- 5/5 test_spectral_gabriel.py passent (Sieve, Invariant 1/2, Anti-hallucination, Ratio, Explanation)
-- Contexte Docker simule : 252 Ko (< 5 Mo cible)
+- **51/51 pytest passent** (22 originaux + 11 silent_audit + 18 slow_motion)
+- 5/5 test_spectral_gabriel.py passent
+- Contexte Docker simule : 320 Ko (< 5 Mo cible)
 
 ## Pour le user
 - Pull depuis GitHub propre

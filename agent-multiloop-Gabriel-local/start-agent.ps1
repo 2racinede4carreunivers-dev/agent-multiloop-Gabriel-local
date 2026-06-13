@@ -1,5 +1,5 @@
 # =============================================================================
-#  start-agent.ps1  |  Auteur : Gabriel  |  Version : 1.0
+#  start-agent.ps1  |  Auteur : Gabriel  |  Version : 1.1
 #  Multi-Loop Math Agent (Methode Spectrale Savard + Isabelle/HOL + Ollama/OpenAI)
 #
 #  Inspire de poweshell_ise_ouvertur.ps1 v4.0
@@ -7,15 +7,24 @@
 #  Workflow :
 #    1. Verifie Docker Desktop (le demarre si necessaire)
 #    2. Build de l'image (--no-cache si -Rebuild)
-#    3. Lance les services via docker-compose (ollama + isabelle + agent)
+#    3. Lance les services via docker-compose (ollama + agent ; isabelle = optionnel)
 #    4. Ouvre un terminal PowerShell qui lance automatiquement le CLI multiloop
 #
 #  Usage :
-#    .\start-agent.ps1                # build + up + ouverture du CLI
-#    .\start-agent.ps1 -Rebuild       # rebuild --no-cache complet
-#    .\start-agent.ps1 -Logs          # affiche les logs au lieu d'ouvrir le CLI
-#    .\start-agent.ps1 -Stop          # arret de tous les services
-#    .\start-agent.ps1 -Status        # affiche l'etat des conteneurs
+#    .\start-agent.ps1                  # build + up + ouverture du CLI (SANS Isabelle)
+#    .\start-agent.ps1 -Rebuild         # rebuild --no-cache complet
+#    .\start-agent.ps1 -WithIsabelle    # inclut le service Isabelle (image 3.2 GB)
+#    .\start-agent.ps1 -PullOnly        # pre-telecharge les images avec retry agressif
+#    .\start-agent.ps1 -Logs            # affiche les logs au lieu d'ouvrir le CLI
+#    .\start-agent.ps1 -Stop            # arret de tous les services
+#    .\start-agent.ps1 -Status          # affiche l'etat des conteneurs
+#
+#  Note sur Isabelle :
+#    L'image makarius/isabelle:latest pese ~3.2 GB. Si le telecharge echoue
+#    (timeout reseau, short read EOF, etc.), utilisez :
+#      .\start-agent.ps1 -PullOnly -WithIsabelle
+#    qui retente jusqu'a 5 fois avec reprise automatique.
+#    En mode sans Isabelle, verification_loop fonctionne en MOCK syntaxique.
 # =============================================================================
 
 param(
@@ -23,7 +32,9 @@ param(
     [switch]$Logs,
     [switch]$Stop,
     [switch]$Status,
-    [switch]$NoOpen
+    [switch]$NoOpen,
+    [switch]$WithIsabelle,
+    [switch]$PullOnly
 )
 
 # ============================================================================
@@ -186,11 +197,69 @@ if ($LASTEXITCODE -ne 0) { Write-Err "Build echoue."; exit 1 }
 Write-OK "Image(s) Docker prete(s)."
 
 # ============================================================================
-# ETAPE 5 : Up des services (Ollama, Isabelle, agent)
+# ETAPE 5 : Up des services (Ollama, Isabelle optionnel, agent)
 # ============================================================================
-Write-Step "Demarrage des services (Ollama, Isabelle, ollama-init)"
-docker compose -f $ComposeFile -p $ProjectName up -d ollama isabelle
-if ($LASTEXITCODE -ne 0) { Write-Err "Echec up Ollama/Isabelle."; exit 1 }
+
+# Construire la liste des services et l'argument --profile
+$ProfileArgs = @()
+$ServicesUp = @("ollama")
+if ($WithIsabelle) {
+    $ProfileArgs = @("--profile", "isabelle")
+    $ServicesUp += "isabelle"
+    Write-Host ""
+    Write-Host "  ATTENTION : Isabelle/HOL active. L'image makarius/isabelle:latest" -ForegroundColor Yellow
+    Write-Host "  pese ~3.2 GB et peut prendre plusieurs minutes a telecharger." -ForegroundColor Yellow
+    Write-Host "  En cas d'echec reseau (short read EOF), relancez avec :"     -ForegroundColor Yellow
+    Write-Host "    .\start-agent.ps1 -PullOnly -WithIsabelle"                 -ForegroundColor Yellow
+    Write-Host ""
+}
+
+# Mode PullOnly : pre-telecharger les images avec retry agressif (max 5 tentatives)
+if ($PullOnly) {
+    Write-Step "Mode PullOnly : pre-telechargement des images Docker (retry x5)"
+    $Images = @("ollama/ollama:latest")
+    if ($WithIsabelle) { $Images += "makarius/isabelle:latest" }
+    foreach ($img in $Images) {
+        $attempt = 0
+        $maxAttempts = 5
+        $pulled = $false
+        while ($attempt -lt $maxAttempts -and -not $pulled) {
+            $attempt++
+            Write-Host ""
+            Write-Host "  [Tentative $attempt/$maxAttempts] docker pull $img" -ForegroundColor Cyan
+            docker pull $img
+            if ($LASTEXITCODE -eq 0) {
+                $pulled = $true
+                Write-OK "Image $img telechargee avec succes."
+            } else {
+                Write-Host "  Echec ($LASTEXITCODE). Pause 5s avant retry..." -ForegroundColor Yellow
+                Start-Sleep -Seconds 5
+            }
+        }
+        if (-not $pulled) {
+            Write-Err "Image $img : echec apres $maxAttempts tentatives."
+            Write-Host "  Causes possibles : reseau instable, VPN/proxy, firewall, espace disque insuffisant." -ForegroundColor Yellow
+            exit 1
+        }
+    }
+    Write-OK "Toutes les images sont localement disponibles. Relancez sans -PullOnly pour demarrer."
+    exit 0
+}
+
+Write-Step "Demarrage des services ($($ServicesUp -join ', '), ollama-init)"
+docker compose -f $ComposeFile -p $ProjectName $ProfileArgs up -d @ServicesUp
+if ($LASTEXITCODE -ne 0) {
+    Write-Err "Echec up des services."
+    if ($WithIsabelle) {
+        Write-Host ""
+        Write-Host "  CONSEIL : si l'erreur est 'short read EOF' lors du telechargement Isabelle," -ForegroundColor Yellow
+        Write-Host "  pre-telechargez les images avec retry agressif :"                            -ForegroundColor Yellow
+        Write-Host "    .\start-agent.ps1 -PullOnly -WithIsabelle"                                 -ForegroundColor Yellow
+        Write-Host "  puis relancez :"                                                              -ForegroundColor Yellow
+        Write-Host "    .\start-agent.ps1 -WithIsabelle"                                            -ForegroundColor Yellow
+    }
+    exit 1
+}
 
 Write-Step "Initialisation d'Ollama (telechargement du modele)"
 docker compose -f $ComposeFile -p $ProjectName up -d ollama-init

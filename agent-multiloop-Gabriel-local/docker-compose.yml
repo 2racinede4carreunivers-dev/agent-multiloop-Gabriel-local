@@ -42,7 +42,6 @@ services:
 
     depends_on:
       - ollama
-      - isabelle
 
   # ===========================================
   # SERVICE : OLLAMA (LLM primaire local)
@@ -79,12 +78,15 @@ services:
     restart: "no"
 
   # ===========================================
-  # SERVICE : ISABELLE/HOL
+  # SERVICE : ISABELLE/HOL (OPTIONNEL — 3.2 GB)
+  # Active uniquement avec : docker-compose --profile isabelle up
+  # ou via start-agent.ps1 -WithIsabelle
   # ===========================================
   isabelle:
     image: makarius/isabelle:latest
     container_name: isabelle
     restart: unless-stopped
+    profiles: ["isabelle"]
     volumes:
       - ./theories:/theories
       - isabelle-heaps:/home/isabelle/.isabelle/heaps

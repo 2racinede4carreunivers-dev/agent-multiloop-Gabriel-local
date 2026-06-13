@@ -5,6 +5,9 @@ from .silent_audit import SilentAuditLoop
 from .coherence_detector import CoherenceDetector, CoherenceReport
 from .request_decomposer import RequestDecomposer, DecomposedRequest, Segment
 from .slow_motion_debugger import SlowMotionDebugger, DebugTimeline
+from .verification_loop import (
+    AutomaticVerificationLoop, VerificationLoopResult, StepReport,
+)
 
 __all__ = [
     "Critic",
@@ -17,4 +20,7 @@ __all__ = [
     "Segment",
     "SlowMotionDebugger",
     "DebugTimeline",
+    "AutomaticVerificationLoop",
+    "VerificationLoopResult",
+    "StepReport",
 ]

@@ -34,6 +34,7 @@ from ..multiloop import (
     SilentAuditLoop,
     CoherenceDetector,
     SlowMotionDebugger,
+    AutomaticVerificationLoop,
 )
 from ..adapters.corpus.certainty_kernel import CertaintyKernel
 from ..audit import AuditStore
@@ -93,6 +94,12 @@ class Pipeline:
         self.audit_store = AuditStore(base_dir=audit_dir)
         self.slow_motion = SlowMotionDebugger(
             certainty_kernel=self.certainty_kernel,
+            spectral_core=self.spectral_core,
+            audit_store=self.audit_store,
+        )
+        # NOUVEAU: boucle automatique Wolfram <-> Gabriel <-> Isabelle
+        self.verification_loop = AutomaticVerificationLoop(
+            config=config,
             spectral_core=self.spectral_core,
             audit_store=self.audit_store,
         )

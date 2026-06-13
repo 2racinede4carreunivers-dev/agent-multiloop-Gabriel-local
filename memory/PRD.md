@@ -101,12 +101,35 @@ Agent IA multi-loop pour les mathematiques (Methode Spectrale Philippe Thomas Sa
 - Aucun nouveau package requis (`hashlib`, `json`, `uuid` sont dans la stdlib)
 - 19 nouveaux tests `tests/test_audit_store.py` (signature deterministe, detection de tampering, filtres, citations 3 formats, integration debugger + session + verifier)
 
+### Feb 2026 - P1 : Boucle automatique Wolfram <-> Gabriel <-> Isabelle
+- **2026-02-13** : Implementation du triptyque de validation autonome
+- Nouveau module **`src/multiloop/verification_loop.py`** :
+  - `AutomaticVerificationLoop` orchestre les 5 etapes :
+    1. **Wolfram** : verification numerique externe (nth_prime) - resilient si AppID absent
+    2. **Gabriel** : generation autonome des valeurs SA/SB/digamma depuis spectral_core
+    3. **Isabelle** : ecriture du .thy + compilation via `isabelle process`
+    4. **Analyse** : si echec, parse stderr (markers "Failed to finish proof", etc.) et retry avec tactique suivante (`simp` -> `auto` -> `force` -> `(simp add: algebra_simps)`)
+    5. **Audit** : sauvegarde JSON signe type `verification_loop` avec tous les rapports
+  - Mode **mock resilient** si Isabelle absent : check syntaxique local du .thy genere (theory/imports/begin/end/lemmas/by) avec rapport d'erreur si invalide
+  - 4 lemmes generes automatiquement par .thy : `SA_n_<n>_valeur`, `SB_n_<n>_valeur`, `digamma_calc_n_<n>_p_<p>`, `prime_equation_<p>_n_<n>`
+- Nouvelle commande CLI **`valider <N> [ratio]`** : lance la boucle complete, affiche 3 panneaux (Wolfram/Gabriel/Isabelle), cree un audit citable
+- 13 nouveaux tests `tests/test_verification_loop.py` couvrant : flux complet, contenu .thy, gestion d'erreurs, syntax check local, audit cree
+
+### Feb 2026 - P2 : Commande `gap <p1> <p2>` (ecart spectral direct sans LLM)
+- **2026-02-13** : Calcul direct de l'ecart spectral entre deux primes/positions
+- Nouveau module **`src/spectral/gap_compute.py`** :
+  - `compute_gap(v1, v2, ratio="1/2")` : accepte positions OU primes (auto-detection par reverse lookup)
+  - Calcule : `delta_n`, `delta_p`, `delta_SA`, `delta_SB`, `RsP` (en fraction exacte via `Fraction`), `D(n,p)`, `delta_D`, `invariant_ok`
+  - Formules pures (SA/SB) -> fonctionne pour TOUTE position (pas limite a la table de 168 du spectral_core)
+- **AUCUN appel LLM** : pure execution Python en quelques millisecondes
+- Nouvelle commande CLI **`gap <v1> <v2>`** : tableau Rich + audit automatique citable
+- 10 nouveaux tests `tests/test_gap_compute.py` (INVARIANT 1/2 verifie sur 5 paires, positions/primes auto-detect, .thy citations)
+
 ## Tests (Feb 2026)
-- **101/101 pytest passent** (22 originaux + 11 silent_audit + 18 slow_motion + 15 debug_session + 16 debug_toolkit + 19 audit_store)
+- **124/124 pytest passent** (22 originaux + 11 silent_audit + 18 slow_motion + 15 debug_session + 16 debug_toolkit + 19 audit_store + 13 verification_loop + 10 gap_compute)
 - 5/5 test_spectral_gabriel.py passent
-- Contexte Docker simule : 372 Ko (< 5 Mo cible)
+- Contexte Docker simule : 460 Ko (< 5 Mo cible)
 - 0 fichier .vhdx detecte dans le workspace
-- Demo verifier 26 -> audit signe sha256 + citation Markdown/LaTeX validee end-to-end
 
 ## Pour le user
 - Pull depuis GitHub propre

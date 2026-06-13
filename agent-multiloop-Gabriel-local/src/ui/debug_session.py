@@ -198,6 +198,9 @@ class DebugSession:
         effective = DecomposedRequest(original=decomposed.original)
         effective.detected_intent = decomposed.detected_intent
         effective.detected_ratio = decomposed.detected_ratio
+        effective.tuple_A = decomposed.tuple_A
+        effective.tuple_B = decomposed.tuple_B
+        effective.config_size = decomposed.config_size
         for letter, seg in zip(letters, decomposed.segments):
             new_seg = Segment(
                 kind=seg.kind, text=seg.text, value=seg.value,
@@ -451,6 +454,10 @@ class DebugSession:
         effective = DecomposedRequest(original=state.combined_question)
         effective.detected_intent = decomposed.detected_intent
         effective.detected_ratio = decomposed.detected_ratio
+        # Preserve tuples et config_size pour le ratio_spectral_nxn
+        effective.tuple_A = decomposed.tuple_A
+        effective.tuple_B = decomposed.tuple_B
+        effective.config_size = decomposed.config_size
         for letter, seg in zip(letters, decomposed.segments):
             new_seg = Segment(
                 kind=seg.kind, text=seg.text, value=seg.value,

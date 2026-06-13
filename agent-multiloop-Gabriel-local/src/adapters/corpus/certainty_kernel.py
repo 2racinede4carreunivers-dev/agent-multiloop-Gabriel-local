@@ -208,7 +208,7 @@ class CertaintyKernel:
 
     def _add_distilled_invariants(self) -> None:
         """
-        DISTILLAT FINAL : les 5 invariants les plus utiles pour le debugger.
+        DISTILLAT FINAL : les certitudes les plus utiles pour le debugger.
         Citent toutes leurs sources d'origine pour la traçabilite.
         """
         self.certainties["KERNEL_INVARIANT_RECONSTRUCTION_1_2"] = Certainty(
@@ -253,6 +253,68 @@ class CertaintyKernel:
             provenance=["methode_spectral.thy::spectral_postulate_1_3"],
             domain="ratio_1_3",
             confidence=0.95,
+        )
+        # NOUVELLES CERTITUDES : Configurations spectrales (PDF p.26-29 + .thy)
+        self.certainties["KERNEL_CONFIG_1X1"] = Certainty(
+            key="KERNEL_CONFIG_1X1",
+            statement=(
+                "Configuration 1*1 (cas classique) : RsP(n1,n2) = (SA(n1)-SA(n2))/(SB(n1)-SB(n2)) = 1/2 "
+                "TOUJOURS, pour tout n1, n2 >= 1 avec n1 != n2."
+            ),
+            formula="RsP(n1,n2) = (SA(n1)-SA(n2)) / (SB(n1)-SB(n2)) = 1/2",
+            provenance=[
+                "methode_spectral.thy::RsP_un_demi_general (lemme prouve)",
+                "analyse_hypothese_riemann_savard.pdf::page_26",
+            ],
+            domain="ratio_1_2",
+            confidence=1.0,
+        )
+        self.certainties["KERNEL_CONFIG_NXN_SYM"] = Certainty(
+            key="KERNEL_CONFIG_NXN_SYM",
+            statement=(
+                "Configuration symetrique n*n : pour deux blocs A et B de meme longueur n>=2, "
+                "le rapport RsP_nn(A,B) = sum(SA(A)) / sum(SB(B)) est attendu proche de 1/2 "
+                "(generalisation du cas 1*1)."
+            ),
+            formula="RsP_nn(A,B) = sum_list(map SA A) / sum_list(map SB B), avec |A|=|B|",
+            provenance=[
+                "methode_spectral.thy::RsP_nn (definition formelle)",
+                "analyse_hypothese_riemann_savard.pdf::page_26",
+            ],
+            domain="ratio_1_2",
+            confidence=0.95,
+        )
+        self.certainties["KERNEL_CONFIG_ASYM_ORD"] = Certainty(
+            key="KERNEL_CONFIG_ASYM_ORD",
+            statement=(
+                "Configuration asymetrique ORDONNEE : |B| = |A|+1, listes en ordre chronologique "
+                "croissant strict, max(A) < min(B). Le rapport RsP_bloc(A,B) S'ECARTE de 1/2 "
+                "(par ex. -1/6 pour A=(2,3) B=(5,7,11)). Cet ecart est attribue a l'ordinal des infinis "
+                "(omega+1 != 1+omega) : numeriquement valide mais algebriquement incoherent."
+            ),
+            formula="|B|=|A|+1 ; A,B strict croissants ; max(A)<min(B) ; RsP_bloc != 1/2",
+            provenance=[
+                "methode_spectral.thy::asymetrique_ordonnee_nat",
+                "analyse_hypothese_riemann_savard.pdf::page_27 (exemple A=(2,3) B=(5,7,11))",
+            ],
+            domain="ratio_1_2",
+            confidence=1.0,
+        )
+        self.certainties["KERNEL_CONFIG_ASYM_CHAOS"] = Certainty(
+            key="KERNEL_CONFIG_ASYM_CHAOS",
+            statement=(
+                "Configuration asymetrique CHAOTIQUE : |A| != |B|, ordre quelconque. "
+                "Le rapport RsP_bloc(A,B) = (sum_SA(A)-sum_SA(B)) / (sum_SB(A)-sum_SB(B)) "
+                "REVIENT a 1/2 (avec faible reste numerique). Cela demontre que les premiers "
+                "conservent leur rapport spectral 1/2 meme dans une comparaison chaotique."
+            ),
+            formula="(sum_SA(A) - sum_SA(B)) / (sum_SB(A) - sum_SB(B)) ~= 1/2",
+            provenance=[
+                "methode_spectral.thy::RsP_bloc_1_2",
+                "analyse_hypothese_riemann_savard.pdf::page_28 (exemple chaotique = 0.498311)",
+            ],
+            domain="ratio_1_2",
+            confidence=1.0,
         )
         self.certainties["KERNEL_FALLBACK_PROCEDURE"] = Certainty(
             key="KERNEL_FALLBACK_PROCEDURE",

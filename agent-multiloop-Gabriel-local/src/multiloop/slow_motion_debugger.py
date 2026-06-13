@@ -289,6 +289,59 @@ class SlowMotionDebugger:
                 position = s.value
                 break
 
+        # NOUVEAU : intent ratio_spectral_nxn (configuration n*n avec tuples)
+        if dec.detected_intent in ("ratio_spectral_nxn", "ratio_spectral") \
+                and dec.tuple_A and dec.tuple_B:
+            try:
+                analysis = self.core.analyze_spectral_ratio(dec.tuple_A, dec.tuple_B)
+            except (ValueError, RuntimeError) as exc:
+                return {
+                    "summary": f"Calcul du rapport spectral impossible : {exc}",
+                    "value": None,
+                    "citations": [],
+                    "method": "spectral_core.analyze_spectral_ratio (erreur)",
+                }
+            if "error" in analysis:
+                return {
+                    "summary": f"Rapport spectral : {analysis['error']}",
+                    "value": None,
+                    "citations": [],
+                    "method": "spectral_core.analyze_spectral_ratio",
+                }
+            # Construire le resume
+            config = analysis["configuration"]
+            cfg_label = {
+                "1x1": "1*1 (cas classique)",
+                "symmetric_nxn": f"symetrique {analysis.get('A_indices', []).__len__()}*{analysis.get('B_indices', []).__len__()}",
+                "asym_ordonnee": "asymetrique ORDONNEE",
+                "asym_chaotique": "asymetrique CHAOTIQUE",
+            }.get(config, config)
+            mark = "= 1/2 EXACT" if analysis.get("matches_half") \
+                else "~= 1/2 (proche)" if analysis.get("near_half") \
+                else "ECARTE de 1/2"
+            summary = (
+                f"Rapport spectral configuration {cfg_label}.\n"
+                f"  A = {analysis['A_input']} (positions {analysis['A_positions']}, primes {analysis['A_primes']})\n"
+                f"  B = {analysis['B_input']} (positions {analysis['B_positions']}, primes {analysis['B_primes']})\n"
+                f"  RsP = {analysis['RsP_fraction']} (decimal {analysis['RsP_decimal']:.6f})  {mark}\n"
+                f"  Methode : {analysis['method']}"
+            )
+            citations = list(analysis.get("citations", []))
+            for key in ("KERNEL_CONFIG_1X1", "KERNEL_CONFIG_NXN_SYM",
+                        "KERNEL_CONFIG_ASYM_ORD", "KERNEL_CONFIG_ASYM_CHAOS"):
+                cert = self.kernel.get(key)
+                if cert and config in cert.statement.lower().replace(" ", "_").replace("*", "x"):
+                    citations.append(cert.cite())
+            return {
+                "summary": summary,
+                "value": analysis.get("RsP_fraction"),
+                "RsP_decimal": analysis.get("RsP_decimal"),
+                "configuration": config,
+                "analysis": analysis,
+                "citations": citations,
+                "method": analysis["method"],
+            }
+
         # Cas principal : reconstruction du N-ieme premier en rapport 1/2
         if dec.detected_intent == "reconstruction" and position is not None:
             ratio = dec.detected_ratio or "1/2"

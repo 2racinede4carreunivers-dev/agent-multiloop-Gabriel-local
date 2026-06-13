@@ -155,6 +155,186 @@ class SpectralMethodCore:
             f"digamma={data.digamma:.6f}"
         )
 
+    # ==========================================================
+    # NOUVELLES METHODES : Rapports Spectraux multi-configurations
+    # (cf. methode_spectral.thy::RsP, RsP_nn, RsP_bloc_1_2,
+    #      analyse_hypothese_riemann_savard.pdf::pages_26_a_29)
+    # ==========================================================
+
+    @staticmethod
+    def _SA_int(n: int) -> int:
+        """SA(n) exact en entier : (13 * 2^n) / 8 - 2."""
+        return (13 * (1 << n)) // 8 - 2
+
+    @staticmethod
+    def _SB_int(n: int) -> int:
+        """SB(n) exact en entier : (13 * 2^n) / 4 - 66."""
+        return (13 * (1 << n)) // 4 - 66
+
+    def primes_to_positions(self, primes_or_positions: List[int]) -> Tuple[List[int], List[bool]]:
+        """
+        Convertit une liste pouvant melanger primes et positions en positions.
+        Retourne (positions, is_prime_input) ou is_prime_input[i] indique si
+        la valeur etait un prime (vs une position) a l'index i.
+        """
+        positions = []
+        is_prime_flags = []
+        for v in primes_or_positions:
+            if 1 <= v <= len(self.prime_list):
+                # Ambigu : on prefere position si v est <= taille de la table.
+                # Mais si v figure aussi dans la table en tant que prime, on peut basculer.
+                # Regle : si v EST un prime present dans la table ET v > taille / 4,
+                # on l'interprete comme prime. Sinon comme position.
+                # En pratique, dans la doc, l'utilisateur ecrit toujours les
+                # PRIMES (ex: (2,3) bloc A signifie premiers 2 et 3).
+                if v in self.prime_list:
+                    positions.append(self.prime_list.index(v) + 1)
+                    is_prime_flags.append(True)
+                else:
+                    positions.append(v)
+                    is_prime_flags.append(False)
+            elif v in self.prime_list:
+                positions.append(self.prime_list.index(v) + 1)
+                is_prime_flags.append(True)
+            else:
+                raise ValueError(f"Valeur {v} : ni un prime connu ni une position 1..{len(self.prime_list)}")
+        return positions, is_prime_flags
+
+    def classify_configuration(self, A: List[int], B: List[int]) -> str:
+        """
+        Identifie le type de configuration spectrale :
+          - "1x1"             : |A|=|B|=1 (cas classique RsP)
+          - "symmetric_nxn"   : |A|=|B|=n avec n>1
+          - "asym_ordonnee"   : |B|=|A|+1 et listes strictement croissantes avec max(A)<min(B)
+          - "asym_chaotique"  : |A|!=|B| autres cas
+          - "unknown"         : aucun motif valide
+        """
+        if len(A) == 1 and len(B) == 1:
+            return "1x1"
+        if len(A) == len(B) and len(A) >= 2:
+            return "symmetric_nxn"
+        if len(B) == len(A) + 1 and all(A[i] < A[i+1] for i in range(len(A)-1)) \
+                and all(B[i] < B[i+1] for i in range(len(B)-1)) \
+                and (not A or not B or A[-1] < B[0]):
+            return "asym_ordonnee"
+        if len(A) != len(B):
+            return "asym_chaotique"
+        return "unknown"
+
+    def compute_RsP_nn(self, A_indices: List[int], B_indices: List[int]) -> Dict:
+        """
+        Rapport spectral symetrique n*n (cf. methode_spectral.thy::RsP_nn).
+        
+            RsP_nn(A, B) = sum(SA(a) for a in A) / sum(SB(b) for b in B)
+        
+        Pour configurations |A|=|B| (1*1, 2*2, 3*3, etc.).
+        """
+        sa_sum = sum(self._SA_int(a) for a in A_indices)
+        sb_sum = sum(self._SB_int(b) for b in B_indices)
+        if sb_sum == 0:
+            return {"error": "denominateur SB = 0", "A": A_indices, "B": B_indices}
+        # Fraction exacte
+        from fractions import Fraction
+        frac = Fraction(sa_sum, sb_sum)
+        decimal = sa_sum / sb_sum
+        return {
+            "configuration": "symmetric_nxn" if len(A_indices) > 1 else "1x1",
+            "A_indices": A_indices,
+            "B_indices": B_indices,
+            "SA_values": [self._SA_int(a) for a in A_indices],
+            "SB_values": [self._SB_int(b) for b in B_indices],
+            "sum_SA": sa_sum,
+            "sum_SB": sb_sum,
+            "RsP_fraction": f"{frac.numerator}/{frac.denominator}",
+            "RsP_decimal": decimal,
+            "matches_half": frac == Fraction(1, 2),
+            "near_half": abs(decimal - 0.5) < 0.05,
+            "method": "RsP_nn (methode_spectral.thy:155-160)",
+        }
+
+    def compute_RsP_bloc_asym(self, A_indices: List[int], B_indices: List[int]) -> Dict:
+        """
+        Rapport spectral de blocs asymetrique (cf. methode_spectral.thy::RsP_bloc_1_2).
+        
+            RsP_bloc(A, B) = (sum(SA(A)) - sum(SA(B))) / (sum(SB(A)) - sum(SB(B)))
+        
+        Utilise pour les configurations chaotiques et ordonnees ou |A| != |B|.
+        Formule du PDF pages 27-29 : "(11-50) / (-40-38) = 1/2".
+        """
+        from fractions import Fraction
+        sa_A = sum(self._SA_int(a) for a in A_indices)
+        sa_B = sum(self._SA_int(b) for b in B_indices)
+        sb_A = sum(self._SB_int(a) for a in A_indices)
+        sb_B = sum(self._SB_int(b) for b in B_indices)
+        num = sa_A - sa_B
+        den = sb_A - sb_B
+        if den == 0:
+            return {"error": "denominateur (sum_SB_A - sum_SB_B) = 0",
+                    "A": A_indices, "B": B_indices}
+        frac = Fraction(num, den)
+        decimal = num / den
+        config = self.classify_configuration(A_indices, B_indices)
+        return {
+            "configuration": config,
+            "A_indices": A_indices,
+            "B_indices": B_indices,
+            "sum_SA_A": sa_A, "sum_SA_B": sa_B,
+            "sum_SB_A": sb_A, "sum_SB_B": sb_B,
+            "numerator": num, "denominator": den,
+            "RsP_fraction": f"{frac.numerator}/{frac.denominator}",
+            "RsP_decimal": decimal,
+            "matches_half": frac == Fraction(1, 2),
+            "near_half": abs(decimal - 0.5) < 0.05,
+            "method": "RsP_bloc_1_2 (methode_spectral.thy:1136-1139)",
+        }
+
+    def analyze_spectral_ratio(self, A: List[int], B: List[int]) -> Dict:
+        """
+        Point d'entree unifie : prend deux listes (positions OU primes)
+        et determine automatiquement la configuration + calcule le rapport
+        approprie.
+        
+        Returns: rapport complet avec configuration, valeurs, RsP, citations.
+        """
+        # Convertit primes -> positions
+        A_pos, A_was_prime = self.primes_to_positions(A)
+        B_pos, B_was_prime = self.primes_to_positions(B)
+        config = self.classify_configuration(A_pos, B_pos)
+
+        if config in ("1x1", "symmetric_nxn"):
+            result = self.compute_RsP_nn(A_pos, B_pos)
+            citations = [
+                "methode_spectral.thy::RsP_def (cas 1x1)",
+                "methode_spectral.thy::RsP_nn (generalisation symetrique)",
+                "analyse_hypothese_riemann_savard.pdf::page_26 (comparaison 1*1)",
+            ]
+        elif config in ("asym_ordonnee", "asym_chaotique"):
+            result = self.compute_RsP_bloc_asym(A_pos, B_pos)
+            citations = [
+                "methode_spectral.thy::RsP_bloc_1_2 (asymetrie)",
+                "analyse_hypothese_riemann_savard.pdf::page_27 (asym ordonnee)",
+                "analyse_hypothese_riemann_savard.pdf::page_28 (asym chaotique)",
+            ]
+        else:
+            return {
+                "error": f"Configuration non reconnue (|A|={len(A_pos)}, |B|={len(B_pos)})",
+                "A_input": A, "B_input": B,
+                "A_positions": A_pos, "B_positions": B_pos,
+            }
+
+        # Reverse lookup : positions -> primes pour affichage
+        result["A_input"] = A
+        result["B_input"] = B
+        result["A_positions"] = A_pos
+        result["B_positions"] = B_pos
+        result["A_primes"] = [self.prime_list[p - 1] for p in A_pos]
+        result["B_primes"] = [self.prime_list[p - 1] for p in B_pos]
+        result["A_was_prime_input"] = A_was_prime
+        result["B_was_prime_input"] = B_was_prime
+        result["citations"] = citations
+        result["expected_ratio"] = "1/2"
+        return result
+
 class AntiHallucinationValidator:
     def __init__(self):
         self.core = SpectralMethodCore()

@@ -133,6 +133,58 @@ def build_grounded_system_prompt(extra_context: str = "") -> str:
         "Ta mission : repondre avec precision en t'appuyant STRICTEMENT sur les formules et chiffres fournis.\n\n"
         + SPECTRAL_KNOWLEDGE_FR
         + "\n"
+        + SPECTRAL_RATIO_CONFIGURATIONS
+        + "\n"
         + SPECTRAL_TONE_GUIDE
         + ("\n\n=== CONTEXTE COMPLEMENTAIRE ===\n" + extra_context if extra_context else "")
     )
+
+
+SPECTRAL_RATIO_CONFIGURATIONS = """
+=== RAPPORT SPECTRAL : 4 CONFIGURATIONS POSSIBLES ===
+
+Le rapport spectral RsP peut etre calcule selon 4 configurations distinctes,
+toutes documentees dans methode_spectral.thy et le PDF d'analyse pages 26-29 :
+
+1. CONFIGURATION 1*1 (cas classique, PROUVE EN ISABELLE) :
+   - Deux positions n1 et n2 distinctes (n1 != n2, n1 >= 1, n2 >= 1)
+   - RsP(n1, n2) = (SA(n1) - SA(n2)) / (SB(n1) - SB(n2)) = 1/2 TOUJOURS
+   - Source : methode_spectral.thy::RsP_un_demi_general (lemme prouve)
+   - PDF page 26 : "(3.25*2^n1 - 2) - (3.25*2^n2 - 2) / (6.5*2^n1 - 66) - (6.5*2^n2 - 66) = 1/2"
+
+2. CONFIGURATION n*n SYMETRIQUE (generalisation, n>=2) :
+   - Deux blocs A et B de MEME LONGUEUR n (ex : 3*3 = 3 vs 3)
+   - RsP_nn(A, B) = sum_list(map SA A) / sum_list(map SB B)
+   - Attendu : proche de 1/2 (le rapport spectral est conserve)
+   - Source : methode_spectral.thy::RsP_nn (definition formelle)
+
+3. CONFIGURATION ASYMETRIQUE ORDONNEE :
+   - |B| = |A| + 1 (B a EXACTEMENT un element de plus)
+   - A et B en ordre chronologique CROISSANT STRICT
+   - max(A) < min(B) (decalage chronologique)
+   - RsP_bloc(A,B) = (sum_SA(A) - sum_SA(B)) / (sum_SB(A) - sum_SB(B))
+   - Attendu : S'ECARTE de 1/2 (ex : -1/6 pour A=(2,3) B=(5,7,11))
+   - INTERPRETATION : l'ecart est du a l'ordinal des infinis (omega+1 != 1+omega).
+     Numeriquement valide mais algebriquement incoherent.
+   - Source : methode_spectral.thy::asymetrique_ordonnee_nat, PDF page 27
+
+4. CONFIGURATION ASYMETRIQUE CHAOTIQUE :
+   - |A| != |B|, ordre quelconque (pas d'ordre chronologique impose)
+   - RsP_bloc(A,B) = (sum_SA(A) - sum_SA(B)) / (sum_SB(A) - sum_SB(B))
+   - Attendu : REVIENT a 1/2 (avec faible reste numerique)
+   - Source : methode_spectral.thy::RsP_bloc_1_2, PDF page 28
+   - Exemple : A=(3,23) B=(41,29,31) -> RsP = 0.4983112709
+
+REGLE D'AUTO-SELECTION :
+   - Si la question contient deux tuples (a,b,c) et (d,e,f) de meme longueur n :
+     -> Configuration n*n SYMETRIQUE -> appliquer RsP_nn
+   - Si les tuples ont des longueurs differentes et sont croissants avec decalage :
+     -> Configuration asymetrique ORDONNEE -> appliquer RsP_bloc
+   - Sinon, si longueurs differentes :
+     -> Configuration asymetrique CHAOTIQUE -> appliquer RsP_bloc
+
+ATTENTION : les valeurs (a,b,c) dans les tuples sont GENERALEMENT des NOMBRES PREMIERS
+(et non des positions). Convertir d'abord en positions via reverse lookup
+dans la table des 1000 premiers premiers.
+"""
+

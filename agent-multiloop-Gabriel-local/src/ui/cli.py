@@ -11,6 +11,7 @@ from rich.text import Text
 from ..core.config import load_config
 from ..core.orchestrator import Orchestrator
 from ..core.types import FinalAnswer
+from .ci_status import run_pytest_local
 from .debug_session import DebugSession, MAX_REQUEST_CHARS, MAX_COMMENT_CHARS
 
 
@@ -47,6 +48,7 @@ HELP_TEXT = """
   citer <id> [fmt] Genere une citation (fmt = markdown | latex | text)
   contexte         Affiche le contexte mathematique actuel
   memoire          Affiche les echanges en memoire
+  ci               Lance la suite pytest locale (161 tests) et affiche le rapport
   version          Affiche la version
 
   Domaines supportes :
@@ -97,6 +99,22 @@ class CLIInterface:
             return True
         if c == "version":
             console.print(f"\n  Multi-Loop Math Agent v{self.VERSION}\n", style="green")
+            return True
+        if c in {"ci", "tests", "pytest"}:
+            console.print("\n  [dim]Execution de la suite pytest locale (tests/)... patientez quelques secondes.[/dim]\n")
+            summary = run_pytest_local()
+            body = (
+                f"  Tests passes  : [bold]{summary.passed}[/bold]\n"
+                f"  Echecs        : [bold]{summary.failed}[/bold]\n"
+                f"  Erreurs       : [bold]{summary.errors}[/bold]\n"
+                f"  Ignores       : [bold]{summary.skipped}[/bold]\n"
+                f"  Total         : [bold]{summary.total}[/bold]\n"
+                f"  Duree         : [bold]{summary.duration_s:.2f}s[/bold]\n"
+                f"  Statut        : [{summary.style}]{summary.badge}[/{summary.style}]\n"
+                f"\n  [dim]Sortie pytest (queue) :[/dim]\n  [dim]{summary.raw_tail}[/dim]"
+            )
+            title = "[green]CI - Tests Gabriel[/green]" if summary.ok else "[red]CI - Tests Gabriel[/red]"
+            console.print(Panel(body, title=title, border_style="green" if summary.ok else "red"))
             return True
         if c == "corpus":
             console.print("\n  " + self.orchestrator.pipeline.corpus.summary() + "\n", style="cyan")
@@ -564,6 +582,19 @@ class CLIInterface:
 
     async def interactive_mode(self) -> None:
         self.banner()
+        # Affichage du statut CI dans l'en-tete d'ouverture (tests pytest locaux)
+        console.print("  [dim]Verification de la suite de tests (pytest local)...[/dim]")
+        try:
+            ci_summary = run_pytest_local(timeout_s=60)
+            status_line = (
+                f"  [bold]Statut CI Gabriel :[/bold] "
+                f"[{ci_summary.style}]{ci_summary.badge}[/{ci_summary.style}] "
+                f"[dim](pytest local, {ci_summary.duration_s:.2f}s - tapez 'ci' pour le rapport detaille)[/dim]"
+            )
+        except Exception as exc:
+            logger.warning("Impossible d'executer pytest a l'ouverture : %s", exc)
+            status_line = "  [yellow]Statut CI Gabriel : indisponible (pytest a echoue au demarrage)[/yellow]"
+        console.print(status_line)
         console.print(f"\n  Agent Multi-Loop pret. Bonjour {self.user_name} !", style="bold")
         console.print("  Tapez 'aide' pour les commandes, 'quitter' pour sortir.\n", style="dim")
         console.print("  " + "-" * 56)

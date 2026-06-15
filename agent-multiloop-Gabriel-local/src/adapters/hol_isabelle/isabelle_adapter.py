@@ -41,21 +41,40 @@ class IsabelleAdapter:
         model: str,
         SA_val: int | float,
         SB_val: int | float,
-        digamma_val: int | float,
+        digamma_val: int | float = None,
     ) -> str:
-        """Genere un .thy minimal pour verifier l'equation prime_equation."""
-        return f"""theory {theory_name}
+        """Genere un .thy minimal pour verifier l'equation prime_equation.
+        
+        CORRECTION MAJEURE (2026-06-14):
+        - digamma_val doit TOUJOURS être calculé comme SB(n) - 64*p
+        - Si digamma_val == p, c'est une erreur (le bug qui persistait)
+        - On force le recalcul et loggons un avertissement
+        """
+        
+        # DÉTECTION ET CORRECTION DU BUG
+        if digamma_val is None or digamma_val == p:
+            logger.warning(
+                f"⚠️ BUG DÉTECTÉ: digamma_val={digamma_val} pour n={n}, p={p}. "
+                f"C'est incorrect! digamma doit = SB(n) - 64*p, pas p."
+            )
+            digamma_val = SB_val - 64 * p
+            logger.info(
+                f"✓ CORRECTION: digamma_val recalculé = {SB_val} - 64*{p} = {digamma_val}"
+            )
+        
+        script = f"""theory {theory_name}
   imports methode_spectral
 begin
 
 (* Script genere automatiquement pour verifier le premier {p} avec n={n} *)
+(* 
+   FORMULES SPECTRALES:
+   SA(n) = (3.25/2) × 2^n - 2
+   SB(n) = (6.5/2) × 2^n - 66
+   digamma(n,p) = SB(n) - 64×p  [FORMULE CORRECTE - PAS juste p!]
+*)
 
 section "Verification {p} via modele {model}"
-
-lemma verif_premier_{p}_n_{n}:
-  "prime_equation {n} {p} = real {p}"
-  unfolding prime_equation_def digamma_calc_def
-  by simp
 
 lemma SA_n_{n}_valeur:
   "SA {n} = {SA_val}"
@@ -67,10 +86,28 @@ lemma SB_n_{n}_valeur:
 
 lemma digamma_calc_n_{n}_p_{p}:
   "digamma_calc {n} {p} = {digamma_val}"
-  unfolding digamma_calc_def SB_def by simp
+  unfolding digamma_calc_def SB_def
+  by (simp add: diff_eq_iff_eq_add)
+
+lemma verif_premier_{p}_n_{n}:
+  "prime_equation {n} {p} = real {p}"
+  unfolding prime_equation_def
+  by (simp add: SA_n_{n}_valeur SB_n_{n}_valeur digamma_calc_n_{n}_p_{p})
+
+(* Verification arithmetique detaillee *)
+lemma digamma_calculation_detail:
+  "SB {n} - 64 * {p} = {digamma_val}"
+  unfolding SB_def
+  by (norm_num; ring)
+
+(* Invariant critique *)
+lemma position_invariant:
+  "position {p} = {n}"
+  by simp
 
 end
 """
+        return script
 
     def write_script(self, theory_name: str, content: str) -> Path:
         """Ecrit le .thy genere dans theory_dir."""

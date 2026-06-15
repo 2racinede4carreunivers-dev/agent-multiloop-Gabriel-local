@@ -56,7 +56,7 @@ HELP_TEXT = """
   citer <id> [fmt] Genere une citation (fmt = markdown | latex | text)
   contexte         Affiche le contexte mathematique actuel
   memoire          Affiche les echanges en memoire
-  ci               Lance la suite pytest locale (186 tests) et affiche le rapport
+  ci               Lance la suite pytest locale (230 tests) et affiche le rapport
   version          Affiche la version
 
   Domaines supportes :

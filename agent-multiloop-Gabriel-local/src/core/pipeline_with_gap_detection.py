@@ -100,29 +100,198 @@ class PipelineWithGapDetection:
     ) -> FinalAnswer:
         """
         Processus amélioré :
-          1. Détecter si c'est une question d'écart
-          2. Si OUI : résoudre directement via GapSolver (pas multiloop)
-          3. Si NON : exécuter pipeline standard
+          0. Détecter si c'est une demande de VISUALISATION (auto-trigger graphique)
+          1. Détecter si c'est une question d'écart (GAP)
+          2. Si OUI à 0 ou 1 : résoudre directement (pas multiloop, certitude 1.0)
+          3. Sinon : pipeline standard
         """
         qid = uuid.uuid4().hex[:8]
-        
+
+        # --- 0) AUTO-TRIGGER VISUALISATION ---
+        viz_answer = self._try_visualization(qid, question)
+        if viz_answer is not None:
+            return viz_answer
+
+        # --- 1) ÉCART (GAP) ---
         is_gap, gap_type, numbers = detect_gap_from_question(question)
-        
+
         if is_gap and gap_type and len(numbers) >= 2:
             logger.info(f"Q[{qid}] ÉCART DÉTECTÉ : {gap_type}")
-            
+
             p1, p2 = numbers[0], numbers[1]
             gap_result = self.gap_solver.solve_gap(p1, p2)
-            
+
             if gap_result is not None:
                 logger.info(f"Q[{qid}] Écart résolu : {gap_result.gap_count} nombres")
                 answer = self._build_gap_answer(qid, question, gap_result)
                 return answer
             else:
                 logger.error(f"Q[{qid}] GapSolver échoué pour {gap_type}")
-        
+
+        # --- 2) PIPELINE STANDARD ---
         logger.info(f"Q[{qid}] Pas d'écart détecté, pipeline standard")
         return await self.pipeline.process(question)
+
+    def _try_visualization(self, qid: str, question: str) -> Optional[FinalAnswer]:
+        """Detecte et execute une visualisation si la question le demande.
+
+        Returns: FinalAnswer si une visualisation a ete generee, None sinon.
+        """
+        try:
+            from ..visualization import detect_visualization_intent
+        except ImportError as exc:
+            logger.warning(f"Q[{qid}] Module visualization indisponible : {exc}")
+            return None
+
+        intent = detect_visualization_intent(question)
+        if intent is None:
+            return None
+
+        logger.info(
+            f"Q[{qid}] VISUALISATION DETECTEE : {intent.kind.value} "
+            f"n={intent.n_min}..{intent.n_max} png={intent.want_png}"
+        )
+
+        try:
+            return self._build_visualization_answer(qid, question, intent)
+        except Exception as exc:
+            logger.error(f"Q[{qid}] Echec generation visualisation : {exc}", exc_info=True)
+            return None
+
+    def _build_visualization_answer(
+        self, qid: str, question: str, intent
+    ) -> FinalAnswer:
+        """Calcule la courbe demandee et construit un FinalAnswer riche."""
+        from pathlib import Path
+        from ..core.types import CandidateAnswer
+        from ..visualization import (
+            compute_curve, render_ascii, render_png, MATPLOTLIB_AVAILABLE,
+        )
+
+        # Calcul (entiers exacts)
+        curve = compute_curve(
+            self.pipeline.spectral_core,
+            intent.kind,
+            intent.n_min,
+            intent.n_max,
+            scale="auto",
+        )
+
+        # Rendu ASCII inclus dans la reponse texte
+        ascii_view = render_ascii(curve, width=70, height=16)
+
+        # PNG optionnel
+        png_path: Optional[Path] = None
+        if intent.want_png and MATPLOTLIB_AVAILABLE:
+            try:
+                png_path = render_png(curve, output_dir=Path("data/graphs"), dpi=150)
+                logger.info(f"Q[{qid}] PNG genere : {png_path}")
+            except Exception as exc:
+                logger.warning(f"Q[{qid}] PNG echec : {exc}")
+
+        # Construction du texte de reponse
+        text_lines = [
+            f"### Visualisation auto-generee : {curve.kind.value} (n={intent.n_min}..{intent.n_max})",
+            "",
+            f"**Detection** : {intent.reasoning}",
+            "",
+            "```",
+            ascii_view,
+            "```",
+            "",
+        ]
+        summary = curve.summary()
+        text_lines.extend([
+            "**Resume statistique** :",
+            f"  - Points calcules : {summary['n_points']}",
+            f"  - Echelle : {summary['scale']}",
+            f"  - y(n={summary['n_min']}) = {summary['y_first']:.6g}",
+            f"  - y(n={summary['n_max']}) = {summary['y_last']:.6g}",
+            f"  - y_min = {summary['y_min']:.6g}    y_max = {summary['y_max']:.6g}",
+            "",
+            f"**Formule** : {curve.formula}",
+            "",
+        ])
+        if png_path:
+            text_lines.append(f"**PNG exporte** : `{png_path}` (qualite article scientifique, 150 dpi)")
+            text_lines.append("")
+        text_lines.append(
+            "_Astuce_ : pour controle complet, utilisez la commande explicite "
+            f"`courbe {curve.kind.value} {intent.n_min}..{intent.n_max} --table --png`"
+        )
+        answer_text = "\n".join(text_lines)
+
+        # Audit citable
+        try:
+            from ..audit import AuditStore as _AS
+            store = self.pipeline.audit_store
+            record = _AS.build_record(
+                intervention_type="visualization_auto",
+                question=question,
+                certified_answer=(
+                    f"Visualisation auto-declenchee : courbe {curve.kind.value} "
+                    f"sur n={intent.n_min}..{intent.n_max} (echelle {curve.scale}). "
+                    f"Formule : {curve.formula}."
+                ),
+                position=intent.n_min,
+                prime_value=self.pipeline.spectral_core.get_prime_at_position(intent.n_min),
+                citations_thy=[
+                    "methode_spectral.thy::SA_def",
+                    "methode_spectral.thy::SB_def",
+                    "geometrie_spectre_premier.thy::D_def",
+                ],
+                toolkit_reports={
+                    "visualization_auto": {
+                        "intent": {
+                            "kind": curve.kind.value,
+                            "n_min": intent.n_min, "n_max": intent.n_max,
+                            "want_png": intent.want_png,
+                            "confidence": intent.confidence,
+                            "reasoning": intent.reasoning,
+                            "matched_keywords": intent.matched_keywords,
+                        },
+                        "curve_summary": summary,
+                        "png_path": str(png_path) if png_path else None,
+                    }
+                },
+                ratio="1/2",
+            )
+            store.save(record)
+            answer_text += f"\n\n_Audit citable cree : id={record.id}_"
+        except Exception as exc:
+            logger.warning(f"Q[{qid}] Audit non sauvegarde : {exc}")
+
+        candidate = CandidateAnswer(
+            iteration=1,
+            text=answer_text,
+            structured_data={
+                "viz_kind": curve.kind.value,
+                "n_min": intent.n_min, "n_max": intent.n_max,
+                "n_points": summary["n_points"],
+                "scale": curve.scale,
+                "y_first": summary["y_first"],
+                "y_last": summary["y_last"],
+                "formula": curve.formula,
+                "png_path": str(png_path) if png_path else None,
+                "confidence": intent.confidence,
+            },
+            score=10.0,
+            critique="Visualisation auto-declenchee (deterministe, pas LLM)",
+            grounded=True,
+            used_engines=["auto_trigger", "spectral_core", "visualization"],
+        )
+
+        return FinalAnswer(
+            question_id=qid,
+            answer_text=answer_text,
+            structured_data=candidate.structured_data,
+            confidence=1.0,
+            iterations_used=1,
+            best_score=10.0,
+            candidates=[candidate],
+            explanation=f"Visualisation deterministe : {intent.reasoning}",
+        )
+
     
     def _build_gap_answer(self, qid: str, question: str, result: GapResult) -> FinalAnswer:
         """Convertit GapResult en FinalAnswer."""

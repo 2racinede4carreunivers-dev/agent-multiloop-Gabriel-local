@@ -4,7 +4,7 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v2.1 — 186/186 tests Pytest ✅ — Certifié 8/8 capacités utilisateur**
+**Production-Ready v2.2 — 230/230 tests Pytest ✅ — Auto-trigger visualisation operationnel**
 
 ## Architecture
 ```
@@ -46,6 +46,20 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 - Corpus mathématique intégré + Slow Motion Debugging + Meta-Learning + CI
 
 ## Changelog
+
+### [2026-02-15] Auto-trigger LLM Visualisation
+- Nouveau module `src/visualization/auto_trigger.py`
+  - `detect_visualization_intent(question) -> VisualizationIntent | None`
+  - **100% deterministe** (regex + mots-cles), aucun appel LLM, zero hallucination
+  - Detection en francais : verbes (trace/dessine/illustre/visualise/evolue/converge...), types (SA/SB/digamma/ratio/gap/invariant/prime), intervalles ("n=1..50", "de 1 a 100", "entre 5 et 25", "100 premiers", "[1,200]"), intention PNG ("article scientifique", "exporte", "image")
+  - Gere les accents, casse, ponctuation
+- Integration dans `PipelineWithGapDetection.process()` AVANT detection gap et pipeline standard
+  - Si visualisation detectee : courbe calculee + ASCII inclus dans la reponse + PNG optionnel + audit JSON citable signe
+  - Si non : flux normal (gap detection puis multiloop)
+- Exemple end-to-end teste :
+  - Question : "Peux-tu tracer la convergence du ratio SA/SB sur 1..50 et exporter un PNG pour mon article scientifique ?"
+  - Reponse : courbe ASCII + chiffres + PNG cree + audit `aa41c24a` (0 LLM consomme)
+- **44 tests pytest ajoutes** (`test_auto_trigger.py`) — 35 cas positifs, 9 cas negatifs, robustesse accents/casse
 
 ### [2026-02-15] Module Visualisation (3 formats combinés)
 - Nouveau module `src/visualization/` (data-centric)

@@ -26,6 +26,7 @@ from .curves import (
 from .ascii_renderer import render_ascii
 from .rich_renderer import render_table
 from .png_renderer import render_png, MATPLOTLIB_AVAILABLE
+from .auto_trigger import VisualizationIntent, detect_visualization_intent
 
 __all__ = [
     "CurveData",
@@ -37,4 +38,6 @@ __all__ = [
     "render_table",
     "render_png",
     "MATPLOTLIB_AVAILABLE",
+    "VisualizationIntent",
+    "detect_visualization_intent",
 ]

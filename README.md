@@ -1,10 +1,10 @@
 # Here are your Instructions
 Agent Multiloop Gabriel (Mm.)
 Assistant mathématique spécialisé en méthode spectrale et Isabelle/HOL
-📘 Présentation
+ Présentation
 L’Agent Multiloop Gabriel est un assistant mathématique avancé conçu pour soutenir le développement de la théorie originale de Philippe Thomas Savard :
 
-📗 L’Univers est au Carré
+ L’Univers est au Carré
 👉 Dépôt complet :
 https://github.com/2racinede4carreunivers-dev/Theorie-mathematique-philippe-thomas-savard-2026.git
 
@@ -18,7 +18,7 @@ la théorie des nombres
 
 une approche innovante de l’hypothèse de Riemann
 
-🎯 Objectif de l’agent
+ Objectif de l’agent
 L’Agent Multiloop Gabriel (Mm.) a été créé pour :
 
 assister dans la génération de scripts Isabelle/HOL
@@ -33,7 +33,7 @@ explorer les concepts de la théorie L’Univers est au Carré
 
 accélérer la recherche et la formalisation mathématique
 
-🔁 Fonctionnement multiloop
+ Fonctionnement multiloop
 L’agent utilise un moteur de raisonnement récursif :
 
 3 itérations maximum par requête
@@ -46,7 +46,7 @@ validation croisée avec Isabelle/HOL
 
 spécialisation dans methode_spectral.thy
 
-🧩 Fichiers HOL/Isabelle supportés
+ Fichiers HOL/Isabelle supportés
 Les trois fichiers principaux de la théorie :
 
 methode_spectral.thy
@@ -57,7 +57,7 @@ analyse_geometrie_spectre_premier.thy
 
 L’agent est optimisé pour travailler avec ces fichiers et leurs structures internes.
 
-🧠 Technologies
+ Technologies
 Python 3.11
 
 Docker / Docker Compose
@@ -74,12 +74,12 @@ Multi-loop reasoning engine
 
 Méthode Spectrale (HOL)
 
-🚀 Installation
+ Installation
 bash
 git clone https://github.com/2racinede4carreunivers-dev/agent-multiloop-Gabriel-local.git
 cd agent-multiloop-Gabriel-local
 docker compose up --build
-🔧 Configuration .env
+ Configuration .env
 Variables principales :
 
 Code
@@ -91,11 +91,11 @@ DEFAULT_LANGUAGE=fr
 AGENT_USERNAME=Philippe
 MULTILOOP_MAX_ITERATIONS=3
 MULTILOOP_MIN_SCORE=0.8
-📜 Licence
+ Licence
 Projet distribué sous licence Apache 2.0.
 Vous pouvez cloner, modifier, partager et contribuer librement.
 
-👋 Auteur
+ Auteur
 Philippe Thomas Savard  
 Créateur de :
 

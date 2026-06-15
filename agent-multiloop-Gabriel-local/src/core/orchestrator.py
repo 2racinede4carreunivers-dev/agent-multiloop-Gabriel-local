@@ -5,6 +5,7 @@ import logging
 from typing import Any
 
 from .pipeline import Pipeline
+from .pipeline_with_gap_detection import PipelineWithGapDetection
 from .types import FinalAnswer
 
 
@@ -16,8 +17,12 @@ class Orchestrator:
 
     def __init__(self, config: dict[str, Any]):
         self.config = config
-        self.pipeline = Pipeline(config)
+        base_pipeline = Pipeline(config)
+        # CORRECTION : Wrapper le pipeline avec détection d'écart
+        # Cela force la détection des écarts AVANT le multiloop
+        self.pipeline = PipelineWithGapDetection(base_pipeline)
         self.memory: list[dict[str, str]] = []
+        logger.info("✓ Orchestrator with GapDetection initialized")
 
     async def ask(self, question: str) -> FinalAnswer:
         result = await self.pipeline.process(question)

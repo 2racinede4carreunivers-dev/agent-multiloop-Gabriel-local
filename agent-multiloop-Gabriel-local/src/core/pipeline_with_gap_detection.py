@@ -74,6 +74,24 @@ class PipelineWithGapDetection:
         self.pipeline = base_pipeline
         self.gap_solver = GapSolver(spectral_core=base_pipeline.spectral_core)
         logger.info("✓ PipelineWithGapDetection initialized")
+
+    def __getattr__(self, name):
+        """Delegation transparente vers le pipeline de base.
+
+        Permet a l'UI / aux autres modules d'acceder a `spectral_core`,
+        `audit_store`, `corpus`, `verification_loop`, etc. sans connaitre
+        ce wrapper. Toute commande historique du CLI continue de fonctionner.
+        """
+        # __getattr__ n'est appele que si l'attribut n'existe pas sur self.
+        # On evite la recursion infinie si self.pipeline n'est pas encore set.
+        if name == "pipeline":
+            raise AttributeError(name)
+        try:
+            return getattr(self.pipeline, name)
+        except AttributeError:
+            raise AttributeError(
+                f"'PipelineWithGapDetection' et son base_pipeline n'ont pas d'attribut '{name}'"
+            )
     
     async def process(
         self,

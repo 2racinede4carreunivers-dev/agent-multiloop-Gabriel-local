@@ -40,6 +40,14 @@ HELP_TEXT = """
   rsp <A> <B>      Rapport spectral direct (auto-detect 1x1, nxn, chaos, ord)
   rsp-test <cfg> <N>  N tests aleatoires de config (1x1|sym2|sym3|sym5|chaos|ord)
   rsp-courbe <cfg> [kmax]  Courbe ASCII RsP en fonction de k (config: 1x1|sym|chaos|ord)
+  courbe <type> <n1>..<n2> [--table] [--png] [--scale=X]
+                   Trace une courbe ASCII (toujours) + tableau Rich (--table)
+                   + export PNG citable (--png).
+                   Types : SA | SB | SA_SB | digamma | invariant | ratio | gap | prime
+                   Echelle : auto (defaut) | linear | log10 | log2
+                   Exemples : 'courbe SA_SB 1..50 --png',
+                              'courbe ratio 1..200 --table --png',
+                              'courbe digamma 1..30 --table'
   debug "<q>"      Mode debugger manuel pedagogique (decompose, bypass, comment)
   verifier <N>     Validation toolkit + creation d'audit citable (rapport 1/2)
   valider <N>      Boucle complete Wolfram <-> Gabriel <-> Isabelle (.thy auto-compile)
@@ -48,7 +56,7 @@ HELP_TEXT = """
   citer <id> [fmt] Genere une citation (fmt = markdown | latex | text)
   contexte         Affiche le contexte mathematique actuel
   memoire          Affiche les echanges en memoire
-  ci               Lance la suite pytest locale (161 tests) et affiche le rapport
+  ci               Lance la suite pytest locale (186 tests) et affiche le rapport
   version          Affiche la version
 
   Domaines supportes :
@@ -243,6 +251,8 @@ class CLIInterface:
                 border_style="cyan",
             ))
             return True
+        if c.startswith("courbe"):
+            return await self._handle_courbe(cmd)
         if c.startswith("rsp-test"):
             parts = cmd.strip().split()
             if len(parts) < 3:
@@ -553,6 +563,132 @@ class CLIInterface:
             ))
             return True
         return False
+
+    async def _handle_courbe(self, cmd: str) -> bool:
+        """Commande `courbe <type> <n_min>..<n_max> [--table] [--png] [--scale=...]`.
+
+        Types : SA, SB, SA_SB, digamma, invariant, ratio, gap, prime.
+        Flags :
+          --table    : ajoute un tableau Rich apres l'ASCII.
+          --png      : exporte un PNG haute resolution + cree un audit JSON citable.
+          --scale=X  : force l'echelle (linear|log10|log2|auto, defaut: auto).
+        """
+        from pathlib import Path as _Path
+        from src.visualization import (
+            compute_curve, render_ascii, render_table, render_png,
+            list_supported_kinds, MATPLOTLIB_AVAILABLE,
+        )
+
+        tokens = cmd.strip().split()
+        if len(tokens) < 3:
+            console.print(
+                "\n  [yellow]Usage : courbe <type> <n_min>..<n_max> [--table] [--png] [--scale=X]\n"
+                f"  Types disponibles : {' | '.join(list_supported_kinds())}\n"
+                "  Exemples :\n"
+                "    courbe SA 1..50\n"
+                "    courbe SA_SB 1..30 --table\n"
+                "    courbe digamma 1..100 --png\n"
+                "    courbe ratio 1..200 --table --png\n"
+                "    courbe invariant 1..50 --scale=linear[/yellow]\n"
+            )
+            return True
+
+        kind = tokens[1]
+        range_spec = tokens[2]
+        # Parsing range "n_min..n_max"
+        if ".." not in range_spec:
+            console.print(f"\n  [yellow]Range invalide : '{range_spec}'. "
+                          f"Format attendu : n_min..n_max (ex: 1..50)[/yellow]\n")
+            return True
+        try:
+            n_min_s, n_max_s = range_spec.split("..", 1)
+            n_min, n_max = int(n_min_s), int(n_max_s)
+        except ValueError:
+            console.print(f"\n  [yellow]Range invalide : '{range_spec}'[/yellow]\n")
+            return True
+
+        # Flags
+        want_table = "--table" in tokens
+        want_png = "--png" in tokens
+        scale = "auto"
+        for tok in tokens[3:]:
+            if tok.startswith("--scale="):
+                scale = tok.split("=", 1)[1]
+
+        # Calcul
+        core = self.orchestrator.pipeline.spectral_core
+        try:
+            curve = compute_curve(core, kind, n_min, n_max, scale=scale)
+        except ValueError as exc:
+            console.print(f"\n  [red]Erreur : {exc}[/red]\n")
+            return True
+
+        # 1) ASCII (toujours)
+        ascii_view = render_ascii(curve, width=70, height=18)
+        console.print(Panel(
+            ascii_view,
+            title=f"[cyan]Courbe {curve.kind.value} (n={n_min}..{n_max})[/cyan]",
+            border_style="cyan",
+        ))
+
+        # 2) Table Rich (optionnel)
+        if want_table:
+            console.print(render_table(curve, max_rows=30))
+
+        # 3) PNG (optionnel) + audit JSON citable
+        png_path = None
+        if want_png:
+            if not MATPLOTLIB_AVAILABLE:
+                console.print(
+                    "\n  [red]matplotlib non installe. Installation : "
+                    "'pip install matplotlib'[/red]\n"
+                )
+            else:
+                output_dir = _Path("data/graphs")
+                try:
+                    png_path = render_png(curve, output_dir=output_dir, dpi=150)
+                    console.print(
+                        f"\n  [green]PNG cree :[/green] [bold]{png_path}[/bold]  "
+                        f"(taille : {png_path.stat().st_size // 1024} Ko, dpi=150)\n"
+                    )
+                except (ImportError, ValueError) as exc:
+                    console.print(f"\n  [red]Erreur PNG : {exc}[/red]\n")
+
+        # Audit citable
+        from src.audit import AuditStore as _AS
+        store = self.orchestrator.pipeline.audit_store
+        record = _AS.build_record(
+            intervention_type="courbe",
+            question=cmd.strip(),
+            certified_answer=(
+                f"Courbe {curve.kind.value} sur n={n_min}..{n_max} "
+                f"(echelle {curve.scale}). {len(curve.points)} points. "
+                f"Formule : {curve.formula}."
+            ),
+            position=n_min,
+            prime_value=core.get_prime_at_position(n_min),
+            citations_thy=[
+                "methode_spectral.thy::SA_def (suite alternee A)",
+                "methode_spectral.thy::SB_def (suite alternee B)",
+                "geometrie_spectre_premier.thy::D_def (invariant spectral)",
+            ],
+            toolkit_reports={
+                "visualization": {
+                    "kind": curve.kind.value,
+                    "n_min": n_min, "n_max": n_max,
+                    "scale": curve.scale,
+                    "formula": curve.formula,
+                    "summary": curve.summary(),
+                    "png_path": str(png_path) if png_path else None,
+                }
+            },
+            ratio="1/2",
+        )
+        store.save(record)
+        console.print(
+            f"\n[dim]Audit cree : id={record.id} (tapez 'citer {record.id}' pour citer)[/dim]\n"
+        )
+        return True
 
     def _display_answer(self, answer: FinalAnswer) -> None:
         # Affichage principal

@@ -58,11 +58,14 @@ Philippe >
 
 | Commande | Description |
 |---|---|
-| `aide` | Affiche l'aide complète |
+| `aide` (`h`, `?`) | Affiche l'aide rapide |
+| `commandes` (`cmd`, `commands`) | **Affiche la liste complète des commandes + raccourcis clavier dans le terminal** |
 | `version` | Affiche la version de Gabriel |
 | `contexte` | Affiche le contexte mathématique actuel |
 | `memoire` | Affiche les échanges en mémoire (historique session) |
 | `quitter` | Ferme Gabriel proprement |
+
+> 💡 **Astuce** : tapez `commandes` à tout moment dans Gabriel pour obtenir cette même fiche directement dans votre terminal, sans quitter la session.
 
 ---
 
@@ -336,6 +339,54 @@ Philippe > Visualise SA et SB ensemble et exporte un PNG pour mon article scient
 ```
 
 Pour chaque détection, Gabriel produit : ASCII + résumé statistique + (PNG si demandé) + audit JSON citable.
+
+---
+
+## ⌨️ Raccourcis clavier interactifs
+
+Gabriel active automatiquement les raccourcis clavier du module `readline` à chaque démarrage. **Historique persistant** entre sessions dans `data/.gabriel_history`.
+
+### Navigation dans l'historique
+
+| Raccourci | Action |
+|---|---|
+| `↑` / `↓` | Naviguer dans les commandes précédentes/suivantes |
+| `Ctrl + R` | Recherche inversée (commencez à taper, `Ctrl+R` à nouveau pour suivant) |
+| `Ctrl + S` | Recherche avant (rare ; nécessite parfois `stty -ixon`) |
+| `Ctrl + G` | Annuler une recherche `Ctrl+R` |
+
+### Auto-complétion
+
+| Raccourci | Action |
+|---|---|
+| `Tab` | Complète la commande en cours (ex : `cou<Tab>` → `courbe`) |
+| `Tab Tab` | Affiche toutes les complétions possibles si ambigu |
+
+Les commandes proposées sont : toutes celles listées dans `aide` + les types de `courbe`.
+
+### Édition de la ligne courante
+
+| Raccourci | Action |
+|---|---|
+| `Ctrl + A` | Aller en début de ligne |
+| `Ctrl + E` | Aller en fin de ligne |
+| `Alt + B` | Reculer d'un mot |
+| `Alt + F` | Avancer d'un mot |
+| `Ctrl + W` | Effacer le mot précédent |
+| `Ctrl + U` | Effacer toute la ligne (vers la gauche) |
+| `Ctrl + K` | Effacer toute la ligne (vers la droite) |
+| `Ctrl + Y` | Coller le dernier texte coupé (yank) |
+| `Ctrl + T` | Inverser les 2 caractères autour du curseur |
+
+### Contrôle du terminal
+
+| Raccourci | Action |
+|---|---|
+| `Ctrl + L` | Effacer l'écran (sans perdre la session) |
+| `Ctrl + C` | Interrompre la commande en cours |
+| `Ctrl + D` | Quitter Gabriel (envoie EOF) |
+
+> 💡 **Sur Windows hors Docker** : si vous lancez Gabriel directement avec Python sur Windows (pas via Docker), installez `pyreadline3` (`pip install pyreadline3`) pour activer ces raccourcis. Dans Docker (cas par défaut), readline est natif et tout fonctionne.
 
 ---
 

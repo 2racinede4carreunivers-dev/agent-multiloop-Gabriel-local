@@ -4,7 +4,7 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v2.2 — 230/230 tests Pytest ✅ — Auto-trigger visualisation operationnel**
+**Production-Ready v2.3 — 236/236 tests Pytest ✅ — Auto-trigger viz + Raccourcis clavier**
 
 ## Architecture
 ```
@@ -46,6 +46,27 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 - Corpus mathématique intégré + Slow Motion Debugging + Meta-Learning + CI
 
 ## Changelog
+
+### [2026-02-15] Commande `commandes` + Raccourcis clavier
+- Nouveau module `src/ui/keybindings.py` (`readline` natif Linux/Docker, `pyreadline3` pour Windows si besoin)
+  - Historique persistant entre sessions : `data/.gabriel_history` (1000 entrees max)
+  - Auto-completion `Tab` des commandes Gabriel (29 commandes)
+  - Navigation historique avec fleches Up/Down + recherche inversee `Ctrl+R`
+  - Singleton `install_keybindings()` idempotent + `save_history()` automatique a la sortie
+- Nouvelle commande `commandes` (alias `cmd`, `commands`) dans `_show_full_commands()` :
+  - 9 panels Rich categorises (general / corpus / calculs / viz / validation / audit / debug / CI / langage naturel)
+  - Panel dedie "RACCOURCIS CLAVIER" avec 12 raccourcis documentes et statut actif/inactif
+  - Panel "FICHIERS DE REFERENCE" pointant vers la documentation et fichiers generes
+- Documentation utilisateur creee dans `commande-gabriel/` :
+  - `COMMANDES.md` (378 lignes, 10 sections, exemples concrets)
+  - `AIDE-MEMOIRE.txt` (cheatsheet 153 lignes a imprimer)
+  - `README.md` (guide d'index)
+- Mise a jour `HELP_TEXT` (mentionne `commandes` comme commande recommandee)
+- Mise a jour `interactive_mode()` :
+  - Installation auto des keybindings au demarrage
+  - Affichage statut clavier dans la banniere
+  - Sauvegarde historique a la sortie (EOF/quitter/Ctrl+D/Ctrl+C)
+- 6 nouveaux tests dans `tests/test_keybindings.py`
 
 ### [2026-02-15] Auto-trigger LLM Visualisation
 - Nouveau module `src/visualization/auto_trigger.py`

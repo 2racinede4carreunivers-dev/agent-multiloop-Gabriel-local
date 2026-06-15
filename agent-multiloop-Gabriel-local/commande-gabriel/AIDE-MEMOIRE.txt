@@ -8,7 +8,8 @@
 ================================================================================
   GENERAL
 ================================================================================
-  aide                    Affiche l'aide complete
+  aide  (h, ?)            Aide rapide (HELP_TEXT)
+  commandes  (cmd)        Liste complete + raccourcis clavier (panel Rich)
   version                 Version de Gabriel
   contexte                Contexte mathematique actuel
   memoire                 Historique des echanges (session)
@@ -125,10 +126,27 @@
   100% deterministe (zero LLM, zero hallucination possible)
 
 ================================================================================
+  RACCOURCIS CLAVIER  (actifs si readline disponible, natif dans Docker)
+================================================================================
+  Fleche Haut / Bas       Naviguer dans l'historique des commandes
+  Ctrl + R                Recherche inversee dans l'historique
+  Tab                     Auto-completion des commandes
+  Ctrl + A / Ctrl + E     Debut / fin de ligne
+  Ctrl + W                Effacer mot precedent
+  Ctrl + U / Ctrl + K     Effacer ligne (gauche / droite)
+  Ctrl + Y                Coller dernier texte coupe (yank)
+  Ctrl + L                Effacer l'ecran
+  Ctrl + C                Interrompre commande en cours
+  Ctrl + D                Quitter (EOF)
+
+  Historique persistant : data/.gabriel_history
+
+================================================================================
   FICHIERS GENERES
 ================================================================================
   data/audits/    Audits JSON signes (SHA-256), citables
   data/graphs/    PNG haute resolution (150 dpi)
+  data/.gabriel_history    Historique des commandes (persistant)
 
   Ces dossiers sont IGNORES par git (.gitignore).
 

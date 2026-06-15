@@ -13,6 +13,7 @@ from ..core.orchestrator import Orchestrator
 from ..core.types import FinalAnswer
 from .ci_status import run_pytest_local
 from .debug_session import DebugSession, MAX_REQUEST_CHARS, MAX_COMMENT_CHARS
+from .keybindings import install_keybindings, save_history as _save_kb_history
 
 
 logger = logging.getLogger(__name__)
@@ -56,7 +57,9 @@ HELP_TEXT = """
   citer <id> [fmt] Genere une citation (fmt = markdown | latex | text)
   contexte         Affiche le contexte mathematique actuel
   memoire          Affiche les echanges en memoire
-  ci               Lance la suite pytest locale (230 tests) et affiche le rapport
+  aide  (h, ?)     Aide rapide (cet ecran)
+  commandes (cmd)  Liste complete + raccourcis clavier (recommande)
+  ci               Lance la suite pytest locale (236 tests) et affiche le rapport
   version          Affiche la version
 
   Domaines supportes :
@@ -104,6 +107,9 @@ class CLIInterface:
         c = cmd.lower().strip()
         if c in {"aide", "help", "h", "?"}:
             self.help()
+            return True
+        if c in {"commandes", "commands", "cmd"}:
+            self._show_full_commands()
             return True
         if c == "version":
             console.print(f"\n  Multi-Loop Math Agent v{self.VERSION}\n", style="green")
@@ -564,6 +570,138 @@ class CLIInterface:
             return True
         return False
 
+    def _show_full_commands(self) -> None:
+        """Affiche la liste complete des commandes Gabriel + raccourcis clavier.
+
+        Active par : commandes | commands | cmd
+        """
+        from rich.table import Table
+        from .keybindings import is_available as _kb_available
+
+        # ----- Categories de commandes -----
+        sections: list[tuple[str, list[tuple[str, str]]]] = [
+            ("[bold cyan]GENERAL[/bold cyan]", [
+                ("aide  (h, ?)", "Aide rapide (HELP_TEXT)"),
+                ("commandes  (cmd)", "Liste complete (ce panel)"),
+                ("version", "Version de Gabriel"),
+                ("contexte", "Contexte mathematique actuel"),
+                ("memoire", "Historique des echanges de la session"),
+                ("quitter", "Ferme Gabriel proprement"),
+            ]),
+            ("[bold cyan]CORPUS & PRIMES[/bold cyan]", [
+                ("corpus", "Resume des fichiers .thy charges"),
+                ("corpus detail", "Vue detaillee (sections, defs, lemmes)"),
+                ("primes", "Statut table des nombres premiers (1..1000)"),
+                ("prime <N>", "N-ieme nombre premier   ex: prime 26 -> 101"),
+            ]),
+            ("[bold cyan]CALCULS DETERMINISTES (sans LLM)[/bold cyan]", [
+                ("gap <v1> <v2>", "Ecart spectral direct   ex: gap 26 56"),
+                ("rsp <A> <B>", "Rapport spectral direct   ex: rsp 2 3"),
+                ("rsp-test <cfg> <N>",
+                 "N tests aleatoires. cfg: 1x1|sym2|sym3|sym5|chaos|ord"),
+            ]),
+            ("[bold cyan]VISUALISATIONS (ASCII + Table + PNG)[/bold cyan]", [
+                ("rsp-courbe <cfg> [kmax]", "Courbe RsP en ASCII"),
+                ("courbe <type> <n1>..<n2>",
+                 "Types: SA|SB|SA_SB|digamma|invariant|ratio|gap|prime"),
+                ("  --table",     "  + tableau Rich avec valeurs exactes"),
+                ("  --png",       "  + PNG haute res (150 dpi, data/graphs/)"),
+                ("  --scale=X",   "  Echelle: auto(defaut)|linear|log10|log2"),
+            ]),
+            ("[bold cyan]VALIDATION MATHEMATIQUE[/bold cyan]", [
+                ("verifier <N>",
+                 "Validation toolkit (sympy/mpmath/z3) + audit signe"),
+                ("valider <N>",
+                 "Boucle Wolfram <-> Gabriel <-> Isabelle (+.thy auto)"),
+            ]),
+            ("[bold cyan]AUDIT & CITATIONS SCIENTIFIQUES[/bold cyan]", [
+                ("historique", "Liste les 20 derniers audits"),
+                ("audit <id>", "Affiche le JSON complet d'un audit"),
+                ("citer <id> [fmt]",
+                 "Citation prete a inserer. fmt: markdown|latex|text"),
+            ]),
+            ("[bold cyan]DEBUGGER PEDAGOGIQUE[/bold cyan]", [
+                ('debug "<q>"',
+                 "Mode debug interactif (decompose/bypass/comment)"),
+            ]),
+            ("[bold cyan]TESTS & CI[/bold cyan]", [
+                ("ci  (tests, pytest)",
+                 "Lance les 236 tests pytest locaux"),
+            ]),
+            ("[bold cyan]LANGAGE NATUREL & AUTO-TRIGGER[/bold cyan]", [
+                ("<question libre>",
+                 "Pipeline multi-loop avec garde-fous"),
+                ("(viz auto)",
+                 "Detecte 'trace/illustre/evolue SA/SB/digamma/...'"),
+            ]),
+        ]
+
+        for title, rows in sections:
+            table = Table(
+                title=title,
+                title_justify="left",
+                show_header=False,
+                show_lines=False,
+                expand=True,
+                padding=(0, 2),
+                border_style="dim cyan",
+            )
+            table.add_column("Commande", style="bold yellow", no_wrap=True, width=30)
+            table.add_column("Description", style="white")
+            for cmd_text, desc in rows:
+                table.add_row(cmd_text, desc)
+            console.print(table)
+            console.print()
+
+        # ----- Raccourcis clavier -----
+        kb_active = _kb_available()
+        kb_body_lines = [
+            "[bold green]Raccourcis clavier interactifs[/bold green]   "
+            + ("[green](actifs)[/green]" if kb_active else "[red](indisponibles)[/red]"),
+            "",
+            "  [bold]Fleche Haut / Bas[/bold]      Naviguer dans l'historique des commandes",
+            "  [bold]Ctrl + R[/bold]               Recherche inversee dans l'historique",
+            "  [bold]Tab[/bold]                    Auto-completion des commandes Gabriel",
+            "  [bold]Ctrl + A[/bold]               Aller en debut de ligne",
+            "  [bold]Ctrl + E[/bold]               Aller en fin de ligne",
+            "  [bold]Ctrl + W[/bold]               Effacer le mot precedent",
+            "  [bold]Ctrl + U[/bold]               Effacer toute la ligne (vers la gauche)",
+            "  [bold]Ctrl + K[/bold]               Effacer toute la ligne (vers la droite)",
+            "  [bold]Ctrl + L[/bold]               Effacer l'ecran",
+            "  [bold]Ctrl + Y[/bold]               Coller le dernier texte coupe (yank)",
+            "  [bold]Ctrl + C[/bold]               Interrompre la commande en cours",
+            "  [bold]Ctrl + D[/bold]               Quitter Gabriel (EOF)",
+            "",
+            "  [dim]L'historique est sauvegarde dans data/.gabriel_history "
+            "et persiste entre les sessions.[/dim]",
+        ]
+        if not kb_active:
+            kb_body_lines.append("")
+            kb_body_lines.append(
+                "  [yellow]Note: le module 'readline' n'est pas disponible. "
+                "Sur Windows hors Docker, installez : pip install pyreadline3[/yellow]"
+            )
+        console.print(Panel(
+            "\n".join(kb_body_lines),
+            title="[bold cyan]RACCOURCIS CLAVIER[/bold cyan]",
+            border_style="green",
+            padding=(1, 2),
+        ))
+        console.print()
+
+        # ----- Fichiers de reference -----
+        console.print(Panel(
+            "  Documentation complete    : [cyan]commande-gabriel/COMMANDES.md[/cyan]\n"
+            "  Aide-memoire (cheatsheet) : [cyan]commande-gabriel/AIDE-MEMOIRE.txt[/cyan]\n"
+            "  Audits crees              : [cyan]data/audits/*.json[/cyan]\n"
+            "  Graphiques PNG            : [cyan]data/graphs/*.png[/cyan]\n"
+            "  Historique commandes      : [cyan]data/.gabriel_history[/cyan]",
+            title="[bold cyan]FICHIERS DE REFERENCE[/bold cyan]",
+            border_style="dim cyan",
+            padding=(1, 2),
+        ))
+        console.print()
+
     async def _handle_courbe(self, cmd: str) -> bool:
         """Commande `courbe <type> <n_min>..<n_max> [--table] [--png] [--scale=...]`.
 
@@ -718,6 +856,8 @@ class CLIInterface:
 
     async def interactive_mode(self) -> None:
         self.banner()
+        # Installation des raccourcis clavier (readline) + historique persistant
+        kb = install_keybindings(history_file="data/.gabriel_history")
         # Affichage du statut CI dans l'en-tete d'ouverture (tests pytest locaux)
         console.print("  [dim]Verification de la suite de tests (pytest local)...[/dim]")
         try:
@@ -731,8 +871,14 @@ class CLIInterface:
             logger.warning("Impossible d'executer pytest a l'ouverture : %s", exc)
             status_line = "  [yellow]Statut CI Gabriel : indisponible (pytest a echoue au demarrage)[/yellow]"
         console.print(status_line)
+        # Statut clavier
+        if kb._installed:
+            console.print(
+                "  [dim]Raccourcis clavier actifs (Tab=completion, Ctrl+R=recherche, "
+                "Up/Down=historique). Tapez 'commandes' pour tout voir.[/dim]"
+            )
         console.print(f"\n  Agent Multi-Loop pret. Bonjour {self.user_name} !", style="bold")
-        console.print("  Tapez 'aide' pour les commandes, 'quitter' pour sortir.\n", style="dim")
+        console.print("  Tapez 'aide' pour l'aide rapide, 'commandes' pour la liste complete, 'quitter' pour sortir.\n", style="dim")
         console.print("  " + "-" * 56)
 
         while True:
@@ -740,12 +886,14 @@ class CLIInterface:
                 user_input = console.input(f"\n[bold magenta]{self.user_name} >[/bold magenta] ").strip()
             except (EOFError, KeyboardInterrupt):
                 console.print(f"\n\n  Au revoir {self.user_name} !", style="bold green")
+                _save_kb_history()
                 break
 
             if not user_input:
                 continue
             if user_input.lower() in {"quitter", "exit", "quit", "q", ":q"}:
                 console.print(f"\n  Au revoir {self.user_name} !", style="bold green")
+                _save_kb_history()
                 break
 
             if await self._handle_special(user_input):

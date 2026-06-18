@@ -1,16 +1,5 @@
 """
-AuditStore — Base de fiches d'audit JSON signees (citables).
-
-Chaque intervention de troubleshooting (slow-motion automatique, debug
-manuel, validation toolkit, commande `verifier`) produit une AuditRecord
-serialisee sous /data/audits/YYYY-MM-DD_HHMMSS_<id>.json.
-
-Caracteristiques :
-  - Signature SHA-256 sur le JSON canonique (cles triees) -> verifiable
-  - Format JSON lisible (indent=2)
-  - Citation Markdown/LaTeX/texte prete a coller dans un article
-  - Filtrage par date, position, rapport, type d'intervention
-  - PERIMETRE STRICT : rapport 1/2 uniquement
+AuditStore — Base de fiches d'audit JSON signees (citables) - AVEC CORRECTION UTF-8.
 """
 from __future__ import annotations
 
@@ -23,6 +12,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Optional
+
+from ..adapters.llm.utf8_sanitizer import UTF8Sanitizer
 
 
 logger = logging.getLogger(__name__)
@@ -58,9 +49,53 @@ class AuditRecord:
         return d
 
     def compute_signature(self) -> str:
-        """SHA-256 sur le JSON canonique (cles triees, separateurs compacts)."""
-        payload = json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+        """SHA-256 sur le JSON canonique (cles triees, separateurs compacts).
+        
+        CORRECTION (2026-06-15): Nettoyer les surrogates UTF-8 mal formes.
+        """
+        sanitizer = UTF8Sanitizer()
+        
+        # Nettoyer tous les strings avant JSON
+        d = self.to_dict()
+        d_clean = self._sanitize_dict(d, sanitizer)
+        
+        # Créer le payload JSON
+        payload = json.dumps(d_clean, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        
+        # Double-check: nettoyer encore les surrogates si présents
+        payload_clean = payload.encode('utf-8', errors='replace').decode('utf-8', errors='replace')
+        
+        return hashlib.sha256(payload_clean.encode('utf-8')).hexdigest()
+    
+    @staticmethod
+    def _sanitize_dict(d: dict, sanitizer: UTF8Sanitizer) -> dict:
+        """Récursivement nettoyer tous les strings d'un dict."""
+        result = {}
+        for k, v in d.items():
+            if isinstance(v, str):
+                result[k] = sanitizer.sanitize(v)
+            elif isinstance(v, dict):
+                result[k] = AuditRecord._sanitize_dict(v, sanitizer)
+            elif isinstance(v, list):
+                result[k] = AuditRecord._sanitize_list(v, sanitizer)
+            else:
+                result[k] = v
+        return result
+    
+    @staticmethod
+    def _sanitize_list(lst: list, sanitizer: UTF8Sanitizer) -> list:
+        """Récursivement nettoyer tous les strings d'une liste."""
+        result = []
+        for item in lst:
+            if isinstance(item, str):
+                result.append(sanitizer.sanitize(item))
+            elif isinstance(item, dict):
+                result.append(AuditRecord._sanitize_dict(item, sanitizer))
+            elif isinstance(item, list):
+                result.append(AuditRecord._sanitize_list(item, sanitizer))
+            else:
+                result.append(item)
+        return result
 
 
 class AuditStore:
@@ -82,6 +117,7 @@ class AuditStore:
     def __init__(self, base_dir: str | Path = "/home/agent/app/data/audits"):
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
+        self.sanitizer = UTF8Sanitizer()
         logger.info("AuditStore initialise : %s", self.base_dir)
 
     # ---------- Construction / sauvegarde ----------
@@ -125,7 +161,11 @@ class AuditStore:
             user_comment=user_comment,
             forced_bypass=forced_bypass or [],
         )
-        record.signature_sha256 = record.compute_signature()
+        try:
+            record.signature_sha256 = record.compute_signature()
+        except Exception as e:
+            logger.warning(f"Erreur calcul signature audit : {e}")
+            record.signature_sha256 = "ERROR_ENCODING"
         return record
 
     def save(self, record: AuditRecord) -> Path:
@@ -135,7 +175,11 @@ class AuditStore:
         path = self.base_dir / filename
         full = record.to_dict()
         full["signature_sha256"] = record.signature_sha256
-        path.write_text(json.dumps(full, indent=2, ensure_ascii=False), encoding="utf-8")
+        
+        # Nettoyer les strings avant sauvegarde
+        full_clean = AuditRecord._sanitize_dict(full, self.sanitizer)
+        
+        path.write_text(json.dumps(full_clean, indent=2, ensure_ascii=False), encoding="utf-8")
         logger.info("Audit sauvegarde : %s (id=%s)", path.name, record.id)
         return path
 

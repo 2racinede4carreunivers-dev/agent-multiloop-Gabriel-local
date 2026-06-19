@@ -235,3 +235,4 @@ __pycache__/
 # 3. git rm --cached memory/*.json (si données sensibles)
 # 4. git commit -m "Remove secrets from history"
 # 5. Avant chaque push: vérifier rien ne fuite
+.credentials

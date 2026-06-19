@@ -42,7 +42,7 @@ scipy>=1.14.0
 numpy>=1.26.0
 
 # --- PDF Processing & RAG ---
-PyPDF2>=4.0.0
+PyPDF2>=3.0.0
 faiss-cpu>=1.7.4
 sentence-transformers>=3.0.0
 
@@ -57,7 +57,7 @@ sentence-transformers>=3.0.0
 wolframclient>=1.1.2
 
 # --- Numerical precision ---
-decimal>=1.0
+
 
 # --- Visualization (spectral analysis) ---
 seaborn>=0.13.0

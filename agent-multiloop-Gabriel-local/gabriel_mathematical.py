@@ -20,6 +20,11 @@ from src.hol_lean_interface import (
 )
 from src.pdf_rag_processor import PDFRAGProcessor, get_rag_processor
 from src.hol_proof_generator import HOL4ProofGenerator, ProofPattern
+from src.spectral_ratio_analyzer import (
+    SpectralRatioAnalyzer,
+    SpectralBlock,
+    export_rsa_explanation
+)
 
 # Configuration logging
 logging.basicConfig(
@@ -56,6 +61,7 @@ class GabrielMathematicalAssistant:
         
         self.formal_verification = FormalVerificationPipeline()
         self.hol_proof_generator = HOL4ProofGenerator()  # NOUVEAU
+        self.spectral_ratio_analyzer = SpectralRatioAnalyzer()  # NOUVEAU v2.2 - RSA
         
         # Charger RAG PDF
         try:
@@ -70,6 +76,57 @@ class GabrielMathematicalAssistant:
         except Exception as e:
             logger.error(f"Erreur chargement RAG: {e}")
             self.rag_processor = None
+    
+    def compute_spectral_ratio(self, block_a_primes: list, block_b_primes: list,
+                              order: int = 1) -> Dict[str, Any]:
+        """
+        NOUVELLE CAPACITÉ v2.2: Calcule le Rapport Spectral Asymétrique Ordonné (RSA)
+        
+        Essentiel pour la théorie "L'univers est au carré" de l'utilisateur
+        
+        Args:
+            block_a_primes: Liste nombres premiers bloc A
+            block_b_primes: Liste nombres premiers bloc B
+            order: Ordre du calcul (défaut: 1)
+        
+        Returns:
+            Dictionnaire avec RSA, convergence, explication
+        """
+        
+        try:
+            # Créer blocs
+            block_a = SpectralBlock(name="A", primes=block_a_primes)
+            block_b = SpectralBlock(name="B", primes=block_b_primes)
+            
+            # Valider
+            block_a.validate()
+            block_b.validate()
+            
+            # Calculer RSA
+            result = self.spectral_ratio_analyzer.compute_rsa(block_a, block_b, order)
+            
+            return {
+                'status': 'success',
+                'block_a': block_a.primes,
+                'block_b': block_b.primes,
+                'order': order,
+                'rsa': result.rsa,
+                'distance_to_half': result.distance_to_half,
+                'convergence_status': result.convergence_status,
+                'numerator': result.numerator,
+                'denominator': result.denominator,
+                'explanation': export_rsa_explanation(result),
+                'details': result.computation_details
+            }
+        
+        except Exception as e:
+            logger.error(f"Erreur calcul RSA: {e}")
+            return {
+                'status': 'error',
+                'error': str(e),
+                'block_a': block_a_primes,
+                'block_b': block_b_primes
+            }
     
     def process_spectral_query(self, context: MathematicalAssistantContext) -> Dict[str, Any]:
         """
@@ -135,6 +192,44 @@ class GabrielMathematicalAssistant:
     def _execute_computation(self, query: str, engines: list) -> ComputationResult:
         """Exécute le calcul selon les moteurs demandés"""
         
+        query_lower = query.lower()
+        
+        # NOUVELLE CAPACITÉ v2.2: Détecte requêtes RSA
+        if 'rapport spectral' in query_lower or 'rsa' in query_lower or 'spectral asymétrique' in query_lower:
+            # Essayer d'extraire blocs de la requête
+            import re
+            
+            # Pattern: "bloc A = ..., bloc B = ..."
+            pattern_a = r'bloc\s+a\s*=\s*([\[\(]?[^,\]\)]+[\]\)]?)'
+            pattern_b = r'bloc\s+b\s*=\s*([\[\(]?[^,\]\)]+[\]\)]?)'
+            
+            match_a = re.search(pattern_a, query_lower)
+            match_b = re.search(pattern_b, query_lower)
+            
+            if match_a and match_b:
+                try:
+                    # Parser blocs
+                    bloc_a_str = match_a.group(1).strip('()[]')
+                    bloc_b_str = match_b.group(1).strip('()[]')
+                    
+                    bloc_a = [int(x.strip()) for x in bloc_a_str.split(',')]
+                    bloc_b = [int(x.strip()) for x in bloc_b_str.split(',')]
+                    
+                    # Calculer RSA
+                    rsa_result = self.compute_spectral_ratio(bloc_a, bloc_b)
+                    
+                    if rsa_result['status'] == 'success':
+                        return ComputationResult(
+                            status='success',
+                            result=rsa_result,
+                            engine='spectral_ratio_analyzer',
+                            computation_time=0,
+                            proof_hint='rsa_convergence in theory'
+                        )
+                except:
+                    pass  # Fallback si parsing échoue
+        
+        # Code existant
         query_lower = query.lower()
         
         # Détection type de requête

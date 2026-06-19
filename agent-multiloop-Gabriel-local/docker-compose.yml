@@ -33,6 +33,7 @@ services:
       - ./main.py:/home/agent/app/main.py:ro
       - ./main_cli.py:/home/agent/app/main_cli.py:ro
       - ./config.yaml:/home/agent/app/config.yaml:ro
+      - ./tests:/home/agent/app/tests:ro
       - ./theories:/theories
       - agent-data:/home/agent/app/data
       - agent-logs:/home/agent/app/logs

@@ -1,13 +1,14 @@
 """Utilitaire CI : exécute la suite pytest locale et formate un résumé Rich.
 
 Sert deux usages :
-  1. Commande CLI `ci` : affiche le résultat détaillé des 161 tests.
+  1. Commande CLI `ci` : affiche le résultat détaillé des tests.
   2. Bannière d'ouverture : affiche un résumé compact (XXX/YYY OK).
 
 Aucune dépendance réseau : tout est exécuté localement, en sous-processus.
 """
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -43,7 +44,45 @@ class CISummary:
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_TESTS_DIR = _REPO_ROOT / "tests"
+
+
+def _find_tests_dir() -> Path:
+    """Cherche le dossier 'tests' a plusieurs emplacements possibles.
+
+    Couvre les cas :
+      1. Execution dev locale (depuis le repo)              -> <repo>/tests
+      2. Execution dans Docker (CWD=/home/agent/app)        -> ./tests (si monte)
+      3. Execution dans Docker (avec /app)                   -> /app/tests
+      4. Variable d'environnement explicite GABRIEL_TESTS_DIR
+    """
+    # Priorite 1 : variable d'environnement explicite
+    env_dir = os.environ.get("GABRIEL_TESTS_DIR")
+    if env_dir:
+        p = Path(env_dir)
+        if p.is_dir():
+            return p
+
+    # Priorite 2 : a cote du module (cas dev local)
+    candidate = _REPO_ROOT / "tests"
+    if candidate.is_dir():
+        return candidate
+
+    # Priorite 3 : depuis CWD (cas Docker avec WORKDIR)
+    cwd_candidate = Path.cwd() / "tests"
+    if cwd_candidate.is_dir():
+        return cwd_candidate
+
+    # Priorite 4 : emplacements connus dans les conteneurs
+    for alt in ("/app/tests", "/home/agent/app/tests", "/workspace/tests"):
+        p = Path(alt)
+        if p.is_dir():
+            return p
+
+    # Fallback : on retourne le chemin "ideal" pour avoir un message d'erreur clair
+    return _REPO_ROOT / "tests"
+
+
+_TESTS_DIR = _find_tests_dir()
 
 # Regex pour parser la ligne de résumé pytest :
 # "161 passed, 1 warning in 1.99s" ou "159 passed, 2 failed in 2.3s" etc.
@@ -63,7 +102,22 @@ def run_pytest_local(timeout_s: int = 120) -> CISummary:
     Renvoie un `CISummary`. Ne lève jamais : encapsule les erreurs dans le résumé.
     """
     if not _TESTS_DIR.is_dir():
-        return CISummary(0, 0, 1, 0, 0, 0.0, False, f"Tests directory introuvable: {_TESTS_DIR}")
+        msg = (
+            f"Tests directory introuvable: {_TESTS_DIR}\n\n"
+            "  Cause probable : Gabriel tourne dans Docker et le dossier 'tests/' n'a\n"
+            "  pas ete monte/copie dans le conteneur. Solutions :\n\n"
+            "  Solution 1 (recommandee) : ajoutez un volume dans docker-compose.yml :\n"
+            "      volumes:\n"
+            "        - ./tests:/app/tests:ro\n\n"
+            "  Solution 2 : sortez de Gabriel (tapez 'quitter') et lancez les tests\n"
+            "  directement sur votre PC avec :\n"
+            "      .\\run-tests.bat   (double-clic possible)\n"
+            "  ou :\n"
+            "      python -m pytest tests/ -v\n\n"
+            "  Solution 3 : definissez la variable d'environnement GABRIEL_TESTS_DIR\n"
+            "  vers le chemin absolu du dossier tests/ sur le conteneur."
+        )
+        return CISummary(0, 0, 1, 0, 0, 0.0, False, msg)
 
     try:
         proc = subprocess.run(

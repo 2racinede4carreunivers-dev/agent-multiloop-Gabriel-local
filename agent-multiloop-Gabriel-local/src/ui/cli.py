@@ -41,6 +41,10 @@ HELP_TEXT = """
   rsp <A> <B>      Rapport spectral direct (auto-detect 1x1, nxn, chaos, ord)
   rsp-test <cfg> <N>  N tests aleatoires de config (1x1|sym2|sym3|sym5|chaos|ord)
   rsp-courbe <cfg> [kmax]  Courbe ASCII RsP en fonction de k (config: 1x1|sym|chaos|ord)
+  modele <action> [args]   Interroge les 3 modeles spectraux (1/2, 1/3, 1/4).
+                           Actions : list | questions | all | rsp1x1 <n1> <n2> |
+                                     rsp <A>|<B> [sym|chaos|ord] | reconstruct <N> | gap <p1> <p2>
+                           Ex: 'modele all', 'modele reconstruct 26', 'modele gap -19 -5'
   courbe <type> <n1>..<n2> [--table] [--png] [--scale=X]
                    Trace une courbe ASCII (toujours) + tableau Rich (--table)
                    + export PNG citable (--png).
@@ -259,6 +263,8 @@ class CLIInterface:
             return True
         if c.startswith("courbe"):
             return await self._handle_courbe(cmd)
+        if c.startswith("modele") or c.startswith("modèle"):
+            return await self._handle_modele(cmd)
         if c.startswith("rsp-test"):
             parts = cmd.strip().split()
             if len(parts) < 3:
@@ -599,6 +605,20 @@ class CLIInterface:
                 ("rsp <A> <B>", "Rapport spectral direct   ex: rsp 2 3"),
                 ("rsp-test <cfg> <N>",
                  "N tests aleatoires. cfg: 1x1|sym2|sym3|sym5|chaos|ord"),
+                ("modele list",
+                 "Liste les 3 modeles spectraux (1/2, 1/3, 1/4)"),
+                ("modele questions",
+                 "Liste les 8 questions canoniques de la Methode"),
+                ("modele all",
+                 "Repond aux 8 questions sur les 3 modeles (audit auto)"),
+                ("modele rsp1x1 <n1> <n2>",
+                 "Q1.a sur 1/2, 1/3, 1/4   ex: modele rsp1x1 3 5"),
+                ("modele rsp <A>|<B> [cas]",
+                 "Q1.b/c/d   cas: sym|chaos|ord"),
+                ("modele reconstruct <N>",
+                 "Q2 sur les 3 modeles   ex: modele reconstruct 26"),
+                ("modele gap <p1> <p2>",
+                 "Q3 sur les 3 modeles (auto detecte le cas)"),
             ]),
             ("[bold cyan]VISUALISATIONS (ASCII + Table + PNG)[/bold cyan]", [
                 ("rsp-courbe <cfg> [kmax]", "Courbe RsP en ASCII"),
@@ -701,6 +721,162 @@ class CLIInterface:
             padding=(1, 2),
         ))
         console.print()
+
+    async def _handle_modele(self, cmd: str) -> bool:
+        """Commande `modele <action> [args...]` pour interroger les 3 modeles spectraux.
+
+        Actions :
+          modele list                         Liste les 3 modeles et leurs facteurs
+          modele questions                    Liste les 8 questions canoniques
+          modele all                          Repond aux 8 questions sur les 3 modeles
+          modele rsp1x1 <n1> <n2>             Q1.a sur les 3 modeles
+          modele rsp <A_pos>|<B_pos> [cas]    Q1.b/c/d sur les 3 modeles
+                                              ex: modele rsp 2,3,4|5,6,7 sym
+          modele reconstruct <N>              Q2 sur les 3 modeles (N-ieme premier)
+          modele gap <p1> <p2>                Q3 sur les 3 modeles
+        """
+        from src.engines.geometrie_spectrale_engine import GeometrieSpectraleEngine
+        from rich.table import Table
+
+        tokens = cmd.strip().split()
+        if len(tokens) < 2:
+            console.print(Panel(
+                "  [bold]Commande modele[/bold] - interroge les 3 modeles spectraux (1/2, 1/3, 1/4)\n\n"
+                "  Actions :\n"
+                "    [yellow]modele list[/yellow]                         Liste les modeles\n"
+                "    [yellow]modele questions[/yellow]                    Liste les 8 questions canoniques\n"
+                "    [yellow]modele all[/yellow]                          Repond aux 8 questions sur les 3 modeles\n"
+                "    [yellow]modele rsp1x1 <n1> <n2>[/yellow]             Q1.a sur les 3 modeles\n"
+                "    [yellow]modele rsp <A_pos>|<B_pos> [cas][/yellow]    Q1.b/c/d (cas: sym|chaos|ord)\n"
+                "    [yellow]modele reconstruct <N>[/yellow]              Q2 (N-ieme premier)\n"
+                "    [yellow]modele gap <p1> <p2>[/yellow]                Q3 (auto detecte +,+ / -,- / -,+)\n\n"
+                "  Exemples :\n"
+                "    [cyan]modele rsp1x1 3 5[/cyan]\n"
+                "    [cyan]modele rsp 2,3,4|5,6,7 sym[/cyan]\n"
+                "    [cyan]modele reconstruct 26[/cyan]      # 26eme premier = 101\n"
+                "    [cyan]modele gap -19 -5[/cyan]\n"
+                "    [cyan]modele all[/cyan]                  # Les 8 questions, 3 modeles",
+                title="[cyan]Aide commande modele[/cyan]",
+                border_style="cyan",
+            ))
+            return True
+
+        engine = GeometrieSpectraleEngine(self.orchestrator.pipeline.spectral_core)
+        action = tokens[1].lower()
+
+        try:
+            if action == "list":
+                tbl = Table(title="Modeles spectraux disponibles", border_style="cyan")
+                tbl.add_column("Modele", style="bold yellow")
+                tbl.add_column("n_factor", justify="right")
+                tbl.add_column("reconstruction_factor", justify="right")
+                tbl.add_column("Ratio cible", justify="center")
+                for name in engine.list_supported_models():
+                    m = engine.models[name]
+                    tbl.add_row(name, str(m.n_factor), str(m.reconstruction_factor), str(m.ratio))
+                console.print(tbl)
+                return True
+
+            if action == "questions":
+                tbl = Table(title="8 questions canoniques", border_style="cyan")
+                tbl.add_column("Q", style="bold yellow")
+                tbl.add_column("Description")
+                for q, desc in engine.list_questions().items():
+                    tbl.add_row(q, desc)
+                console.print(tbl)
+                return True
+
+            if action == "all":
+                console.print("  [dim]Execution des 8 questions sur les 3 modeles...[/dim]\n")
+                reports = engine.answer_all_questions()
+                for r in reports:
+                    console.print(Panel(r.to_text(), border_style="green"))
+                return True
+
+            if action == "rsp1x1":
+                if len(tokens) < 4:
+                    console.print("  [yellow]Usage : modele rsp1x1 <n1> <n2>[/yellow]")
+                    return True
+                n1, n2 = int(tokens[2]), int(tokens[3])
+                report = engine.compute_rsp_1x1_all_models(n1, n2)
+                console.print(Panel(report.to_text(), border_style="green"))
+                self._save_modele_audit(report, cmd)
+                return True
+
+            if action == "rsp":
+                if len(tokens) < 3 or "|" not in tokens[2]:
+                    console.print("  [yellow]Usage : modele rsp <A_pos>|<B_pos> [cas][/yellow]")
+                    return True
+                a_str, b_str = tokens[2].split("|", 1)
+                A_pos = [int(x) for x in a_str.split(",") if x]
+                B_pos = [int(x) for x in b_str.split(",") if x]
+                case_map = {"sym": "nxn_symetrique", "chaos": "asym_chaotique", "ord": "asym_ordonnee"}
+                case = case_map.get(tokens[3].lower() if len(tokens) > 3 else "sym", "nxn_symetrique")
+                report = engine.compute_rsp_nxn_all_models(A_pos, B_pos, case=case)
+                console.print(Panel(report.to_text(), border_style="green"))
+                self._save_modele_audit(report, cmd)
+                return True
+
+            if action == "reconstruct":
+                if len(tokens) < 3:
+                    console.print("  [yellow]Usage : modele reconstruct <N>[/yellow]")
+                    return True
+                n = int(tokens[2])
+                report = engine.reconstruct_all_models(n)
+                console.print(Panel(report.to_text(), border_style="green"))
+                self._save_modele_audit(report, cmd)
+                return True
+
+            if action == "gap":
+                if len(tokens) < 4:
+                    console.print("  [yellow]Usage : modele gap <p1> <p2>[/yellow]")
+                    return True
+                p1, p2 = int(tokens[2]), int(tokens[3])
+                report = engine.compute_gap_all_models(p1, p2)
+                console.print(Panel(report.to_text(), border_style="green"))
+                self._save_modele_audit(report, cmd)
+                return True
+
+            console.print(f"  [red]Action inconnue : '{action}'. Tapez 'modele' pour l'aide.[/red]")
+        except (ValueError, ZeroDivisionError) as exc:
+            console.print(f"  [red]Erreur : {exc}[/red]")
+        return True
+
+    def _save_modele_audit(self, report, cmd_text: str) -> None:
+        """Sauvegarde un audit JSON citable pour les commandes modele."""
+        try:
+            from src.audit import AuditStore as _AS
+            store = self.orchestrator.pipeline.audit_store
+            results_summary = {}
+            for name, res in report.results_by_model.items():
+                # Convertir Fraction en str pour serialisation
+                results_summary[name] = {
+                    k: (str(v) if not isinstance(v, (int, float, bool, str, list, dict, type(None))) else v)
+                    for k, v in res.__dict__.items()
+                }
+            record = _AS.build_record(
+                intervention_type="modele_spectral",
+                question=cmd_text,
+                certified_answer=f"{report.question} : {report.description}",
+                citations_thy=[
+                    "methode_spectral.thy::SA_def, SB_def, RsP_def",
+                    "methode_spectral.thy::A_1_3, B_1_3, A_1_4, B_1_4",
+                    "methode_spectral.thy::digamma_calc, prime_equation",
+                ],
+                toolkit_reports={
+                    "geometrie_spectrale_engine": {
+                        "question": report.question,
+                        "description": report.description,
+                        "results_by_model": results_summary,
+                        "notes": report.notes,
+                    }
+                },
+                ratio="1/2,1/3,1/4",
+            )
+            store.save(record)
+            console.print(f"  [dim]Audit cree : id={record.id} (citer {record.id})[/dim]\n")
+        except Exception as exc:
+            logger.warning(f"Audit modele non sauvegarde : {exc}")
 
     async def _handle_courbe(self, cmd: str) -> bool:
         """Commande `courbe <type> <n_min>..<n_max> [--table] [--png] [--scale=...]`.

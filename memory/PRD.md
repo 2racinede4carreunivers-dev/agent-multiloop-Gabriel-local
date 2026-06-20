@@ -4,7 +4,7 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v2.3 — 255/255 tests Pytest ✅ — Auto-trigger viz + Raccourcis clavier**
+**Production-Ready v2.4 — 325/325 tests Pytest ✅ — GeometrieSpectraleEngine operationnel sur 3 modeles**
 
 ## Architecture
 ```
@@ -46,6 +46,24 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 - Corpus mathématique intégré + Slow Motion Debugging + Meta-Learning + CI
 
 ## Changelog
+
+### [2026-02-15] GeometrieSpectraleEngine — 3 modeles, 8 questions canoniques
+- Nouveau module `src/spectral/spectral_models.py` :
+  - Classe abstraite `SpectralModel` + 3 implementations (`Model_1_2`, `Model_1_3`, `Model_1_4`)
+  - Calcul en `fractions.Fraction` (exactitude infinie)
+  - Conforme `theories/methode_spectral.thy` (A_1_3, A_1_4, B_1_3, B_1_4)
+  - Facteurs : 64 (1/2), 729 (1/3), 4096 (1/4)
+- Nouveau module `src/engines/geometrie_spectrale_engine.py` :
+  - 8 questions canoniques : Q1.a (1x1), Q1.b (n×n sym), Q1.c (chaos), Q1.d (ord), Q2 (recon), Q3.a/b/c (gaps)
+  - `answer_all_questions()` retourne 8 rapports comparatifs sur les 3 modeles
+- Nouvelle commande CLI `modele <action>` :
+  - `modele list | questions | all`
+  - `modele rsp1x1 <n1> <n2>` / `modele rsp <A>|<B> [sym|chaos|ord]`
+  - `modele reconstruct <N>` / `modele gap <p1> <p2>`
+  - Audit JSON signe pour chaque calcul
+- `AuditStore` etendu : supporte `1/2`, `1/3`, `1/4`, `1/2,1/3,1/4`
+- 70 nouveaux tests (Total : **325/325 ✅**)
+- **Verification mathematique end-to-end** : les 3 modeles reconstruisent exactement le N-ieme premier pour n ∈ {1, 5, 10, 26, 50, 100}
 
 ### [2026-02-15] Commande `commandes` + Raccourcis clavier
 - Nouveau module `src/ui/keybindings.py` (`readline` natif Linux/Docker, `pyreadline3` pour Windows si besoin)

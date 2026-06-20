@@ -55,12 +55,13 @@ def test_build_record_assigns_id_and_timestamp():
 
 
 def test_build_record_rejects_unsupported_ratio():
+    """v2 accepte 1/2, 1/3, 1/4 et 1/2,1/3,1/4. Doit toujours rejeter les autres."""
     with pytest.raises(ValueError):
         AuditStore.build_record(
             intervention_type="test",
             question="x",
             certified_answer="y",
-            ratio="1/3",
+            ratio="1/5",  # inconnu : doit etre rejete
         )
 
 

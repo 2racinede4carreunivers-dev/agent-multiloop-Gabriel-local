@@ -19,7 +19,8 @@ from ..adapters.llm.utf8_sanitizer import UTF8Sanitizer
 logger = logging.getLogger(__name__)
 
 
-SUPPORTED_RATIO = "1/2"  # PERIMETRE STRICT
+SUPPORTED_RATIOS = {"1/2", "1/3", "1/4", "1/2,1/3,1/4"}  # v2 : 3 modeles + combine
+SUPPORTED_RATIO = "1/2"  # Compat retro : valeur par defaut
 
 
 @dataclass
@@ -138,10 +139,10 @@ class AuditStore:
         ratio: str = SUPPORTED_RATIO,
     ) -> AuditRecord:
         """Construit une AuditRecord avec id et timestamp auto-generes."""
-        if ratio != SUPPORTED_RATIO:
+        if ratio not in SUPPORTED_RATIOS:
             raise ValueError(
-                f"AuditStore v1 supporte uniquement le rapport {SUPPORTED_RATIO} "
-                f"(recu : {ratio}). Les rapports 1/3 et 1/4 seront ajoutes plus tard."
+                f"AuditStore v2 supporte les rapports {SUPPORTED_RATIOS} "
+                f"(recu : {ratio})."
             )
         record_id = uuid.uuid4().hex[:8]
         ts = datetime.now(timezone.utc).isoformat(timespec="seconds")

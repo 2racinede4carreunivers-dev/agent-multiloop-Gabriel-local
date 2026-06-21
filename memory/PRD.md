@@ -4,7 +4,7 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v2.6 — 374/374 tests Pytest ✅ — RAG Spectral + Ask Gabriel + GeometrieSpectraleEngine**
+**Production-Ready v2.7 — 406/406 tests Pytest ✅ — 4 Axes cognitifs + RAG + Ask Gabriel + 3 Modèles**
 
 ## Architecture
 ```

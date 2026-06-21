@@ -36,6 +36,8 @@ except ImportError:
 DEFAULT_COMMANDS = (
     # Generaux
     "aide", "commandes", "version", "contexte", "memoire", "quitter",
+    # Ask Gabriel (aide contextuelle)
+    "ask", "ask type", "ask rules",
     # Corpus & primes
     "corpus", "corpus detail", "primes", "prime ",
     # Calculs deterministes

@@ -4,7 +4,7 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v2.4 — 325/325 tests Pytest ✅ — GeometrieSpectraleEngine operationnel sur 3 modeles**
+**Production-Ready v2.5 — 346/346 tests Pytest ✅ — Ask Gabriel + GeometrieSpectraleEngine**
 
 ## Architecture
 ```
@@ -46,6 +46,18 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 - Corpus mathématique intégré + Slow Motion Debugging + Meta-Learning + CI
 
 ## Changelog
+
+### [2026-02-15] Ask Gabriel - 3 commandes d'aide contextuelle
+- Nouveau module `src/ui/ask_gabriel.py` (deterministe, zero LLM) :
+  - 3 sous-commandes : `ask`, `ask type`, `ask rules`
+  - `ASK_MAIN_SECTIONS` : 4 facons d'interpeller Gabriel + commandes par categorie
+  - `ASK_TYPE_SECTIONS` : 3 modeles + 8 questions canoniques + 7 moteurs + visualisations + audit + HOL
+  - `ASK_RULES_SECTIONS` : 10 regles d'or + capacites + limites + en cas de probleme
+- Integration CLI : commande `ask` dans `_handle_special` avec navigation entre les 3 modes
+- Banniere d'ouverture enrichie : encart vert ">>> Pour decouvrir Gabriel : ask | ask type | ask rules"
+- Tab completion : 'ask', 'ask type', 'ask rules' ajoutees a `DEFAULT_COMMANDS`
+- 14 nouveaux tests dans `tests/test_ask_gabriel.py`
+- Total : **346/346 tests ✅**
 
 ### [2026-02-15] GeometrieSpectraleEngine — 3 modeles, 8 questions canoniques
 - Nouveau module `src/spectral/spectral_models.py` :

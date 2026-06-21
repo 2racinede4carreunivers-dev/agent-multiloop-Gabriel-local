@@ -63,6 +63,9 @@ HELP_TEXT = """
   memoire          Affiche les echanges en memoire
   aide  (h, ?)     Aide rapide (cet ecran)
   commandes (cmd)  Liste complete + raccourcis clavier (recommande)
+  ask              Interpeller Gabriel : principales commandes pour interagir
+  ask type         Voir les fonctions et caracteristiques de Gabriel
+  ask rules        Guide pour interagir efficacement avec Gabriel
   ci               Lance la suite pytest locale (236 tests) et affiche le rapport
   version          Affiche la version
 
@@ -114,6 +117,9 @@ class CLIInterface:
             return True
         if c in {"commandes", "commands", "cmd"}:
             self._show_full_commands()
+            return True
+        if c == "ask" or c.startswith("ask "):
+            self._handle_ask(cmd)
             return True
         if c == "version":
             console.print(f"\n  Multi-Loop Math Agent v{self.VERSION}\n", style="green")
@@ -722,6 +728,71 @@ class CLIInterface:
         ))
         console.print()
 
+    def _handle_ask(self, cmd: str) -> None:
+        """Commande 'ask' : 3 modes d'aide contextuelle sur Gabriel.
+
+        Modes :
+          ask          -> Principales commandes pour interpeller Gabriel
+          ask type     -> Fonctions et caracteristiques + comment les utiliser
+          ask rules    -> Guide pour interagir efficacement avec Gabriel
+        """
+        from .ask_gabriel import get_response
+
+        tokens = cmd.strip().split(maxsplit=1)
+        sub = tokens[1].strip().lower() if len(tokens) > 1 else None
+
+        try:
+            response = get_response(sub)
+        except ValueError as exc:
+            console.print(Panel(
+                f"  [red]{exc}[/red]\n\n"
+                "  Sous-commandes disponibles :\n"
+                "    [cyan]ask[/cyan]         Principales commandes pour interagir avec Gabriel\n"
+                "    [cyan]ask type[/cyan]    Fonctions et caracteristiques\n"
+                "    [cyan]ask rules[/cyan]   Guide d'interaction avec Gabriel",
+                title="[red]Erreur Ask Gabriel[/red]",
+                border_style="red",
+            ))
+            return
+
+        # En-tete unifie
+        header = (
+            f"[bold green]{response.title}[/bold green]\n"
+            f"[dim]Aide contextuelle deterministe (zero appel LLM)[/dim]"
+        )
+        console.print(Panel(header, border_style="green", padding=(0, 2)))
+        console.print()
+
+        # Rendu des sections
+        for section in response.sections:
+            body = "\n".join(section["lines"])
+            console.print(Panel(
+                body,
+                title=section["title"],
+                border_style="cyan",
+                padding=(1, 2),
+            ))
+            console.print()
+
+        # Pied de page : navigation
+        if response.mode == "main":
+            footer = (
+                "  Suite logique : [cyan]ask type[/cyan] (fonctions) ou "
+                "[cyan]ask rules[/cyan] (regles d'interaction)"
+            )
+        elif response.mode == "type":
+            footer = (
+                "  Suite logique : [cyan]ask rules[/cyan] (regles d'interaction) "
+                "ou [cyan]commandes[/cyan] (liste complete)"
+            )
+        else:
+            footer = (
+                "  Vous etes pret ! Essayez : [cyan]modele all[/cyan] ou "
+                "[cyan]courbe ratio 1..50 --png[/cyan]"
+            )
+        console.print(Panel(footer, border_style="dim green"))
+        console.print()
+
     async def _handle_modele(self, cmd: str) -> bool:
         """Commande `modele <action> [args...]` pour interroger les 3 modeles spectraux.
 
@@ -1054,7 +1125,14 @@ class CLIInterface:
                 "Up/Down=historique). Tapez 'commandes' pour tout voir.[/dim]"
             )
         console.print(f"\n  Agent Multi-Loop pret. Bonjour {self.user_name} !", style="bold")
-        console.print("  Tapez 'aide' pour l'aide rapide, 'commandes' pour la liste complete, 'quitter' pour sortir.\n", style="dim")
+        console.print("  Tapez 'aide' pour l'aide rapide, 'commandes' pour la liste complete, 'quitter' pour sortir.", style="dim")
+        console.print(
+            "  [bold green]>>> Pour decouvrir Gabriel :[/bold green]  "
+            "[cyan]ask[/cyan] = commandes principales  |  "
+            "[cyan]ask type[/cyan] = fonctions  |  "
+            "[cyan]ask rules[/cyan] = guide d'interaction"
+        )
+        console.print()
         console.print("  " + "-" * 56)
 
         while True:

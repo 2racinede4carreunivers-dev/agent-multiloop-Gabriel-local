@@ -9,6 +9,7 @@ from typing import Any
 
 from ..adapters.llm.ollama_client import OllamaClient
 from ..adapters.llm.openai_client import OpenAIClient
+from ..adapters.llm.utf8_sanitizer import UTF8Sanitizer
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +156,12 @@ class LLMManager:
         3. Si échec → Tenter OpenAI (90s timeout)
         4. Si tout échoue → Erreur
         """
+        # Sanitization UTF-8 contre les surrogates (\udcc3 etc.) qui font crasher
+        # le client HTTP des LLM lors de l'encodage. Sans coût pour les
+        # textes deja propres.
+        prompt = UTF8Sanitizer.sanitize(prompt) if prompt else prompt
+        if system:
+            system = UTF8Sanitizer.sanitize(system)
         
         # ========== ÉTAPE 1: OLLAMA ==========
         if self.primary == "ollama" and await self._check_ollama():
@@ -198,6 +205,14 @@ class LLMManager:
         Chat multi-tours avec même logique de fallback:
         Ollama → Claude → OpenAI
         """
+        # Sanitization UTF-8 de chaque tour de chat
+        sanitized: list[dict] = []
+        for msg in messages:
+            new_msg = dict(msg)
+            if isinstance(new_msg.get("content"), str):
+                new_msg["content"] = UTF8Sanitizer.sanitize(new_msg["content"])
+            sanitized.append(new_msg)
+        messages = sanitized
         
         # OLLAMA
         if self.primary == "ollama" and await self._check_ollama():

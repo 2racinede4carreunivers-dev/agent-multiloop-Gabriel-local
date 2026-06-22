@@ -4,7 +4,7 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v2.8 — 449/449 tests Pytest ✅ — 5 Axes cognitifs (Axe 2 intégré au pipeline) + RAG + Ask Gabriel + 3 Modèles**
+**Production-Ready v2.9 — 477/477 tests Pytest ✅ — 5 Axes cognitifs intégrés + Plan Trifocal + UTF-8 sanitization + Refactor src/**
 
 ## Architecture
 ```
@@ -46,6 +46,32 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 - Corpus mathématique intégré + Slow Motion Debugging + Meta-Learning + CI
 
 ## Changelog
+
+### [2026-02-16] Plan Trifocal FZg/HyRi/MsP (P1) + Fix UnicodeEncodeError (P1) + Refactor src/ (P2)
+
+#### Plan Trifocal — Section X methode_spectral.thy
+- Nouveau module `src/spectral/plan_trifocal.py` :
+  - 3 axes : **FZg** (Fonction Zêta globale), **HyRi** (Hypothèse de Riemann), **MsP** (Méthode spectrale + position)
+  - 5 postulats épipolaires (P1-P5) : coïncidence des positions, constante 1/2, équation d'aires, sur-combinatoire mixte, courbure de droite critique
+  - `PlanTrifocal.validate(n, model)` : validation déterministe (Fraction) — P2 OK uniquement pour modèle 1/2 (1/3 et 1/4 ne touchent pas Riemann directement)
+  - `riemann_link_statement()` : texte citable expliquant le lien MsP↔Riemann
+  - `epistemic_claim(validation)` : produit une `EpistemicClaim` CERTAIN/CONJECTURE/HORS_DOMAINE
+- Nouvelle commande CLI : `trifocal [axes|postulats|valider <n> [m]|riemann]`
+- 19 nouveaux tests (`tests/test_plan_trifocal.py`)
+
+#### Fix UnicodeEncodeError (bug original du handoff)
+- `src/core/llm_manager.py` : sanitization UTF-8 systématique de `prompt`/`system` dans `generate()` et de chaque `content` dans `chat()` via `UTF8Sanitizer`
+- `src/audit/audit_store.py` : déjà sanitizé (vérifié et confirmé)
+- 9 nouveaux tests (`tests/test_unicode_surrogate_fix.py`) — reproduit le surrogate `\udcc3` Windows PowerShell, vérifie AuditStore + LLMManager
+
+#### Refactor src/ (P2)
+- Supprimé **11 fichiers Python orphelins** (0 import dans src/, tests/, main_cli.py) :
+  - `src/spectral/gap_solver.py`, `gap_solver_final.py` (v_corrected est la version live)
+  - `src/core/pipeline_fixed.py`, `llm_manager_v2.py`, `llm_manager_old_backup.py`
+  - `src/gabriel_v6_2_rag.py`, `gabriel_llm_integration.py`
+  - `src/hol_proof_generator.py`, `spectral_ratio_analyzer.py`, `multiloop_validation_engine.py`, `gabriel_gap_mixed_handler.py`
+- Déplacé **20 fichiers .md flottants** depuis `/app/` vers `/app/agent-multiloop-Gabriel-local/docs/archive/`
+- Total : **477/477 tests ✅** (+28 nouveaux tests, 0 régression)
 
 ### [2026-02-16] Axe 2 - Ponts cognitifs intégrés au pipeline live (P0)
 - Nouveau module `src/cognitive/engine_bridge.py` : pont entre les 4 briques cognitives et le moteur live
@@ -162,9 +188,7 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 - `695c64e` — Mise à jour fonctions Isabelle (HOL_ISABELLE_FIX.md, hol_integration.py, hol_script_generator.py, verif_p103_n27_CORRECT.thy)
 
 ## Backlog / Futures tâches
-- **P1** : `UnicodeEncodeError` (caractère `\udcc3` sur input PowerShell) — bug original du handoff, à fixer dans `src/audit/audit_store.py` et `src/core/llm_manager.py` (sanitization des surrogates)
-- **P1** : Plan trifocal FZg/HyRi/MsP (Section X de `methode_spectral.thy`) — lien Riemann
-- **P1** : Refactoring des versions parallèles (`gap_solver.py` vs `gap_solver_final.py`, `pipeline.py` vs `pipeline_fixed.py`)
+- **P2** : Refactor avancé — fusionner les versions parallèles encore actives (`pipeline.py` + `pipeline_with_gap_detection.py`, `llm_router.py` + `llm_router_v2.py`, `gabriel_llm_integration_safe.py` + `gabriel_llm_integration_v2.py`) en une seule classe canonique (nécessite tests d'intégration approfondis)
 - **P2** : Badge GitHub Actions dans README.md (à ajouter après le 1er run distant)
 - **P2** : Permettre à Gabriel de **décider lui-même** d'insérer un graphique dans sa réponse LLM (auto-trigger sur "explique la convergence", "trace l'évolution", etc.)
 - **P3** : Comparaison via API GitHub Actions distante (local vs remote CI dans la bannière)
@@ -180,4 +204,4 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 N/A (pas d'authentification, app CLI locale).
 
 ## Health Status
-✅ **Production-Ready v2.8** — 449/449 tests, CI configurée, Axe 2 (ProofTrace + invariants) intégré au pipeline live + EpistemicClaim sur chaque réponse + MetaReasoner singleton.
+✅ **Production-Ready v2.9** — 477/477 tests, CI configurée, Axes cognitifs 2-5 intégrés, Plan Trifocal FZg/HyRi/MsP opérationnel (Section X), Unicode-safe sur LLM + Audit, 11 fichiers orphelins supprimés + 20 .md flottants archivés.

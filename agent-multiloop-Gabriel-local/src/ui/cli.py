@@ -68,6 +68,7 @@ HELP_TEXT = """
   ask rules        Guide pour interagir efficacement avec Gabriel
   ci               Lance la suite pytest locale (236 tests) et affiche le rapport
   cognitive [r|reset] Auto-evaluation Gabriel (Axe 5) : stats par categorie / reset
+  trifocal [sub]   Plan Trifocal FZg/HyRi/MsP (Section X) : axes, postulats, valider, riemann
   version          Affiche la version
 
   Domaines supportes :
@@ -130,6 +131,8 @@ class CLIInterface:
             return True
         if c == "cognitive" or c.startswith("cognitive "):
             return self._handle_cognitive(cmd)
+        if c == "trifocal" or c.startswith("trifocal "):
+            return self._handle_trifocal(cmd)
         if c in {"ci", "tests", "pytest"}:
             console.print("\n  [dim]Execution de la suite pytest locale (tests/)... patientez quelques secondes.[/dim]\n")
             summary = run_pytest_local()
@@ -669,6 +672,14 @@ class CLIInterface:
                 ("cognitive reset",
                  "Reinitialise les statistiques d'auto-evaluation"),
             ]),
+            ("[bold cyan]PLAN TRIFOCAL & RIEMANN (Section X)[/bold cyan]", [
+                ("trifocal axes", "Liste les 3 axes (FZg, HyRi, MsP)"),
+                ("trifocal postulats", "Liste les 5 postulats epipolaires P1-P5"),
+                ("trifocal valider <n> [m]",
+                 "Valide la coherence epipolaire pour n  ex: trifocal valider 26"),
+                ("trifocal riemann",
+                 "Affiche le lien Methode Spectrale <-> Hypothese de Riemann"),
+            ]),
             ("[bold cyan]LANGAGE NATUREL & AUTO-TRIGGER[/bold cyan]", [
                 ("<question libre>",
                  "Pipeline multi-loop avec garde-fous"),
@@ -934,6 +945,168 @@ class CLIInterface:
             console.print(f"  [red]Action inconnue : '{action}'. Tapez 'modele' pour l'aide.[/red]")
         except (ValueError, ZeroDivisionError) as exc:
             console.print(f"  [red]Erreur : {exc}[/red]")
+        return True
+
+    def _handle_trifocal(self, cmd: str) -> bool:
+        """Commande `trifocal [axes|postulats|valider <n> [modele]|riemann]`.
+
+        Plan Trifocal FZg/HyRi/MsP (Section X methode_spectral.thy).
+        """
+        from rich.table import Table as _Table
+        from src.spectral import (
+            PlanTrifocal, AXIS_DESCRIPTIONS, POSTULATES, TrifocalAxis,
+        )
+
+        tokens = cmd.strip().split()
+        sub = tokens[1].lower() if len(tokens) > 1 else "menu"
+
+        plan = PlanTrifocal(spectral_core=self.orchestrator.pipeline.spectral_core)
+
+        # --- Menu d'aide
+        if sub == "menu":
+            console.print(Panel(
+                "  [bold]trifocal[/bold] - Plan trifocal FZg/HyRi/MsP (Section X)\n\n"
+                "  Sous-commandes :\n"
+                "    [yellow]trifocal axes[/yellow]                 Liste les 3 axes (FZg, HyRi, MsP)\n"
+                "    [yellow]trifocal postulats[/yellow]            Liste les 5 postulats epipolaires (P1-P5)\n"
+                "    [yellow]trifocal valider <n> [modele][/yellow] Valide la coherence epipolaire pour n\n"
+                "    [yellow]trifocal riemann[/yellow]              Affiche le lien avec l'Hypothese de Riemann\n\n"
+                "  Exemples :\n"
+                "    [cyan]trifocal valider 26[/cyan]       (modele 1/2 par defaut)\n"
+                "    [cyan]trifocal valider 10 1/3[/cyan]\n"
+                "    [cyan]trifocal riemann[/cyan]",
+                title="[cyan]Aide trifocal[/cyan]", border_style="cyan",
+            ))
+            return True
+
+        # --- axes
+        if sub in {"axes", "axis"}:
+            tbl = _Table(
+                title="Plan Trifocal - 3 Axes", border_style="cyan", show_lines=True,
+            )
+            tbl.add_column("Axe", style="bold yellow", no_wrap=True)
+            tbl.add_column("Description")
+            for axis in TrifocalAxis:
+                tbl.add_row(axis.value, AXIS_DESCRIPTIONS[axis])
+            console.print(tbl)
+            return True
+
+        # --- postulats
+        if sub in {"postulats", "postulates"}:
+            tbl = _Table(
+                title="Plan Trifocal - 5 Postulats epipolaires",
+                border_style="cyan", show_lines=True,
+            )
+            tbl.add_column("Code", style="bold yellow", no_wrap=True)
+            tbl.add_column("Nom", style="cyan", no_wrap=True)
+            tbl.add_column("Enonce")
+            tbl.add_column("Axes", no_wrap=True)
+            for p in POSTULATES:
+                axes_str = "+".join(a.value for a in p.axes)
+                tbl.add_row(p.code, p.name, p.statement, axes_str)
+            console.print(tbl)
+            return True
+
+        # --- valider <n> [modele]
+        if sub in {"valider", "validate"}:
+            if len(tokens) < 3:
+                console.print(
+                    "\n  [yellow]Usage : trifocal valider <n> [modele]\n"
+                    "  modele = 1/2 (defaut) | 1/3 | 1/4[/yellow]\n"
+                )
+                return True
+            try:
+                n = int(tokens[2])
+            except ValueError:
+                console.print(f"\n  [yellow]Position invalide : '{tokens[2]}'[/yellow]\n")
+                return True
+            model = tokens[3] if len(tokens) >= 4 else "1/2"
+
+            try:
+                v = plan.validate(n=n, model_name=model)
+            except ValueError as exc:
+                console.print(f"\n  [red]Erreur : {exc}[/red]\n")
+                return True
+
+            style = "green" if v.epipolar_coherent else "yellow"
+            console.print(Panel(
+                v.to_text(),
+                title=f"[{style}]Validation epipolaire trifocale n={n} ({model})[/{style}]",
+                border_style=style,
+            ))
+            # Claim epistemique
+            claim = plan.epistemic_claim(v)
+            color = {"CERTAIN": "green", "CONJECTURE": "yellow",
+                     "HORS_DOMAINE": "red"}.get(claim.certainty.value, "white")
+            body = (
+                f"[bold {color}]{claim.certainty.value}[/bold {color}]   "
+                f"citable={'oui' if claim.can_cite() else 'non'}\n"
+                f"  {claim.statement}\n"
+                f"  Provenance : {', '.join(p.value for p in claim.provenance) or '—'}"
+            )
+            if claim.limits:
+                body += "\n  Limites :\n" + "\n".join(
+                    f"    - {lim}" for lim in claim.limits
+                )
+            console.print(Panel(
+                body, title="[bold]Claim epistemique (Axe 4)[/bold]",
+                border_style=color,
+            ))
+
+            # Audit JSON citable
+            try:
+                from src.audit import AuditStore as _AS
+                store = self.orchestrator.pipeline.audit_store
+                record = _AS.build_record(
+                    intervention_type="trifocal",
+                    question=cmd.strip(),
+                    certified_answer=(
+                        f"Validation trifocale n={n} model={model} : "
+                        f"{'VALIDE' if v.epipolar_coherent else 'BRISEE'}. "
+                        f"P1={v.p1_positions_match}, P2={v.p2_demi_equal}, "
+                        f"MsP={v.msp_equation_holds}."
+                    ),
+                    position=n, prime_value=v.prime,
+                    citations_thy=[
+                        "methode_spectral.thy::Section X (Validation epipolaire)",
+                        "methode_spectral.thy::SA_def, SB_def, prime_equation",
+                        "riemann_spectral.thy::RiemannHypothesis",
+                    ],
+                    toolkit_reports={"plan_trifocal": {
+                        "n": v.n, "prime": v.prime, "model": v.model_name,
+                        "msp_demi": str(v.msp_demi),
+                        "hypR_demi": str(v.hypR_demi),
+                        "p1_positions_match": v.p1_positions_match,
+                        "p2_demi_equal": v.p2_demi_equal,
+                        "msp_equation_holds": v.msp_equation_holds,
+                        "epipolar_coherent": v.epipolar_coherent,
+                        "details": v.details,
+                    }},
+                    ratio=model,
+                )
+                store.save(record)
+                console.print(
+                    f"\n[dim]Audit cree : id={record.id} "
+                    f"(citer {record.id} pour bloc citable)[/dim]\n"
+                )
+            except Exception as exc:
+                logger.warning("Audit trifocal non sauvegarde : %s", exc)
+            return True
+
+        # --- riemann
+        if sub == "riemann":
+            from src.spectral import PlanTrifocal as _PT
+            console.print(Panel(
+                _PT.riemann_link_statement(),
+                title="[magenta]Lien Methode Spectrale <-> Hypothese de Riemann[/magenta]",
+                border_style="magenta", padding=(1, 2),
+            ))
+            return True
+
+        console.print(
+            f"\n  [yellow]Sous-commande inconnue : '{sub}'. "
+            "Tapez 'trifocal' pour l'aide.[/yellow]\n"
+        )
         return True
 
     def _handle_cognitive(self, cmd: str) -> bool:

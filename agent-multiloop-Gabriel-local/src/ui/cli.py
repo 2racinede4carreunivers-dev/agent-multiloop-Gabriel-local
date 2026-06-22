@@ -1395,7 +1395,15 @@ class CLIInterface:
         return True
 
     def _display_answer(self, answer: FinalAnswer) -> None:
-        # Affichage principal
+        # Detecter le mode slow-motion -> rendu instrument de precision
+        is_slow_motion = bool(
+            answer.structured_data
+            and answer.structured_data.get("slow_motion_triggered")
+        )
+        if is_slow_motion:
+            return self._display_slow_motion(answer)
+
+        # Affichage principal standard
         console.print(
             Panel(
                 answer.answer_text,
@@ -1439,6 +1447,236 @@ class CLIInterface:
             console.print(
                 Panel(answer.hol_script, title="[yellow]Fragment HOL genere[/yellow]", border_style="yellow")
             )
+
+    # ====================================================================
+    # Rendu SLOW-MOTION : "Kit de reparation spectrale" (instrument precis)
+    # ====================================================================
+    def _display_slow_motion(self, answer: FinalAnswer) -> None:
+        """Rendu dedie pour les reponses produites par le Slow-Motion Debugger.
+
+        Theme : kit de reparation metrologique. Chaque panneau = un cadran.
+        Couleur dominante : turquoise/teal profond (precision) + accents ambre
+        (alerte / instrument calibre). Espacement aere pour lecture critique.
+        """
+        from rich.text import Text as _Text
+        from rich.rule import Rule as _Rule
+
+        sd = answer.structured_data or {}
+        certified = sd.get("certified") or {}
+        decomposition = sd.get("decomposition") or {}
+        timeline_events = sd.get("debug_timeline") or []
+        suggestions = sd.get("reformulations") or []
+        bypassed = decomposition.get("incoherent_segments") or []
+        coherence_score = sd.get("coherence_score")
+        coherence_signals = sd.get("coherence_signals") or []
+
+        # ----- HEADER : "KIT DE REPARATION SPECTRALE" (autorite) -----
+        console.print()  # ligne de respiration avant le panneau
+        header_text = _Text()
+        header_text.append("KIT DE REPARATION SPECTRALE\n",
+                           style="bold bright_cyan")
+        header_text.append("MODE INSTRUMENT DE PRECISION  ",
+                           style="bold cyan")
+        header_text.append("\u2014  ", style="dim")
+        header_text.append("Debugger Ralenti active\n",
+                           style="italic yellow")
+        if coherence_score is not None:
+            header_text.append(
+                f"\nIncoherence detectee  -  score multiloop = "
+                f"{coherence_score:.2f}/1.00\n",
+                style="bold red",
+            )
+        if coherence_signals:
+            header_text.append("Signaux declencheurs :\n", style="dim")
+            for sig in coherence_signals[:3]:
+                header_text.append(f"   * {sig}\n", style="yellow")
+        console.print(Panel(
+            header_text,
+            title="[bold bright_cyan]+- GABRIEL // KIT METRIQUE -+[/bold bright_cyan]",
+            border_style="bright_cyan",
+            padding=(1, 3),
+        ))
+
+        # ----- CADRAN 1 : REFERENCE CERTIFIEE (lecture de l'instrument) -----
+        ref_lines = self._parse_certified_summary(certified)
+        ref_text = _Text()
+        ref_text.append("LECTURE DE L'INSTRUMENT  ", style="bold bright_cyan")
+        ref_text.append("(deterministe, sans LLM)\n", style="dim italic")
+        ref_text.append("\n")
+        for label, value in ref_lines:
+            ref_text.append(f"  {label:<14}", style="bold yellow")
+            ref_text.append(f"  {value}\n", style="white")
+        if certified.get("method") and not any(
+            "methode" in lab.lower() for lab, _ in ref_lines
+        ):
+            ref_text.append("\n  ")
+            ref_text.append("Methode      ", style="bold yellow")
+            ref_text.append(f"  {certified['method']}\n", style="cyan")
+        console.print(Panel(
+            ref_text,
+            title="[bold]CADRAN 1  -  REFERENCE CERTIFIEE[/bold]",
+            subtitle="[dim italic]source : kernel + spectral_core[/dim italic]",
+            border_style="bright_cyan",
+            padding=(1, 3),
+        ))
+
+        # ----- CADRAN 2 : SOURCES DE CERTITUDE (axiomes calibrants) -----
+        citations = certified.get("citations") or []
+        if citations:
+            cit_text = _Text()
+            cit_text.append("AXIOMES DE CALIBRATION\n",
+                            style="bold bright_cyan")
+            cit_text.append("\n")
+            for i, cit in enumerate(citations, 1):
+                cit_text.append(f"  [{i:>2}]  ", style="bold yellow")
+                cit_text.append(f"{cit}\n", style="white")
+                if i < len(citations):
+                    cit_text.append("\n")
+            console.print(Panel(
+                cit_text,
+                title="[bold]CADRAN 2  -  SOURCES DE CERTITUDE[/bold]",
+                subtitle="[dim italic]autorite : methode_spectral.thy + corpus Savard[/dim italic]",
+                border_style="cyan",
+                padding=(1, 3),
+            ))
+
+        # ----- CADRAN 3 : SEGMENTS EN QUARANTAINE (si bypass) -----
+        if bypassed:
+            byp_text = _Text()
+            byp_text.append("SEGMENTS MIS EN QUARANTAINE\n",
+                            style="bold bright_red")
+            byp_text.append("(ignores pour preserver la coherence)\n",
+                            style="dim italic")
+            byp_text.append("\n")
+            for i, seg in enumerate(bypassed, 1):
+                byp_text.append("  [X] ", style="bold red")
+                byp_text.append(f"{seg.get('text', '?')}\n", style="white")
+                if seg.get("reason"):
+                    byp_text.append("      Motif : ", style="dim")
+                    byp_text.append(f"{seg['reason']}\n", style="italic yellow")
+                if i < len(bypassed):
+                    byp_text.append("\n")
+            console.print(Panel(
+                byp_text,
+                title="[bold red]CADRAN 3  -  SEGMENTS REJETES[/bold red]",
+                border_style="red",
+                padding=(1, 3),
+            ))
+
+        # ----- CADRAN 4 : SUGGESTIONS DE REFORMULATION -----
+        if suggestions:
+            sug_text = _Text()
+            sug_text.append("RECALIBRAGE PROPOSE\n",
+                            style="bold bright_cyan")
+            sug_text.append("(reformulez pour obtenir un resultat plus precis)\n",
+                            style="dim italic")
+            sug_text.append("\n")
+            for i, s in enumerate(suggestions, 1):
+                sug_text.append("  -> ", style="bold green")
+                sug_text.append(f"{s}\n", style="white")
+                if i < len(suggestions):
+                    sug_text.append("\n")
+            console.print(Panel(
+                sug_text,
+                title="[bold green]CADRAN 4  -  SUGGESTIONS DE REFORMULATION[/bold green]",
+                border_style="green",
+                padding=(1, 3),
+            ))
+
+        # ----- CADRAN 5 : TIMELINE DEBUGGER (chronologie) -----
+        if timeline_events:
+            console.print()
+            console.print(_Rule(
+                "[bold bright_cyan]CADRAN 5  -  TIMELINE DEBUGGER (chronologie)[/bold bright_cyan]",
+                style="bright_cyan",
+            ))
+            for ev in timeline_events:
+                step = ev.get("step", "?")
+                label = ev.get("label", "?")
+                detail = ev.get("detail", "")
+                title = _Text()
+                title.append(f"  T{step:<2}  ", style="bold bright_cyan")
+                title.append(f"[{label}]", style="bold yellow")
+                console.print(title)
+                # detail sur plusieurs lignes, indente
+                for line in str(detail).splitlines() or [str(detail)]:
+                    if line.strip():
+                        console.print(f"        [dim]{line}[/dim]")
+                console.print()  # respiration entre etapes
+            console.print(_Rule(style="bright_cyan"))
+
+        # ----- CADRAN 6 : Niveau de certitude (Axe 4) -----
+        if answer.epistemic_claim:
+            ec = answer.epistemic_claim
+            cert = ec.get("certainty", "?")
+            color = {"CERTAIN": "bright_green", "CONJECTURE": "yellow",
+                     "HORS_DOMAINE": "red"}.get(cert, "white")
+            body = _Text()
+            body.append(f"{cert}", style=f"bold {color}")
+            body.append(f"   citable={'oui' if ec.get('can_cite') else 'non'}\n\n",
+                        style="dim")
+            body.append("  Provenance : ", style="bold yellow")
+            body.append(
+                f"{', '.join(ec.get('provenance', [])) or '—'}\n",
+                style="white",
+            )
+            if ec.get("limits"):
+                body.append("\n  Limites :\n", style="bold yellow")
+                for lim in ec["limits"]:
+                    body.append(f"     - {lim}\n", style="italic")
+            console.print(Panel(
+                body,
+                title=f"[bold {color}]CADRAN 6  -  NIVEAU DE CERTITUDE (Axe 4)[/bold {color}]",
+                border_style=color,
+                padding=(1, 3),
+            ))
+
+        # ----- Audit ID en bas (si dispo) -----
+        if sd.get("audit_id"):
+            console.print(
+                f"\n  [dim]Audit signe : id={sd['audit_id']} "
+                f"(tapez 'citer {sd['audit_id']}' pour bloc citable)[/dim]\n"
+            )
+
+    @staticmethod
+    def _parse_certified_summary(certified: dict) -> list[tuple[str, str]]:
+        """Decompose le 'summary' du certified en (label, value) pour affichage.
+
+        Le summary suit typiquement le format :
+          'Rapport spectral configuration X.\\n  A = [...]\\n  B = [...]\\n
+           RsP = num/den (...)\\n  Methode : ...'
+        On extrait chaque ligne en (label_avant_=, valeur_apres).
+        """
+        summary = certified.get("summary", "") or ""
+        lines: list[tuple[str, str]] = []
+        # Premiere ligne -> "Resume" si elle ne contient pas '=' / ':'
+        first, *rest = summary.splitlines()
+        if first.strip():
+            lines.append(("Resume", first.strip()))
+        for raw in rest:
+            line = raw.strip()
+            if not line:
+                continue
+            # Format "Methode : ..."
+            if line.lower().startswith("methode") and ":" in line:
+                label, val = line.split(":", 1)
+                lines.append((label.strip().capitalize(), val.strip()))
+                continue
+            # Format "Foo = bar"
+            if "=" in line:
+                label, val = line.split("=", 1)
+                lines.append((label.strip(), val.strip()))
+                continue
+            lines.append(("", line))
+        # Aussi : ajouter RsP_decimal explicite si dispo et pas deja inclus
+        rsp_dec = certified.get("RsP_decimal")
+        if rsp_dec is not None and not any("decimal" in lab.lower() for lab, _ in lines):
+            lines.append(("RsP (decimal)", f"{rsp_dec:.10f}"))
+        # Et la config detectee
+        cfg = certified.get("configuration")
+        if cfg and not any("configuration" in lab.lower() for lab, _ in lines):
+            lines.append(("Configuration", cfg))
+        return lines
 
     async def interactive_mode(self) -> None:
         self.banner()

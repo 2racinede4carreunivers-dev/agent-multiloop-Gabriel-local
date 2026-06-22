@@ -4,7 +4,7 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v2.9 — 477/477 tests Pytest ✅ — 5 Axes cognitifs intégrés + Plan Trifocal + UTF-8 sanitization + Refactor src/**
+**Production-Ready v3.0 — 487/487 tests Pytest ✅ — Slow-Motion "Kit de réparation" (6 cadrans aérés) + Décomposeur intelligent + 5 Axes cognitifs + Plan Trifocal**
 
 ## Architecture
 ```
@@ -46,6 +46,46 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 - Corpus mathématique intégré + Slow Motion Debugging + Meta-Learning + CI
 
 ## Changelog
+
+### [2026-02-16] Slow-Motion Debugger — Kit de réparation spectrale (UX + logique)
+
+**Suite au feedback Philippe sur l'écran "REPONSE CERTIFIEE" écrasé et T4/T7 vides.**
+
+#### A. Visuel — "Kit de réparation métrique"
+- Nouveau rendu CLI dédié `_display_slow_motion(answer)` (route automatique quand `slow_motion_triggered=True`)
+- **6 cadrans aérés** au lieu d'un seul panneau écrasé :
+  - **HEADER** "KIT DE REPARATION SPECTRALE — MODE INSTRUMENT DE PRECISION" (cyan vif + signaux déclencheurs)
+  - **CADRAN 1** — REFERENCE CERTIFIEE : lecture de l'instrument, chaque mesure sur sa propre ligne avec label aligné (A, B, RsP, Configuration, Méthode...)
+  - **CADRAN 2** — SOURCES DE CERTITUDE : axiomes de calibration numérotés `[1]`, `[2]`, `[3]` avec aération entre eux
+  - **CADRAN 3** — SEGMENTS REJETÉS : quarantaine avec `[X]` + motif italique (rouge, uniquement si bypass)
+  - **CADRAN 4** — SUGGESTIONS DE REFORMULATION : recalibrage `->` (vert)
+  - **CADRAN 5** — TIMELINE DEBUGGER : chaque step avec respiration entre étapes
+  - **CADRAN 6** — Niveau de certitude (Axe 4) intégré dans le thème
+- Thème : turquoise/cyan profond (précision) + accents ambre/jaune (gauges) + rouge (alerte) + vert (recalibrage)
+- `padding=(1, 3)` partout pour aération critique
+
+#### B. Logique — Décomposeur + Slow-Motion plus intelligents
+- **Décomposeur** détecte le mismatch "annoncé vs réel" :
+  - "rapport spectral **symétrique 4×4**" + tuples `(7,23,79,31)` (4) et `(17,11,3)` (3) → tuples flaggés INCOHÉRENTS avec motif explicite "Annonce symetrique 4*4 mais A=4 != B=3 (ASYMETRIQUE en realite)"
+  - Nouveau champ `announced_size` + `announced_symmetric` dans `DecomposedRequest`
+  - Détecte aussi "asymétrique NxN" / "configuration NxN" (regex avec lookbehind pour éviter `sym` match dans `asym`)
+- **`_build_reformulations`** étendue à `ratio_spectral_nxn` :
+  - Cas mismatch : propose la reformulation ASYMETRIQUE + suggestion de compléter B pour rester SYMETRIQUE
+  - Cas normal : propose la reformulation canonique avec tuples
+  - Toujours propose le cas élémentaire `RsP_1x1(a, b)` comme retour aux fondamentaux
+  - Branches `reconstruction` et `gap` aussi améliorées
+- **Timeline T1-T7** : chaque step **explique son raisonnement** (plus de "aucun segment à ignorer" sec) :
+  - T2 mentionne pourquoi on bascule vers le kit déterministe
+  - T3 montre "annoncé vs réel" en cas de mismatch
+  - T4 explique soit la quarantaine, soit "syntaxiquement valide → incohérence vient du LLM"
+  - T5 précise "seuls les segments cohérents sont utilisés"
+  - T6 mentionne la méthode (`spectral_core.analyze_spectral_ratio` etc.)
+  - T7 dit combien de suggestions + lesquelles (ou explique pourquoi 0)
+- **`structured_data` nettoyé** : les champs obsolètes (`ratio_float`, `expected_float`, `matches_expected`) hérités du multiloop pré-slow-motion sont effacés pour éviter la contradiction visuelle avec la réponse certifiée
+
+#### Tests
+- `tests/test_slow_motion_improvements.py` : **10 nouveaux tests**
+- Total : **487/487 ✅** (0 régression)
 
 ### [2026-02-16] Plan Trifocal FZg/HyRi/MsP (P1) + Fix UnicodeEncodeError (P1) + Refactor src/ (P2)
 
@@ -204,4 +244,4 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 N/A (pas d'authentification, app CLI locale).
 
 ## Health Status
-✅ **Production-Ready v2.9** — 477/477 tests, CI configurée, Axes cognitifs 2-5 intégrés, Plan Trifocal FZg/HyRi/MsP opérationnel (Section X), Unicode-safe sur LLM + Audit, 11 fichiers orphelins supprimés + 20 .md flottants archivés.
+✅ **Production-Ready v3.0** — 487/487 tests, CI configurée, Slow-Motion "Kit métrique" en 6 cadrans aérés, décomposeur détecte les mismatches annoncé/réel, T4/T7 expliquent leur raisonnement, Axes cognitifs 2-5 + Plan Trifocal + Unicode-safe.

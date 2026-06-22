@@ -39,6 +39,10 @@ class DecomposedRequest:
     tuple_A: Optional[list[int]] = None
     tuple_B: Optional[list[int]] = None
     config_size: Optional[int] = None  # 3 pour 3*3, etc.
+    # NOUVEAU : taille annoncee par l'utilisateur dans la requete ("symétrique 4*4" -> 4)
+    announced_size: Optional[int] = None
+    # NOUVEAU : type de configuration annoncee ("symétrique" / "asymétrique")
+    announced_symmetric: Optional[bool] = None
 
     @property
     def coherent_segments(self) -> list[Segment]:
@@ -104,6 +108,10 @@ class RequestDecomposer:
 
         # 2bis. Pour les requetes de rapport spectral, extraire les tuples
         if result.detected_intent in ("ratio_spectral_nxn", "ratio_spectral"):
+            # Capter la taille annoncee + le qualificatif (symétrique/asymétrique)
+            announced = self._extract_announced_config(question)
+            if announced is not None:
+                result.announced_size, result.announced_symmetric = announced
             tuples = self._extract_tuples(question)
             if len(tuples) >= 2:
                 result.tuple_A = tuples[0]
@@ -134,13 +142,35 @@ class RequestDecomposer:
 
         # 3c. Tuples (A, B) si presents
         if result.tuple_A is not None and result.tuple_B is not None:
+            # Detecter le mismatch annonce vs reel
+            mismatch_reason = ""
+            sizes_equal = (len(result.tuple_A) == len(result.tuple_B))
+            if result.announced_size is not None:
+                if (result.announced_symmetric is True
+                        and result.announced_size != len(result.tuple_A)):
+                    mismatch_reason = (
+                        f"Annonce 'symetrique {result.announced_size}*{result.announced_size}'"
+                        f" mais A a {len(result.tuple_A)} elements (mismatch taille)."
+                    )
+                if (result.announced_symmetric is True and not sizes_equal):
+                    mismatch_reason = (
+                        f"Annonce 'symetrique {result.announced_size}*{result.announced_size}'"
+                        f" mais A={len(result.tuple_A)} elements != B={len(result.tuple_B)}"
+                        " (configuration ASYMETRIQUE en realite)."
+                    )
+            tuple_a_coherent = (mismatch_reason == "")
+            tuple_b_coherent = (mismatch_reason == "")
             result.segments.append(Segment(
                 kind="tuple_A", text=str(tuple(result.tuple_A)),
-                value=result.tuple_A, coherent=True,
+                value=result.tuple_A,
+                coherent=tuple_a_coherent,
+                reason=mismatch_reason,
             ))
             result.segments.append(Segment(
                 kind="tuple_B", text=str(tuple(result.tuple_B)),
-                value=result.tuple_B, coherent=True,
+                value=result.tuple_B,
+                coherent=tuple_b_coherent,
+                reason=mismatch_reason,
             ))
         else:
             # 3d. Tous les autres nombres
@@ -172,6 +202,42 @@ class RequestDecomposer:
             ))
 
         return result
+
+    @staticmethod
+    def _extract_announced_config(text: str) -> Optional[tuple[int, bool]]:
+        """Extrait la taille et la symetrie annoncees dans la requete.
+
+        Exemples reconnus :
+          "rapport spectral symetrique 4*4"  -> (4, True)
+          "configuration symetrique 3x3"     -> (3, True)
+          "rapport asymetrique 5*3"          -> (5, False) (premiere taille)
+
+        Returns: (size_announced, is_symmetric) ou None si rien d'annonce.
+        """
+        t = text.lower()
+        # IMPORTANT: chercher "asymetrique" AVANT "symetrique"
+        # (sinon "symetrique" matche en sous-chaine de "asymetrique")
+        m = re.search(
+            r"asym[ée]trique\s*(\d+)\s*[x*]\s*(\d+)",
+            t,
+        )
+        if m:
+            return (int(m.group(1)), False)
+        # Cherche "symetrique N*N" ou "symetrique NxN"
+        m = re.search(
+            r"(?<![a-z])sym[ée]trique\s*(\d+)\s*[x*]\s*(\d+)",
+            t,
+        )
+        if m:
+            return (int(m.group(1)), True)
+        # "configuration NxN" sans qualificatif explicite -> symetrique par defaut
+        m = re.search(
+            r"configuration\s*(\d+)\s*[x*]\s*(\d+)",
+            t,
+        )
+        if m and m.group(1) == m.group(2):
+            return (int(m.group(1)), True)
+        return None
 
     @staticmethod
     def _extract_tuples(text: str) -> list[list[int]]:

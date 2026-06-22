@@ -118,42 +118,83 @@ class SlowMotionDebugger:
         timeline = DebugTimeline()
         timeline.add(1, "REQUETE_RECUE", f'"{question[:80]}"')
         timeline.add(2, "INCOHERENCE_DETECTEE",
-                     f"score={coherence_report.score:.2f}, "
-                     f"signaux={coherence_report.signals[:3]}")
+                     f"score={coherence_report.score:.2f} (seuil critique). "
+                     f"Signaux : {coherence_report.signals[:3]}. "
+                     "Le multiloop a produit une reponse jugee non-fiable -> "
+                     "bascule sur le kit de reparation deterministe (kernel + spectral_core).")
 
         # T3. Decomposition
         decomposed = self.decomposer.decompose(question)
         coherent_str = ", ".join(f"{s.kind}={s.value}" for s in decomposed.coherent_segments)
         incoherent_str = ", ".join(f"{s.kind}={s.value}" for s in decomposed.incoherent_segments)
-        timeline.add(3, "DECOMPOSITION",
-                     f"intent={decomposed.detected_intent} "
-                     f"ratio={decomposed.detected_ratio} "
-                     f"coherents=[{coherent_str}] incoherents=[{incoherent_str}]")
+        t3_detail = (
+            f"Intent={decomposed.detected_intent}, ratio={decomposed.detected_ratio}. "
+            f"Coherents=[{coherent_str}]. "
+            f"Incoherents=[{incoherent_str or 'aucun'}]."
+        )
+        if decomposed.announced_size is not None:
+            t3_detail += (
+                f" Configuration ANNONCEE : "
+                f"{'symetrique' if decomposed.announced_symmetric else 'asymetrique'} "
+                f"{decomposed.announced_size}*{decomposed.announced_size}."
+            )
+            if (decomposed.tuple_A is not None and decomposed.tuple_B is not None
+                    and len(decomposed.tuple_A) != len(decomposed.tuple_B)):
+                t3_detail += (
+                    f" REELLE : A={len(decomposed.tuple_A)} elements, "
+                    f"B={len(decomposed.tuple_B)} elements (MISMATCH)."
+                )
+        timeline.add(3, "DECOMPOSITION", t3_detail)
 
         # T4. By-pass
         bypassed = [s for s in decomposed.incoherent_segments]
         if bypassed:
-            timeline.add(4, "BYPASS_SEGMENTS",
-                         f"ignores : {[s.text for s in bypassed]} "
-                         f"(raisons : {[s.reason for s in bypassed]})")
+            timeline.add(
+                4, "BYPASS_SEGMENTS",
+                f"Segments mis en quarantaine : "
+                f"{[s.text for s in bypassed]}. "
+                f"Raisons : {[s.reason for s in bypassed]}. "
+                "Ces segments sont IGNORES dans la requete canonique pour "
+                "preserver la coherence spectrale.",
+            )
         else:
-            timeline.add(4, "BYPASS_SEGMENTS", "aucun segment a ignorer")
+            timeline.add(
+                4, "BYPASS_SEGMENTS",
+                "Aucun segment incoherent detecte. La requete est syntaxiquement "
+                "valide ; l'incoherence du multiloop vient probablement d'une "
+                "interpretation LLM erronee, pas d'un defaut de la requete.",
+            )
 
         # T5. Requete canonique
         canonical = self._rewrite_canonical(decomposed)
-        timeline.add(5, "REQUETE_CANONIQUE", canonical)
+        timeline.add(
+            5, "REQUETE_CANONIQUE",
+            f"Reformulation deterministe : {canonical} "
+            "(seuls les segments coherents et l'invariant spectral_core sont utilises).",
+        )
 
         # T6. Resolution certifiee (sans LLM)
         certified = self._solve_certified(decomposed)
-        timeline.add(6, "RESOLUTION_CERTIFIEE", certified["summary"])
+        timeline.add(
+            6, "RESOLUTION_CERTIFIEE",
+            certified.get("method", "kernel") + " -> " + certified["summary"].splitlines()[0],
+        )
 
         # T7. Reponse courte + reformulations
         suggestions = self._build_reformulations(decomposed, bypassed)
         if suggestions:
-            timeline.add(7, "REFORMULATIONS",
-                         " | ".join(f'"{s}"' for s in suggestions[:2]))
+            timeline.add(
+                7, "REFORMULATIONS",
+                f"{len(suggestions)} suggestion(s) generee(s) "
+                f"pour clarifier la requete future : "
+                + " | ".join(f'"{s}"' for s in suggestions[:3]),
+            )
         else:
-            timeline.add(7, "REFORMULATIONS", "aucune suggestion necessaire")
+            timeline.add(
+                7, "REFORMULATIONS",
+                "Aucune reformulation proposee car la requete est resolue par le "
+                "kernel sans ambiguite (intent reconnu + segments coherents).",
+            )
 
         # T8. Reponse finale construite
         answer_text = self._render_answer(
@@ -170,6 +211,11 @@ class SlowMotionDebugger:
         final.answer_text = answer_text
         final.confidence = 1.0  # CERTAIN car derive du kernel
         final.structured_data = dict(final.structured_data or {})
+        # Nettoyer les champs OBSOLETES du multiloop avant slow-motion :
+        # ils peuvent contredire la reponse certifiee (ex: ratio_float=2047
+        # alors que la verite spectral_core est ~0.5). On les ecrase.
+        for stale_key in ("ratio_float", "expected_float", "matches_expected"):
+            final.structured_data.pop(stale_key, None)
         final.structured_data.update({
             "slow_motion_triggered": True,
             "coherence_score": coherence_report.score,
@@ -413,25 +459,82 @@ class SlowMotionDebugger:
 
     @staticmethod
     def _build_reformulations(dec: DecomposedRequest, bypassed: list[Segment]) -> list[str]:
-        """Propose des reformulations courtes pour aider l'utilisateur."""
+        """Propose des reformulations courtes pour aider l'utilisateur.
+
+        Strategie : retourne TOUJOURS au moins une suggestion canonique si
+        l'intent est detecte, meme si rien n'a ete bypass.
+        """
         suggestions: list[str] = []
-        if not bypassed:
-            return suggestions
-        position = None
-        for s in dec.coherent_segments:
-            if s.kind == "position":
-                position = s.value
-                break
         ratio = dec.detected_ratio or "1/2"
-        if position:
-            suggestions.append(
-                f"Reconstruire le {position}-eme premier en rapport {ratio}"
-            )
-            if ratio == "1/2":
+
+        # ===== Cas : ratio spectral NxN (configurations avec tuples) =====
+        if dec.detected_intent in ("ratio_spectral_nxn", "ratio_spectral"):
+            if dec.tuple_A and dec.tuple_B:
+                size_a = len(dec.tuple_A)
+                size_b = len(dec.tuple_B)
+                a_text = "(" + ",".join(str(x) for x in dec.tuple_A) + ")"
+                b_text = "(" + ",".join(str(x) for x in dec.tuple_B) + ")"
+
+                # Cas mismatch annonce/reel
+                if dec.announced_symmetric is True and size_a != size_b:
+                    suggestions.append(
+                        f"Rapport spectral ASYMETRIQUE entre A={a_text} ({size_a} elements) "
+                        f"et B={b_text} ({size_b} elements) en rapport {ratio}"
+                    )
+                    suggestions.append(
+                        f"Pour rester SYMETRIQUE {size_a}*{size_a} : completer B "
+                        f"avec {size_a - size_b} premier(s) supplementaire(s)"
+                    )
+                else:
+                    suggestions.append(
+                        f"Rapport spectral {ratio} entre A={a_text} et B={b_text} "
+                        f"(configuration {size_a}*{size_b})"
+                    )
+                # Toujours proposer un retour aux fondamentaux
                 suggestions.append(
-                    f"Quel est le {position}-eme nombre premier et combien de termes "
-                    f"dans A et B pour le reconstituer ?"
+                    f"Cas elementaire : verifier RsP_1x1({dec.tuple_A[0]}, "
+                    f"{dec.tuple_B[0]}) en rapport {ratio} (doit donner EXACTEMENT 1/2)"
                 )
+            else:
+                suggestions.append(
+                    f"Calculer le rapport spectral {ratio} avec deux tuples A et B "
+                    "explicites entre parentheses : exemple 'RsP({3,5,11},{2,7,13}) en 1/2'"
+                )
+            return suggestions
+
+        # ===== Cas : reconstruction =====
+        if dec.detected_intent == "reconstruction":
+            position = None
+            for s in dec.coherent_segments:
+                if s.kind == "position":
+                    position = s.value
+                    break
+            if position:
+                suggestions.append(
+                    f"Reconstruire le {position}-eme premier en rapport {ratio}"
+                )
+                if ratio == "1/2":
+                    suggestions.append(
+                        f"Quel est le {position}-eme nombre premier et combien de termes "
+                        f"dans A et B pour le reconstituer en rapport 1/2 ?"
+                    )
+            return suggestions
+
+        # ===== Cas : gap / ecart =====
+        if dec.detected_intent == "gap":
+            nums = [s.value for s in dec.coherent_segments if s.kind == "number"]
+            if len(nums) >= 2:
+                suggestions.append(
+                    f"Calculer l'ecart spectral entre {nums[0]} et {nums[1]} "
+                    "(symetrique par definition)"
+                )
+            return suggestions
+
+        # ===== Fallback : intent inconnu =====
+        if bypassed:
+            return ["Reformuler la requete avec une intention explicite : "
+                    "'reconstruire le N-eme premier', 'rapport spectral RsP', "
+                    "ou 'ecart entre p1 et p2'"]
         return suggestions
 
     @staticmethod

@@ -15,6 +15,10 @@ from .gaps import (
 )
 from .reconstructor import reconstruct_pth_prime_full, reconstruct_from_blocks
 from .prime_table import PRIMES, nth_prime, prime_position, is_known_prime, max_position
+from .plan_trifocal import (
+    PlanTrifocal, TrifocalValidation, TrifocalAxis, EpipolarPostulate,
+    POSTULATES, AXIS_DESCRIPTIONS,
+)
 
 __all__ = [
     # Suites
@@ -35,4 +39,7 @@ __all__ = [
     "reconstruct_pth_prime_full", "reconstruct_from_blocks",
     # Prime table
     "PRIMES", "nth_prime", "prime_position", "is_known_prime", "max_position",
+    # Plan trifocal (Section X)
+    "PlanTrifocal", "TrifocalValidation", "TrifocalAxis", "EpipolarPostulate",
+    "POSTULATES", "AXIS_DESCRIPTIONS",
 ]

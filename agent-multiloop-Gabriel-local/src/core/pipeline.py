@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from pathlib import Path
 from typing import Any
 
 from ..adapters.corpus.thy_loader import TheoryLoader
@@ -38,6 +39,9 @@ from ..multiloop import (
 )
 from ..adapters.corpus.certainty_kernel import CertaintyKernel
 from ..audit import AuditStore
+from ..cognitive import (
+    Certainty, Provenance, get_meta_reasoner, mark_claim,
+)
 from ..spectral import (
     PRIMES,
     compute_gap,
@@ -82,6 +86,15 @@ class Pipeline:
         self.anti_hallucination = AntiHallucinationValidator()
         # NOUVEAU: Audit silencieux post-pipeline (anti-hallucination actif)
         self.silent_audit = SilentAuditLoop(self.llm, config)
+        # NOUVEAU (Axe 5) : MetaReasoner singleton -> auto-evaluation par categorie
+        data_cfg = config.get("data", {})
+        if data_cfg.get("learning_dir"):
+            learning_dir = data_cfg["learning_dir"]
+        elif data_cfg.get("audit_dir"):
+            learning_dir = str(Path(data_cfg["audit_dir"]).parent / "learning")
+        else:
+            learning_dir = "data/learning"
+        self.meta_reasoner = get_meta_reasoner(learning_dir=learning_dir)
         # NOUVEAU: Slow-Motion Debugger (declenche si incoherence detectee)
         slowmo_cfg = config.get("slow_motion", {}) if config else {}
         self.slowmo_enabled = bool(slowmo_cfg.get("enabled", True))
@@ -177,6 +190,7 @@ class Pipeline:
                     precomputed_facts=precomputed_facts,
                 )
                 # Apres slow-motion : la reponse est certifiee, on saute l'audit
+                self._annotate_epistemic(final, precomputed_facts, goal, qid)
                 return final
         
         # 6.ter Audit silencieux post-pipeline (anti-hallucination)
@@ -201,7 +215,85 @@ class Pipeline:
             )
             final.hol_script = hol_script
 
+        # 8. Axes cognitifs 4+5 : EpistemicClaim + MetaReasoner
+        self._annotate_epistemic(final, precomputed_facts, goal, qid)
+
         return final
+
+    def _annotate_epistemic(
+        self,
+        final: FinalAnswer,
+        precomputed_facts: dict[str, Any],
+        goal: dict[str, Any],
+        qid: str,
+    ) -> None:
+        """Axes 4+5 : attache une EpistemicClaim au FinalAnswer + record MetaReasoner.
+
+        Une affirmation est CERTAIN si :
+          - un calcul deterministe spectral_core a abouti
+          - et l'equation est validee (equation_holds=True) OU c'est un cas non-reconstruction
+        Sinon CONJECTURE (LLM uniquement, sans facts) ou HORS_DOMAINE (erreur).
+        """
+        intent = goal.get("intent", "general")
+        model_name = (precomputed_facts.get("model") or "1/2").replace("/", "_")
+        category = {
+            "reconstruction": f"reconstruction_{model_name}",
+            "gap": "gap_pos_pos",
+            "ratio": "ratio_1x1",
+        }.get(intent, "general")
+
+        has_facts = bool(precomputed_facts) and "error" not in precomputed_facts
+        equation_ok = precomputed_facts.get("equation_holds", True) if has_facts else False
+
+        if has_facts and equation_ok:
+            certainty = Certainty.CERTAIN
+            provenance = [Provenance.SPECTRAL_CORE]
+            evidence = {
+                k: (str(v) if not isinstance(v, (int, float, bool, str)) else v)
+                for k, v in precomputed_facts.items()
+                if k in {"n", "p", "position", "prime", "model",
+                         "equation_holds", "SA_float", "SB_float",
+                         "digamma_calc_float"}
+            }
+            limits: list[str] = []
+            success = True
+        elif "error" in precomputed_facts:
+            certainty = Certainty.HORS_DOMAINE
+            provenance = [Provenance.SPECTRAL_CORE]
+            evidence = {"error": precomputed_facts.get("error", "")}
+            limits = ["Le calcul deterministe n'a pas abouti."]
+            success = False
+        else:
+            certainty = Certainty.CONJECTURE
+            provenance = [Provenance.LLM_CLAUDE]
+            evidence = {"iterations": final.iterations_used, "score": final.best_score}
+            limits = ["Reponse produite par LLM sans verification spectrale formelle."]
+            success = final.best_score >= 7.0
+
+        claim = mark_claim(
+            statement=final.answer_text[:200],
+            certainty=certainty,
+            provenance=provenance,
+            evidence=evidence,
+            limits=limits,
+        )
+        final.epistemic_claim = {
+            "statement": claim.statement,
+            "certainty": claim.certainty.value,
+            "provenance": [p.value for p in claim.provenance],
+            "evidence": claim.evidence,
+            "limits": claim.limits,
+            "can_cite": claim.can_cite(),
+            "created_at": claim.created_at,
+        }
+
+        try:
+            self.meta_reasoner.record(
+                category=category, success=success,
+                details={"qid": qid, "intent": intent, "score": final.best_score},
+            )
+        except Exception as exc:
+            logger.debug("MetaReasoner.record : %s", exc)
 
     def _compute_spectral(self, ctx: QuestionContext, plan: dict[str, Any], qid: str) -> dict[str, Any]:
         """

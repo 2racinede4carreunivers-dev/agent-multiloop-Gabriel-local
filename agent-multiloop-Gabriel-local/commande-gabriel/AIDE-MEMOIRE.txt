@@ -10,6 +10,9 @@
 ================================================================================
   aide  (h, ?)            Aide rapide (HELP_TEXT)
   commandes  (cmd)        Liste complete + raccourcis clavier (panel Rich)
+  ask                     Principales commandes pour interagir avec Gabriel
+  ask type                Fonctions et caracteristiques de Gabriel
+  ask rules               Guide pour interagir efficacement avec Gabriel
   version                 Version de Gabriel
   contexte                Contexte mathematique actuel
   memoire                 Historique des echanges (session)

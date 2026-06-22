@@ -73,6 +73,12 @@ class FinalAnswer(BaseModel):
     explanation: str = ""
     hol_script: str | None = None
 
+    # ----- Axe 4 (Epistemic) + Axe 2 (ProofTrace) : optionnels -----
+    # On les expose comme dicts pour rester JSON-serialisables sans
+    # introduire de dependance circulaire sur le package cognitive.
+    epistemic_claim: dict[str, Any] | None = None
+    proof_traces: list[dict[str, Any]] = []
+
 
 class PipelineStep(str, Enum):
     """Etapes du pipeline cognitif."""

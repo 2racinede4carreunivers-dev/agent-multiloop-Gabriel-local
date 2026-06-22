@@ -6,6 +6,7 @@ Empêche dépassement budget mensuel
 import logging
 import os
 from datetime import datetime, timedelta
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

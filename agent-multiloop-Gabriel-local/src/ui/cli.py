@@ -1583,11 +1583,19 @@ class CLIInterface:
                 padding=(1, 3),
             ))
 
-        # ----- CADRAN 5 : TIMELINE DEBUGGER (chronologie) -----
+        # ----- CADRAN 5 : MODELE DE CERTITUDE (8 criteres / 3 questions) -----
+        self._render_certainty_panel(sd.get("certainty_evaluation"))
+
+        # ----- CADRAN 6 : BOUCLE LOGIQUE + REPONSE MODESTE -----
+        self._render_modest_panel(
+            sd.get("modest_request"), sd.get("modest_certified"),
+        )
+
+        # ----- CADRAN 7 : TIMELINE DEBUGGER (chronologie) -----
         if timeline_events:
             console.print()
             console.print(_Rule(
-                "[bold bright_cyan]CADRAN 5  -  TIMELINE DEBUGGER (chronologie)[/bold bright_cyan]",
+                "[bold bright_cyan]CADRAN 7  -  TIMELINE DEBUGGER (chronologie)[/bold bright_cyan]",
                 style="bright_cyan",
             ))
             for ev in timeline_events:
@@ -1605,7 +1613,7 @@ class CLIInterface:
                 console.print()  # respiration entre etapes
             console.print(_Rule(style="bright_cyan"))
 
-        # ----- CADRAN 6 : Niveau de certitude (Axe 4) -----
+        # ----- CADRAN 8 : Niveau de certitude (Axe 4) -----
         if answer.epistemic_claim:
             ec = answer.epistemic_claim
             cert = ec.get("certainty", "?")
@@ -1626,7 +1634,7 @@ class CLIInterface:
                     body.append(f"     - {lim}\n", style="italic")
             console.print(Panel(
                 body,
-                title=f"[bold {color}]CADRAN 6  -  NIVEAU DE CERTITUDE (Axe 4)[/bold {color}]",
+                title=f"[bold {color}]CADRAN 8  -  NIVEAU DE CERTITUDE (Axe 4)[/bold {color}]",
                 border_style=color,
                 padding=(1, 3),
             ))
@@ -1637,6 +1645,144 @@ class CLIInterface:
                 f"\n  [dim]Audit signe : id={sd['audit_id']} "
                 f"(tapez 'citer {sd['audit_id']}' pour bloc citable)[/dim]\n"
             )
+
+    def _render_certainty_panel(self, evaluation: dict | None) -> None:
+        """CADRAN 5 — Modele de Certitude (8 criteres / 3 questions).
+
+        Affiche un tableau compact (regroupe par question) avec OK/FAIL + detail.
+        """
+        if not evaluation or not evaluation.get("results"):
+            return
+        from rich.table import Table as _Table
+        from rich.text import Text as _Text
+
+        ratio = evaluation.get("certainty_ratio", 0.0)
+        violated = evaluation.get("violated_codes", [])
+        passed = evaluation.get("passed_codes", [])
+        # Couleur dynamique selon le ratio
+        if ratio >= 1.0:
+            color = "bright_green"
+            verdict = "TOUS LES CRITERES PASSENT"
+        elif ratio >= 0.75:
+            color = "yellow"
+            verdict = "PARTIEL - quelques criteres violes"
+        else:
+            color = "red"
+            verdict = "INSUFFISANT - reformulation requise"
+
+        header = _Text()
+        header.append("MODELE DE CERTITUDE  ", style="bold bright_cyan")
+        header.append("(8 criteres / 3 questions essentielles)\n",
+                      style="dim italic")
+        header.append("\n  Score : ", style="bold yellow")
+        header.append(f"{len(passed)}/{len(evaluation['results'])}  ",
+                      style=f"bold {color}")
+        header.append(f"({ratio*100:.0f}%)  -  ", style=color)
+        header.append(f"{verdict}\n", style=f"bold {color}")
+        if violated:
+            header.append("  Critères violes : ", style="bold yellow")
+            header.append(", ".join(violated) + "\n", style="bold red")
+
+        # Tableau par question
+        tbl = _Table(border_style=color, show_lines=False, padding=(0, 1))
+        tbl.add_column("Q", style="bold yellow", no_wrap=True)
+        tbl.add_column("Code", style="bold", no_wrap=True)
+        tbl.add_column("Critère", no_wrap=True)
+        tbl.add_column("OK", justify="center", no_wrap=True)
+        tbl.add_column("Detail")
+
+        q_labels = {
+            "Q1_POSITION": "Q1",
+            "Q2_MODELE": "Q2",
+            "Q3_CONFIGURATION": "Q3",
+        }
+        for r in evaluation["results"]:
+            mark = "[green]V[/green]" if r["passed"] else "[red]X[/red]"
+            tbl.add_row(
+                q_labels.get(r["question"], "?"),
+                r["code"],
+                r["name"],
+                mark,
+                r["detail"],
+            )
+
+        from rich.console import Group as _Group
+        console.print(Panel(
+            _Group(header, tbl),
+            title=f"[bold {color}]CADRAN 5  -  MODELE DE CERTITUDE[/bold {color}]",
+            subtitle=("[dim italic]Q1=Position | Q2=Modele | "
+                      "Q3=Configuration[/dim italic]"),
+            border_style=color,
+            padding=(1, 2),
+        ))
+
+    def _render_modest_panel(
+        self, modest: dict | None, modest_certified: dict | None,
+    ) -> None:
+        """CADRAN 6 — Boucle Logique + Requete Modeste + Reponse Modeste."""
+        if not modest:
+            return
+        from rich.text import Text as _Text
+
+        skips = modest.get("skips_applied") or []
+        canonical_text = modest.get("canonical_text", "")
+
+        body = _Text()
+        # Section 1 : boucle logique (sursauts)
+        body.append("BOUCLE LOGIQUE  ", style="bold bright_cyan")
+        body.append("(sursauts appliques pour atteindre la coherence)\n",
+                    style="dim italic")
+        body.append("\n")
+        if skips:
+            for i, skip in enumerate(skips, 1):
+                body.append(f"  [{i}] ", style="bold yellow")
+                body.append(
+                    f"{skip.get('criterion')} -> {skip.get('strategy')}\n",
+                    style="bold white",
+                )
+                body.append("      ", style="dim")
+                body.append(
+                    f"{skip.get('rationale', '')}\n", style="italic",
+                )
+                if i < len(skips):
+                    body.append("\n")
+        else:
+            body.append(
+                "  (aucun sursaut necessaire - la requete satisfait deja les 8 criteres)\n",
+                style="dim italic green",
+            )
+
+        body.append("\n")
+        body.append("REQUETE MODESTE REFORMULEE\n", style="bold bright_cyan")
+        body.append(f"  \"{canonical_text}\"\n", style="bold white")
+
+        if modest_certified:
+            body.append("\n")
+            body.append("REPONSE MODESTE  ", style="bold bright_green")
+            body.append("(certifiee par spectral_core, sans LLM)\n",
+                        style="dim italic")
+            body.append("\n")
+            for line in (modest_certified.get("summary") or "").splitlines():
+                if line.strip():
+                    body.append(f"  {line}\n", style="white")
+            if modest_certified.get("method"):
+                body.append("\n  Methode : ", style="bold yellow")
+                body.append(modest_certified["method"] + "\n",
+                            style="cyan")
+            cits = modest_certified.get("citations") or []
+            if cits:
+                body.append("\n  Citations :\n", style="bold yellow")
+                for c in cits[:5]:
+                    body.append(f"     - {c}\n", style="dim italic")
+
+        console.print(Panel(
+            body,
+            title="[bold bright_green]CADRAN 6  -  BOUCLE LOGIQUE & REPONSE MODESTE[/bold bright_green]",
+            subtitle=("[dim italic]juste milieu : requete originale "
+                      "raffinee par les 8 criteres[/dim italic]"),
+            border_style="bright_green",
+            padding=(1, 3),
+        ))
 
     @staticmethod
     def _parse_certified_summary(certified: dict) -> list[tuple[str, str]]:

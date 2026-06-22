@@ -32,7 +32,9 @@ from ..audit import AuditStore
 from ..core.spectral_core import SpectralMethodCore
 from ..core.types import FinalAnswer
 from ..spectral.prime_table import nth_prime
+from .certainty_model import CertaintyEvaluation, CertaintyModel
 from .coherence_detector import CoherenceReport
+from .logical_loop import LogicalLoop, ModestRequest
 from .request_decomposer import DecomposedRequest, RequestDecomposer, Segment
 
 
@@ -87,6 +89,9 @@ class SlowMotionDebugger:
         self.kernel = certainty_kernel or CertaintyKernel()
         self.core = spectral_core or SpectralMethodCore()
         self.decomposer = RequestDecomposer()
+        # Axes Modele de Certitude + Boucle Logique
+        self.certainty_model = CertaintyModel(spectral_core=self.core)
+        self.logical_loop = LogicalLoop(spectral_core=self.core)
         self.audit_store = audit_store  # peut etre None -> pas d'audit auto
         logger.info(
             "SlowMotionDebugger initialise : %d certitudes, %d premiers en table, audit=%s",
@@ -180,23 +185,73 @@ class SlowMotionDebugger:
             certified.get("method", "kernel") + " -> " + certified["summary"].splitlines()[0],
         )
 
-        # T7. Reponse courte + reformulations
+        # ============================================================
+        # NOUVEAU - Modele de Certitude + Boucle Logique + Reponse Modeste
+        # ============================================================
+        # T6.1 : Evaluation des 8 criteres / 3 questions du modele de certitude
+        evaluation: CertaintyEvaluation = self.certainty_model.evaluate(decomposed)
+        violated = evaluation.violated_codes
+        certainty_ratio = evaluation.certainty_ratio
+        timeline.add(
+            7, "EVALUATION_CERTITUDE",
+            f"Modele de certitude (8 criteres / 3 questions) : "
+            f"{len(evaluation.passed_codes)}/{len(evaluation.results)} passes "
+            f"({certainty_ratio*100:.0f}%). "
+            + (f"Critères violes : {violated}. "
+               + " ; ".join(
+                   f"{r.code}={r.detail}"
+                   for r in evaluation.results if not r.passed
+               )
+               if violated else "Aucun critere viole."),
+        )
+
+        # T6.2 : Boucle logique -> requete modeste (sursaut des elements violants)
+        modest: ModestRequest = self.logical_loop.derive_modest_request(
+            decomposed, evaluation,
+        )
+        if modest.skips_applied:
+            timeline.add(
+                8, "BOUCLE_LOGIQUE",
+                f"{len(modest.skips_applied)} sursaut(s) applique(s) : "
+                + " | ".join(
+                    f"{s['criterion']}->{s['strategy']}"
+                    for s in modest.skips_applied
+                )
+                + f". Requete reformulee modeste : \"{modest.canonical_text}\".",
+            )
+        else:
+            timeline.add(
+                8, "BOUCLE_LOGIQUE",
+                "Aucun sursaut necessaire : la requete satisfait deja tous les "
+                f"criteres du modele de certitude. Requete canonique conservee : "
+                f"\"{modest.canonical_text}\".",
+            )
+
+        # T6.3 : Resolution de la REQUETE MODESTE par spectral_core (deterministe)
+        modest_certified = self._solve_modest(modest)
+        timeline.add(
+            9, "REPONSE_MODESTE",
+            modest_certified.get("method", "kernel") + " -> "
+            + modest_certified.get("summary", "").splitlines()[0],
+        )
+
+        # T10 (ex-T7). Reformulations textuelles (suggestions pour relancer Gabriel)
         suggestions = self._build_reformulations(decomposed, bypassed)
         if suggestions:
             timeline.add(
-                7, "REFORMULATIONS",
+                10, "REFORMULATIONS",
                 f"{len(suggestions)} suggestion(s) generee(s) "
                 f"pour clarifier la requete future : "
                 + " | ".join(f'"{s}"' for s in suggestions[:3]),
             )
         else:
             timeline.add(
-                7, "REFORMULATIONS",
+                10, "REFORMULATIONS",
                 "Aucune reformulation proposee car la requete est resolue par le "
                 "kernel sans ambiguite (intent reconnu + segments coherents).",
             )
 
-        # T8. Reponse finale construite
+        # T11 (ex-T8). Reponse finale construite
         answer_text = self._render_answer(
             question=question,
             decomposed=decomposed,
@@ -204,8 +259,11 @@ class SlowMotionDebugger:
             certified=certified,
             suggestions=suggestions,
             timeline=timeline,
+            evaluation=evaluation,
+            modest=modest,
+            modest_certified=modest_certified,
         )
-        timeline.add(8, "REPONSE_CERTIFIEE", f"{len(answer_text)} caracteres produits")
+        timeline.add(11, "REPONSE_CERTIFIEE", f"{len(answer_text)} caracteres produits")
 
         # Enrichir la FinalAnswer
         final.answer_text = answer_text
@@ -234,6 +292,22 @@ class SlowMotionDebugger:
             },
             "canonical_request": canonical,
             "certified": certified,
+            "certainty_evaluation": {
+                "passed_codes": evaluation.passed_codes,
+                "violated_codes": evaluation.violated_codes,
+                "certainty_ratio": evaluation.certainty_ratio,
+                "is_fully_certain": evaluation.is_fully_certain,
+                "results": [
+                    {
+                        "code": r.code, "name": r.name,
+                        "question": r.question.value,
+                        "passed": r.passed, "detail": r.detail,
+                    }
+                    for r in evaluation.results
+                ],
+            },
+            "modest_request": modest.to_dict(),
+            "modest_certified": modest_certified,
             "reformulations": suggestions,
             "debug_timeline": timeline.to_dict(),
         })
@@ -545,6 +619,9 @@ class SlowMotionDebugger:
         certified: dict[str, Any],
         suggestions: list[str],
         timeline: DebugTimeline,
+        evaluation: Optional[CertaintyEvaluation] = None,
+        modest: Optional[ModestRequest] = None,
+        modest_certified: Optional[dict[str, Any]] = None,
     ) -> str:
         """Assemble la reponse finale pour l'utilisateur."""
         parts: list[str] = []
@@ -566,6 +643,31 @@ class SlowMotionDebugger:
                 parts.append(f"  • {cit}")
             parts.append("")
 
+        # NOUVEAU : Modele de certitude + Reponse modeste reformulee
+        if evaluation is not None and modest is not None and modest_certified is not None:
+            parts.append("")
+            parts.append("MODELE DE CERTITUDE (8 criteres / 3 questions)")
+            parts.append("-" * 60)
+            for r in evaluation.results:
+                tag = "✓" if r.passed else "✗"
+                parts.append(f"  {tag} {r.code} ({r.question.value}) : {r.detail}")
+            parts.append("")
+            if modest.skips_applied:
+                parts.append("BOUCLE LOGIQUE (sursauts appliques) :")
+                for skip in modest.skips_applied:
+                    parts.append(
+                        f"  -> {skip['criterion']} via {skip['strategy']}  : "
+                        f"{skip['rationale']}"
+                    )
+                parts.append("")
+            parts.append("REQUETE MODESTE REFORMULEE :")
+            parts.append(f"  \"{modest.canonical_text}\"")
+            parts.append("")
+            parts.append("REPONSE MODESTE (certifiee par spectral_core) :")
+            for line in (modest_certified.get("summary") or "").splitlines():
+                parts.append(f"  {line}")
+            parts.append("")
+
         if suggestions:
             parts.append("Suggestions de reformulation plus precises :")
             for s in suggestions:
@@ -574,3 +676,51 @@ class SlowMotionDebugger:
 
         parts.append(timeline.render())
         return "\n".join(parts)
+
+    def _solve_modest(self, modest: ModestRequest) -> dict[str, Any]:
+        """Resoud la requete modeste produite par la Boucle Logique.
+
+        On reutilise `_solve_certified` en synthetisant une DecomposedRequest
+        equivalente a la ModestRequest (cas elementaires : reconstruction,
+        ratio_spectral_nxn, gap).
+        """
+        from .request_decomposer import Segment as _Segment
+
+        synthesized = DecomposedRequest(
+            original=modest.canonical_text,
+            detected_intent=modest.intent,
+            detected_ratio=modest.ratio,
+            tuple_A=modest.tuple_A,
+            tuple_B=modest.tuple_B,
+            config_size=(len(modest.tuple_A) if modest.tuple_A else None),
+        )
+        if modest.position is not None:
+            synthesized.segments.append(_Segment(
+                kind="position", text=str(modest.position),
+                value=modest.position, coherent=True,
+            ))
+        if modest.ratio:
+            synthesized.segments.append(_Segment(
+                kind="ratio", text=modest.ratio,
+                value=modest.ratio, coherent=True,
+            ))
+        if modest.tuple_A:
+            synthesized.segments.append(_Segment(
+                kind="tuple_A", text=str(tuple(modest.tuple_A)),
+                value=modest.tuple_A, coherent=True,
+            ))
+        if modest.tuple_B:
+            synthesized.segments.append(_Segment(
+                kind="tuple_B", text=str(tuple(modest.tuple_B)),
+                value=modest.tuple_B, coherent=True,
+            ))
+        try:
+            return self._solve_certified(synthesized)
+        except Exception as exc:
+            logger.exception("Echec _solve_modest")
+            return {
+                "summary": f"Resolution modeste impossible : {exc}",
+                "value": None,
+                "citations": [],
+                "method": "modest_solve (erreur)",
+            }

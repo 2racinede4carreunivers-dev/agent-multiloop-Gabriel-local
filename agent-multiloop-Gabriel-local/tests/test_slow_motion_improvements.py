@@ -157,9 +157,12 @@ class TestTimelineExplains:
             final=final, coherence_report=report, skip_auto_audit=True,
         )
         timeline = res.structured_data["debug_timeline"]
-        t7 = next(ev for ev in timeline if ev["step"] == 7)
-        # T7 doit mentionner le nombre de suggestions ou un texte explicatif
-        assert "suggestion" in t7["detail"].lower()
+        # REFORMULATIONS est maintenant a T10 (apres l'insertion du modele de
+        # certitude T7 + boucle logique T8 + reponse modeste T9).
+        t_reformulations = next(
+            ev for ev in timeline if ev["label"] == "REFORMULATIONS"
+        )
+        assert "suggestion" in t_reformulations["detail"].lower()
 
 
 # ==========================================================================

@@ -4,7 +4,7 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.0 — 487/487 tests Pytest ✅ — Slow-Motion "Kit de réparation" (6 cadrans aérés) + Décomposeur intelligent + 5 Axes cognitifs + Plan Trifocal**
+**Production-Ready v3.1 — 505/505 tests Pytest ✅ — Modèle de Certitude (8 critères / 3 questions) + Boucle Logique avec sursauts + Réponse Modeste reformulée + Slow-Motion "Kit de réparation" (8 cadrans) + 5 Axes cognitifs + Plan Trifocal**
 
 ## Architecture
 ```
@@ -46,6 +46,55 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 - Corpus mathématique intégré + Slow Motion Debugging + Meta-Learning + CI
 
 ## Changelog
+
+### [2026-02-16] Modèle de Certitude + Boucle Logique + Réponse Modeste (P0)
+
+**Suite au feedback Philippe : "le debugger ne propose jamais de reformulation, ne divise que peu, n'explique pas ses choix, ne propose aucune solution".**
+
+#### Architecture cognitive du Slow-Motion étendue
+
+1. **`src/multiloop/certainty_model.py` — Modèle de Certitude** :
+   - **3 questions essentielles** (Q1 Position, Q2 Modèle, Q3 Configuration)
+   - **8 critères vérifiables** :
+     - **Q1 Position** : C1 position_dans_table, C2 premier_connu
+     - **Q2 Modèle** : C3 ratio_supporte, C4 intent_compatible_ratio
+     - **Q3 Configuration** : C5 tuples_presents, C6 symetrie_respectee, C7 elements_premiers, C8 ratio_atteignable
+   - Chaque critère a une `skip_strategy` (rationale du sursaut)
+   - `CertaintyModel.evaluate(decomposed)` → `CertaintyEvaluation` (passed_codes, violated_codes, certainty_ratio)
+
+2. **`src/multiloop/logical_loop.py` — Boucle Logique de sursaut** :
+   - Pour chaque critère violé, applique la `skip_strategy` correspondante :
+     - `drop_position` : ramène hors-table → position 10 (cas pédagogique)
+     - `default_to_half` : ratio invalide → 1/2
+     - `normalize_intent` : intent ambigu → reconstruction/ratio_spectral_nxn
+     - `drop_tuples` : tuples vides → bascule sur reconstruction
+     - `drop_symmetry` : symétrie violée → reformule asymétrique
+     - `filter_to_primes` : retire les non-premiers des tuples
+     - `downgrade_to_1x1` : RsP=1/2 inatteignable en NxN → bascule en RsP_1x1 (1/2 EXACT)
+   - Produit une **`ModestRequest`** = juste milieu entre requête originale incohérente et version triviale
+   - Préserve l'intent principal de l'utilisateur
+
+3. **Slow-Motion enrichi** :
+   - **3 nouvelles étapes** dans la timeline :
+     - **T7 EVALUATION_CERTITUDE** : score X/8 + critères violés + détails
+     - **T8 BOUCLE_LOGIQUE** : liste des sursauts appliqués + requête modeste construite
+     - **T9 REPONSE_MODESTE** : la requête modeste est **EFFECTIVEMENT RÉSOLUE** par spectral_core
+   - Renuméro de T7→T10 (REFORMULATIONS) et T8→T11 (REPONSE_CERTIFIEE)
+   - `_solve_modest(modest)` : synthétise une DecomposedRequest équivalente et appelle `_solve_certified()`
+
+4. **CLI : 2 nouveaux cadrans** dans le rendu "Kit de réparation" :
+   - **CADRAN 5 — Modèle de Certitude** : tableau Rich groupé par question (Q1/Q2/Q3), avec V/X par critère + détail + couleur selon ratio (vert ≥100%, jaune ≥75%, rouge <75%)
+   - **CADRAN 6 — Boucle Logique & Réponse Modeste** : sursauts numérotés avec rationale, requête modeste reformulée, réponse modeste certifiée par spectral_core, méthode + citations
+
+#### Exemple Philippe ("symétrique 4×4 entre (7,23,79,31) et (17,11,3)")
+- Modèle de certitude : **6/8 passent (75%)**, C6 et C8 violés
+- Sursauts : `C6→drop_symmetry` puis `C8→downgrade_to_1x1`
+- Requête modeste : *"Calculer le rapport spectral 1/2 symétrique 1×1 entre A=(7) et B=(17)"*
+- **Réponse modeste : `RsP = 1/2 (decimal 0.500000) = 1/2 EXACT`** ✅
+
+#### Tests
+- `tests/test_certainty_model_and_logical_loop.py` : **18 nouveaux tests**
+- Total : **505/505 ✅** (0 régression)
 
 ### [2026-02-16] Slow-Motion Debugger — Kit de réparation spectrale (UX + logique)
 
@@ -244,4 +293,4 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 N/A (pas d'authentification, app CLI locale).
 
 ## Health Status
-✅ **Production-Ready v3.0** — 487/487 tests, CI configurée, Slow-Motion "Kit métrique" en 6 cadrans aérés, décomposeur détecte les mismatches annoncé/réel, T4/T7 expliquent leur raisonnement, Axes cognitifs 2-5 + Plan Trifocal + Unicode-safe.
+✅ **Production-Ready v3.1** — 505/505 tests, CI configurée, Slow-Motion en 8 cadrans avec Modèle de Certitude + Boucle Logique + Réponse Modeste (la requête incohérente devient une requête modeste **effectivement résolue**), Axes cognitifs 2-5 + Plan Trifocal + Unicode-safe.

@@ -67,6 +67,7 @@ HELP_TEXT = """
   ask type         Voir les fonctions et caracteristiques de Gabriel
   ask rules        Guide pour interagir efficacement avec Gabriel
   ci               Lance la suite pytest locale (236 tests) et affiche le rapport
+  cognitive [r|reset] Auto-evaluation Gabriel (Axe 5) : stats par categorie / reset
   version          Affiche la version
 
   Domaines supportes :
@@ -91,6 +92,9 @@ class CLIInterface:
         self.orchestrator = Orchestrator(self.config)
         # Mode debug manuel : partage le kernel et spectral_core du pipeline
         self._debug_session: DebugSession | None = None
+        # Axe 5 - MetaReasoner singleton (auto-evaluation par categorie)
+        from src.cognitive import get_meta_reasoner
+        self._meta_reasoner = get_meta_reasoner()
 
     def _get_debug_session(self) -> DebugSession:
         """Lazy init : reutilise le kernel/core/audit_store du pipeline pour eviter de re-charger les .thy."""
@@ -124,6 +128,8 @@ class CLIInterface:
         if c == "version":
             console.print(f"\n  Multi-Loop Math Agent v{self.VERSION}\n", style="green")
             return True
+        if c == "cognitive" or c.startswith("cognitive "):
+            return self._handle_cognitive(cmd)
         if c in {"ci", "tests", "pytest"}:
             console.print("\n  [dim]Execution de la suite pytest locale (tests/)... patientez quelques secondes.[/dim]\n")
             summary = run_pytest_local()
@@ -233,6 +239,11 @@ class CLIInterface:
                 console.print(
                     f"\n[dim]Audit cree : id={record.id} (tapez 'citer {record.id}' pour citer)[/dim]\n"
                 )
+                # Axe 2/3/4/5 : trace cognitive deterministe
+                try:
+                    self._render_traced_gap(result.point1.prime, result.point2.prime)
+                except Exception as exc:
+                    logger.debug("trace cognitive gap : %s", exc)
             except (ValueError, RuntimeError) as exc:
                 console.print(f"\n  [red]Erreur gap : {exc}[/red]\n")
             return True
@@ -653,6 +664,10 @@ class CLIInterface:
             ("[bold cyan]TESTS & CI[/bold cyan]", [
                 ("ci  (tests, pytest)",
                  "Lance les 236 tests pytest locaux"),
+                ("cognitive  (report)",
+                 "Stats Axe 5 (MetaReasoner) : confiance par categorie"),
+                ("cognitive reset",
+                 "Reinitialise les statistiques d'auto-evaluation"),
             ]),
             ("[bold cyan]LANGAGE NATUREL & AUTO-TRIGGER[/bold cyan]", [
                 ("<question libre>",
@@ -871,6 +886,8 @@ class CLIInterface:
                 n1, n2 = int(tokens[2]), int(tokens[3])
                 report = engine.compute_rsp_1x1_all_models(n1, n2)
                 console.print(Panel(report.to_text(), border_style="green"))
+                # Axe 2/3/4/5 : trace cognitive par modele
+                self._render_traced_rsp1x1(n1, n2)
                 self._save_modele_audit(report, cmd)
                 return True
 
@@ -895,6 +912,10 @@ class CLIInterface:
                 n = int(tokens[2])
                 report = engine.reconstruct_all_models(n)
                 console.print(Panel(report.to_text(), border_style="green"))
+                # Axe 2/3/4/5 : trace cognitive par modele
+                actual_prime = self.orchestrator.pipeline.spectral_core.get_prime_at_position(n)
+                if actual_prime is not None:
+                    self._render_traced_reconstruct(n, actual_prime)
                 self._save_modele_audit(report, cmd)
                 return True
 
@@ -905,6 +926,8 @@ class CLIInterface:
                 p1, p2 = int(tokens[2]), int(tokens[3])
                 report = engine.compute_gap_all_models(p1, p2)
                 console.print(Panel(report.to_text(), border_style="green"))
+                # Axe 2/3/4/5 : trace cognitive (gap est independant du modele)
+                self._render_traced_gap(p1, p2)
                 self._save_modele_audit(report, cmd)
                 return True
 
@@ -912,6 +935,129 @@ class CLIInterface:
         except (ValueError, ZeroDivisionError) as exc:
             console.print(f"  [red]Erreur : {exc}[/red]")
         return True
+
+    def _handle_cognitive(self, cmd: str) -> bool:
+        """Commande `cognitive [report|reset]` : statistiques Axe 5 (MetaReasoner)."""
+        from rich.table import Table as _Table
+
+        tokens = cmd.strip().split()
+        sub = tokens[1].lower() if len(tokens) > 1 else "report"
+
+        if sub == "reset":
+            for cat in list(self._meta_reasoner.stats.keys()):
+                stats = self._meta_reasoner.stats[cat]
+                stats.total = 0
+                stats.successes = 0
+            self._meta_reasoner._save_stats()
+            console.print("  [green]Statistiques MetaReasoner reinitialisees.[/green]\n")
+            return True
+
+        if sub not in {"report", "stats", "show"}:
+            console.print(
+                "\n  [yellow]Usage : cognitive [report|reset]\n"
+                "    report  Affiche les stats d'auto-evaluation (defaut)\n"
+                "    reset   Reinitialise toutes les categories a 0[/yellow]\n"
+            )
+            return True
+
+        report = self._meta_reasoner.report()
+        tbl = _Table(
+            title="Auto-evaluation Gabriel (Axe 5 - MetaReasoner)",
+            border_style="cyan", show_lines=False,
+        )
+        tbl.add_column("Categorie", style="bold yellow", no_wrap=True)
+        tbl.add_column("Total", justify="right")
+        tbl.add_column("Succes", justify="right")
+        tbl.add_column("Taux", justify="right")
+        tbl.add_column("Confiance", justify="center")
+        for cat, data in sorted(report.items()):
+            conf = data["confidence"]
+            conf_color = {
+                "HIGH": "green", "MEDIUM": "yellow",
+                "LOW": "red", "UNKNOWN": "dim",
+            }.get(conf, "white")
+            tbl.add_row(
+                cat,
+                str(data["total"]),
+                str(data["successes"]),
+                f"{data['rate']*100:.1f}%" if data["total"] else "—",
+                f"[{conf_color}]{conf}[/{conf_color}]",
+            )
+        console.print(tbl)
+        console.print(
+            f"\n  [dim]Fichier stats : {self._meta_reasoner.stats_file}[/dim]\n"
+            f"  [dim]Fichier erreurs : {self._meta_reasoner.errors_file}[/dim]\n"
+        )
+        return True
+
+    def _render_cognitive_result(self, result, header: str) -> None:
+        """Rendu Rich d'un CognitiveResult (Axe 2/3/4/5)."""
+        from rich.table import Table as _Table
+
+        trace = result.proof_trace
+        # Panneau invariants
+        if trace.invariants_checked:
+            inv_tbl = _Table(
+                title="Invariants verifies", border_style="cyan", show_lines=False,
+            )
+            inv_tbl.add_column("Nom", style="bold")
+            inv_tbl.add_column("Statut", justify="center")
+            inv_tbl.add_column("Detail")
+            for inv in trace.invariants_checked:
+                statut = "[green]OK[/green]" if inv["passed"] else "[red]FAIL[/red]"
+                inv_tbl.add_row(inv["name"], statut, inv.get("details", ""))
+            console.print(inv_tbl)
+
+        # Claim epistemique
+        claim = result.claim
+        marker_color = {
+            "CERTAIN": "green",
+            "CONJECTURE": "yellow",
+            "HORS_DOMAINE": "red",
+        }.get(claim.certainty.value, "white")
+        body = (
+            f"[bold {marker_color}]{claim.certainty.value}[/bold {marker_color}]  "
+            f"{claim.statement}\n\n"
+            f"  Provenance : {', '.join(p.value for p in claim.provenance) or '—'}\n"
+            f"  Regime     : {result.regime or '—'}\n"
+            f"  Categorie  : {result.category}\n"
+            f"  Citable    : {'oui' if claim.can_cite() else 'non'}"
+        )
+        if claim.limits:
+            body += "\n  Limites    :\n" + "\n".join(f"    - {lim}" for lim in claim.limits)
+        console.print(Panel(body, title=header, border_style=marker_color))
+
+        # Enregistrement MetaReasoner
+        try:
+            from src.cognitive import record_cognitive_result
+            record_cognitive_result(result, meta=self._meta_reasoner)
+        except Exception as exc:
+            logger.debug("MetaReasoner record : %s", exc)
+
+    def _render_traced_gap(self, p1: int, p2: int) -> None:
+        from src.cognitive import build_gap_result
+        result = build_gap_result(p1, p2)
+        self._render_cognitive_result(
+            result, header=f"[cyan]Axe cognitif - gap({p1}, {p2})[/cyan]",
+        )
+
+    def _render_traced_reconstruct(self, n: int, actual_prime: int) -> None:
+        from src.cognitive import build_reconstruct_result
+        for model_name in ("1/2", "1/3", "1/4"):
+            res = build_reconstruct_result(n, actual_prime, model_name)
+            self._render_cognitive_result(
+                res,
+                header=f"[cyan]Axe cognitif - reconstruct(n={n}) modele {model_name}[/cyan]",
+            )
+
+    def _render_traced_rsp1x1(self, n1: int, n2: int) -> None:
+        from src.cognitive import build_rsp_1x1_result
+        for model_name in ("1/2", "1/3", "1/4"):
+            res = build_rsp_1x1_result(n1, n2, model_name)
+            self._render_cognitive_result(
+                res,
+                header=f"[cyan]Axe cognitif - RsP_1x1({n1}, {n2}) modele {model_name}[/cyan]",
+            )
 
     def _save_modele_audit(self, report, cmd_text: str) -> None:
         """Sauvegarde un audit JSON citable pour les commandes modele."""
@@ -1095,6 +1241,26 @@ class CLIInterface:
                 console.print(
                     Panel("\n".join(facts), title="[cyan]Chiffres calcules[/cyan]", border_style="cyan")
                 )
+        # Axe 4 : niveau de certitude epistemique
+        if answer.epistemic_claim:
+            ec = answer.epistemic_claim
+            cert = ec.get("certainty", "?")
+            color = {"CERTAIN": "green", "CONJECTURE": "yellow",
+                     "HORS_DOMAINE": "red"}.get(cert, "white")
+            body = (
+                f"[bold {color}]{cert}[/bold {color}]   "
+                f"citable={'oui' if ec.get('can_cite') else 'non'}\n"
+                f"  Provenance : {', '.join(ec.get('provenance', [])) or '—'}"
+            )
+            if ec.get("limits"):
+                body += "\n  Limites :\n" + "\n".join(
+                    f"    - {lim}" for lim in ec["limits"]
+                )
+            console.print(Panel(
+                body,
+                title=f"[{color}]Niveau de certitude (Axe 4)[/{color}]",
+                border_style=color,
+            ))
         # Script HOL
         if answer.hol_script:
             console.print(

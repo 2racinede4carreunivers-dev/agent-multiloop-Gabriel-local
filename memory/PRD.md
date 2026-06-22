@@ -4,7 +4,7 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v2.7 — 406/406 tests Pytest ✅ — 4 Axes cognitifs + RAG + Ask Gabriel + 3 Modèles**
+**Production-Ready v2.8 — 449/449 tests Pytest ✅ — 5 Axes cognitifs (Axe 2 intégré au pipeline) + RAG + Ask Gabriel + 3 Modèles**
 
 ## Architecture
 ```
@@ -46,6 +46,30 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 - Corpus mathématique intégré + Slow Motion Debugging + Meta-Learning + CI
 
 ## Changelog
+
+### [2026-02-16] Axe 2 - Ponts cognitifs intégrés au pipeline live (P0)
+- Nouveau module `src/cognitive/engine_bridge.py` : pont entre les 4 briques cognitives et le moteur live
+  - `CognitiveResult` : enveloppe `value + ProofTrace + EpistemicClaim + categorie + regime`
+  - `build_gap_result(p1, p2)` : trace + claim CERTAIN/HORS_DOMAINE, catégorie auto (gap_pos_pos/neg_neg/mixed), régime ontologique (regime_positif/negatif/mixte)
+  - `build_reconstruct_result(n, actual_prime, model)` : trace + claim sur les 3 modèles (1/2, 1/3, 1/4)
+  - `build_rsp_1x1_result(n1, n2, model)` : trace + invariants `ratio_exact_1x1`, `denominateur_non_nul`
+  - `get_meta_reasoner()` singleton + `record_cognitive_result()` enregistrement auto
+- Nouveau wrapper `traced_rsp_1x1` dans `src/cognitive/traced_calculations.py`
+- `FinalAnswer` étendu (`src/core/types.py`) : champs optionnels `epistemic_claim: dict` + `proof_traces: list[dict]`
+- `Pipeline._annotate_epistemic` (`src/core/pipeline.py`) :
+  - Attache une `EpistemicClaim` à chaque `FinalAnswer` (CERTAIN si calcul spectral_core validé, HORS_DOMAINE si erreur, CONJECTURE si pur-LLM)
+  - Appelle `meta.record(category, success)` en fin de pipeline pour Axe 5
+  - Singleton `MetaReasoner` instancié dans `Pipeline.__init__` (stocke stats à `data/learning/stats.json`)
+- CLI (`src/ui/cli.py`) :
+  - Nouvelle commande `cognitive [report|reset]` : tableau Rich des statistiques d'auto-évaluation par catégorie (Axe 5)
+  - Commandes `gap`, `modele gap`, `modele reconstruct`, `modele rsp1x1` produisent désormais un panneau Rich "Axe cognitif" avec invariants + claim (Axes 2/3/4)
+  - `_display_answer` affiche un panneau "Niveau de certitude (Axe 4)" pour les réponses LLM
+  - Tab completion et `HELP_TEXT` mis à jour
+- Tests :
+  - `tests/test_engine_bridge.py` : 17 tests (build_gap/reconstruct/rsp_1x1, mapping régime, intégration MetaReasoner)
+  - `tests/test_pipeline_epistemic.py` : 4 tests (CERTAIN/HORS_DOMAINE/CONJECTURE + record MetaReasoner)
+  - `tests/test_traced_calculations.py` : +5 tests pour `traced_rsp_1x1`
+- **Total : 449/449 tests ✅ (+27 nouveaux)**
 
 ### [2026-02-15] Ask Gabriel - 3 commandes d'aide contextuelle
 - Nouveau module `src/ui/ask_gabriel.py` (deterministe, zero LLM) :
@@ -138,8 +162,9 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 - `695c64e` — Mise à jour fonctions Isabelle (HOL_ISABELLE_FIX.md, hol_integration.py, hol_script_generator.py, verif_p103_n27_CORRECT.thy)
 
 ## Backlog / Futures tâches
+- **P1** : `UnicodeEncodeError` (caractère `\udcc3` sur input PowerShell) — bug original du handoff, à fixer dans `src/audit/audit_store.py` et `src/core/llm_manager.py` (sanitization des surrogates)
+- **P1** : Plan trifocal FZg/HyRi/MsP (Section X de `methode_spectral.thy`) — lien Riemann
 - **P1** : Refactoring des versions parallèles (`gap_solver.py` vs `gap_solver_final.py`, `pipeline.py` vs `pipeline_fixed.py`)
-- **P1** : `UnicodeEncodeError` (caractère `\udcc3` sur input PowerShell) — non reproduit récemment
 - **P2** : Badge GitHub Actions dans README.md (à ajouter après le 1er run distant)
 - **P2** : Permettre à Gabriel de **décider lui-même** d'insérer un graphique dans sa réponse LLM (auto-trigger sur "explique la convergence", "trace l'évolution", etc.)
 - **P3** : Comparaison via API GitHub Actions distante (local vs remote CI dans la bannière)
@@ -155,4 +180,4 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 N/A (pas d'authentification, app CLI locale).
 
 ## Health Status
-✅ **Production-Ready v2.1** — 186/186 tests, CI configurée, visualisations citables opérationnelles.
+✅ **Production-Ready v2.8** — 449/449 tests, CI configurée, Axe 2 (ProofTrace + invariants) intégré au pipeline live + EpistemicClaim sur chaque réponse + MetaReasoner singleton.

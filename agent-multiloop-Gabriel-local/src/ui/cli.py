@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+from pathlib import Path
 
 from rich.console import Console
 from rich.panel import Panel
@@ -18,6 +20,9 @@ from .keybindings import install_keybindings, save_history as _save_kb_history
 
 logger = logging.getLogger(__name__)
 console = Console()
+
+# Chemin canonique du .env de Gabriel (celui charge par dotenv en priorite #2)
+_ROOT_ENV_PATH = Path(__file__).resolve().parent.parent.parent / ".env"
 
 
 BANNER = """
@@ -68,6 +73,7 @@ HELP_TEXT = """
   ask rules        Guide pour interagir efficacement avec Gabriel
   ci               Lance la suite pytest locale (236 tests) et affiche le rapport
   cognitive [r|reset] Auto-evaluation Gabriel (Axe 5) : stats par categorie / reset
+  env-check        Diagnostic des .env + voir ou placer la cle Anthropic Claude
   trifocal [sub]   Plan Trifocal FZg/HyRi/MsP (Section X) : axes, postulats, valider, riemann
   version          Affiche la version
 
@@ -131,6 +137,8 @@ class CLIInterface:
             return True
         if c == "cognitive" or c.startswith("cognitive "):
             return self._handle_cognitive(cmd)
+        if c == "env-check" or c == "env" or c.startswith("env "):
+            return self._handle_env_check(cmd)
         if c == "trifocal" or c.startswith("trifocal "):
             return self._handle_trifocal(cmd)
         if c in {"ci", "tests", "pytest"}:
@@ -1109,7 +1117,228 @@ class CLIInterface:
         )
         return True
 
+    def _handle_env_check(self, cmd: str) -> bool:
+        """Commande `env-check` : diagnostic complet des fichiers .env.
+
+        Montre :
+          - tous les fichiers .env presents dans le projet
+          - lequel est ACTIF (charge par dotenv)
+          - quelles cles API sont configurees (sans afficher la valeur)
+          - le marqueur exact pour la cle Anthropic Claude
+        """
+        from rich.table import Table as _Table
+        from rich.text import Text as _Text
+        from src.core.config import LOADED_ENV_PATH
+
+        # 1. Lister tous les .env du projet (et alentours)
+        roots_to_scan = [
+            Path("/app/agent-multiloop-Gabriel-local"),
+            Path("/app"),
+            Path.cwd(),
+        ]
+        found: dict[Path, dict] = {}
+        for root in roots_to_scan:
+            if not root.exists():
+                continue
+            for pattern in (".env", ".env.example", ".env.local"):
+                for p in root.glob(pattern):
+                    if p.is_file():
+                        found.setdefault(p.resolve(), {
+                            "size": p.stat().st_size,
+                            "has_anthropic": False,
+                            "has_openai": False,
+                            "has_real_key": False,
+                        })
+
+        # Analyser le contenu (sans afficher les valeurs)
+        for path, info in found.items():
+            try:
+                content = path.read_text(encoding="utf-8", errors="replace")
+                for line in content.splitlines():
+                    if line.startswith("#"):
+                        continue
+                    if "=" not in line:
+                        continue
+                    key, _, val = line.partition("=")
+                    key = key.strip()
+                    val = val.strip().strip('"').strip("'")
+                    if key in ("CLAUDE_API_KEY", "ANTHROPIC_API_KEY"):
+                        info["has_anthropic"] = True
+                        if val.startswith("sk-ant-") and len(val) > 30:
+                            info["has_real_key"] = True
+                    if key == "OPENAI_API_KEY":
+                        info["has_openai"] = True
+            except Exception as exc:
+                info["error"] = str(exc)
+
+        # 2. Affichage Rich
+        header = _Text()
+        header.append("DIAGNOSTIC DES FICHIERS .env\n", style="bold bright_cyan")
+        header.append("(carte complete + cle ACTIVEMENT chargee par Gabriel)",
+                      style="dim italic")
+        console.print(Panel(header, border_style="bright_cyan", padding=(1, 2)))
+
+        # Tableau des .env trouves
+        tbl = _Table(
+            title="Fichiers .env detectes",
+            border_style="cyan", show_lines=True,
+        )
+        tbl.add_column("Chemin", style="bold", overflow="fold")
+        tbl.add_column("Taille", justify="right")
+        tbl.add_column("CLAUDE_API_KEY", justify="center")
+        tbl.add_column("Cle reelle ?", justify="center")
+        tbl.add_column("ACTIF", justify="center", style="bold")
+
+        for path in sorted(found.keys(), key=str):
+            info = found[path]
+            is_active = (LOADED_ENV_PATH is not None
+                         and Path(LOADED_ENV_PATH).resolve() == path)
+            tbl.add_row(
+                str(path),
+                f"{info['size']}o",
+                "[green]V[/green]" if info["has_anthropic"] else "[red]X[/red]",
+                "[green]sk-ant-...[/green]" if info["has_real_key"]
+                else "[yellow]placeholder[/yellow]" if info["has_anthropic"]
+                else "[red]aucune[/red]",
+                "[bold green]<- CHARGE[/bold green]" if is_active else "—",
+            )
+        console.print(tbl)
+
+        # 3. Cle ANTHROPIC en memoire actuellement
+        env_claude = os.environ.get("CLAUDE_API_KEY") or os.environ.get("ANTHROPIC_API_KEY") or ""
+        env_openai = os.environ.get("OPENAI_API_KEY") or ""
+        is_claude_valid = env_claude.startswith("sk-ant-") and len(env_claude) > 30
+        is_openai_valid = env_openai.startswith("sk-") and len(env_openai) > 30
+
+        runtime = _Text()
+        runtime.append("CLES EFFECTIVEMENT CHARGEES EN MEMOIRE\n",
+                       style="bold bright_cyan")
+        runtime.append("\n")
+        runtime.append("  CLAUDE_API_KEY  : ", style="bold yellow")
+        if is_claude_valid:
+            runtime.append(f"OK ({env_claude[:10]}...{env_claude[-4:]})\n",
+                           style="bold green")
+        elif env_claude:
+            runtime.append(
+                f"INVALIDE (valeur='{env_claude[:30]}...', "
+                "doit commencer par 'sk-ant-')\n", style="bold yellow",
+            )
+        else:
+            runtime.append("ABSENTE -> Claude DESACTIVE\n", style="bold red")
+        runtime.append("  OPENAI_API_KEY  : ", style="bold yellow")
+        if is_openai_valid:
+            runtime.append(f"OK ({env_openai[:7]}...{env_openai[-4:]})\n",
+                           style="bold green")
+        elif env_openai:
+            runtime.append(
+                f"INVALIDE (valeur='{env_openai[:20]}...')\n",
+                style="bold yellow",
+            )
+        else:
+            runtime.append("ABSENTE\n", style="bold red")
+
+        console.print(Panel(
+            runtime, title="[bold]Etat runtime[/bold]",
+            border_style="green" if is_claude_valid else "red",
+            padding=(1, 2),
+        ))
+
+        # 4. Instructions
+        if not is_claude_valid:
+            instr = _Text()
+            instr.append("COMMENT AJOUTER VOTRE CLE ANTHROPIC\n",
+                         style="bold bright_yellow")
+            instr.append("\n")
+            instr.append("  1. Ouvrir le fichier  : ", style="bold")
+            instr.append(
+                f"{_ROOT_ENV_PATH}\n", style="bold cyan",
+            )
+            instr.append("  2. Chercher la balise : ", style="bold")
+            instr.append(">>>  COLLEZ VOTRE CLE ANTHROPIC CLAUDE ICI  <<<\n",
+                         style="bold cyan")
+            instr.append("  3. Remplacer la ligne :\n", style="bold")
+            instr.append(
+                "       CLAUDE_API_KEY=COLLEZ-VOTRE-CLE-ICI\n",
+                style="dim",
+            )
+            instr.append("     par :\n", style="bold")
+            instr.append(
+                "       CLAUDE_API_KEY=sk-ant-api03-xxxx...vos-vraies-donnees\n",
+                style="green",
+            )
+            instr.append("\n  4. ", style="bold")
+            instr.append("Redemarrer Gabriel ", style="bold")
+            instr.append("(le .env n'est lu qu'au demarrage) :\n", style="dim")
+            instr.append(
+                "       docker-compose down && docker-compose up --build\n",
+                style="cyan",
+            )
+            instr.append("\n  5. ", style="bold")
+            instr.append("Re-executer 'env-check' pour confirmer.", style="dim")
+            console.print(Panel(
+                instr, title="[bold yellow]Action requise[/bold yellow]",
+                border_style="yellow", padding=(1, 2),
+            ))
+        else:
+            console.print(
+                "\n  [bold green]Gabriel est pret a utiliser Claude (Anthropic).[/bold green]\n"
+            )
+        return True
+
     def _handle_cognitive(self, cmd: str) -> bool:
+        """Commande `cognitive [report|reset]` : statistiques Axe 5 (MetaReasoner)."""
+        from rich.table import Table as _Table
+
+        tokens = cmd.strip().split()
+        sub = tokens[1].lower() if len(tokens) > 1 else "report"
+
+        if sub == "reset":
+            for cat in list(self._meta_reasoner.stats.keys()):
+                stats = self._meta_reasoner.stats[cat]
+                stats.total = 0
+                stats.successes = 0
+            self._meta_reasoner._save_stats()
+            console.print("  [green]Statistiques MetaReasoner reinitialisees.[/green]\n")
+            return True
+
+        if sub not in {"report", "stats", "show"}:
+            console.print(
+                "\n  [yellow]Usage : cognitive [report|reset]\n"
+                "    report  Affiche les stats d'auto-evaluation (defaut)\n"
+                "    reset   Reinitialise toutes les categories a 0[/yellow]\n"
+            )
+            return True
+
+        report = self._meta_reasoner.report()
+        tbl = _Table(
+            title="Auto-evaluation Gabriel (Axe 5 - MetaReasoner)",
+            border_style="cyan", show_lines=False,
+        )
+        tbl.add_column("Categorie", style="bold yellow", no_wrap=True)
+        tbl.add_column("Total", justify="right")
+        tbl.add_column("Succes", justify="right")
+        tbl.add_column("Taux", justify="right")
+        tbl.add_column("Confiance", justify="center")
+        for cat, data in sorted(report.items()):
+            conf = data["confidence"]
+            conf_color = {
+                "HIGH": "green", "MEDIUM": "yellow",
+                "LOW": "red", "UNKNOWN": "dim",
+            }.get(conf, "white")
+            tbl.add_row(
+                cat,
+                str(data["total"]),
+                str(data["successes"]),
+                f"{data['rate']*100:.1f}%" if data["total"] else "—",
+                f"[{conf_color}]{conf}[/{conf_color}]",
+            )
+        console.print(tbl)
+        console.print(
+            f"\n  [dim]Fichier stats : {self._meta_reasoner.stats_file}[/dim]\n"
+            f"  [dim]Fichier erreurs : {self._meta_reasoner.errors_file}[/dim]\n"
+        )
+        return True
+
         """Commande `cognitive [report|reset]` : statistiques Axe 5 (MetaReasoner)."""
         from rich.table import Table as _Table
 

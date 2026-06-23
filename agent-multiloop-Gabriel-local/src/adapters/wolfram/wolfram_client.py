@@ -49,7 +49,13 @@ class WolframClient:
         self._external_client = client
 
     def is_available(self) -> bool:
-        return bool(self.app_id) and not self.app_id.startswith("VOTRE-WOLFRAM")
+        if not self.app_id:
+            return False
+        # Detection des placeholders connus (.env non rempli)
+        placeholders = ("VOTRE-WOLFRAM", "COLLEZ-VOTRE", "COLLEZ_VOTRE",
+                        "VOTRE_WOLFRAM", "PLACEHOLDER")
+        return not any(self.app_id.upper().startswith(p.upper())
+                       for p in placeholders)
 
     async def query_full_results(self, input_text: str) -> dict[str, Any]:
         """Appelle l'API Full Results. Retourne le queryresult ou leve une exception."""

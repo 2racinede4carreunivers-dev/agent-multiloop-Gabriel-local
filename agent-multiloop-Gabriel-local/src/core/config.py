@@ -1,6 +1,7 @@
 """Chargement de la configuration YAML + variables d'environnement."""
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -8,12 +9,16 @@ from typing import Any
 import yaml
 from dotenv import load_dotenv
 
-
+logger = logging.getLogger(__name__)
 _ROOT = Path(__file__).resolve().parent.parent.parent
+
+# Memorise quel .env a ete charge (utile pour la commande 'env-check')
+LOADED_ENV_PATH: Path | None = None
 
 
 def _load_env() -> None:
-    """Charge le fichier .env le plus pertinent."""
+    """Charge le fichier .env le plus pertinent. Loggue celui retenu."""
+    global LOADED_ENV_PATH
     candidates = [
         Path.cwd() / ".env",
         _ROOT / ".env",
@@ -22,7 +27,14 @@ def _load_env() -> None:
     for candidate in candidates:
         if candidate.exists():
             load_dotenv(candidate)
+            LOADED_ENV_PATH = candidate
+            logger.info(".env charge depuis : %s", candidate)
             return
+    LOADED_ENV_PATH = None
+    logger.warning(
+        ".env INTROUVABLE parmi les candidats : %s",
+        [str(c) for c in candidates],
+    )
 
 
 _load_env()

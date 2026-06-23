@@ -4,7 +4,7 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.1 — 505/505 tests Pytest ✅ — Modèle de Certitude (8 critères / 3 questions) + Boucle Logique avec sursauts + Réponse Modeste reformulée + Slow-Motion "Kit de réparation" (8 cadrans) + 5 Axes cognitifs + Plan Trifocal**
+**Production-Ready v3.2 — 515/515 tests Pytest ✅ — .env unifié + commande `env-check` + Modèle de Certitude + Boucle Logique + Réponse Modeste + Slow-Motion (8 cadrans) + 5 Axes cognitifs + Plan Trifocal**
 
 ## Architecture
 ```
@@ -46,6 +46,41 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 - Corpus mathématique intégré + Slow Motion Debugging + Meta-Learning + CI
 
 ## Changelog
+
+### [2026-02-16] Unification `.env` + commande `env-check` + détection des placeholders
+
+**Suite au feedback Philippe : "j'ai plusieurs .env, je ne sais pas où mettre ma clé Anthropic Claude qui ne fonctionne pas".**
+
+#### Diagnostic
+- `src/core/config.py` cherche `.env` dans 3 emplacements ; aucun n'existait → `load_dotenv` silencieux → `CLAUDE_API_KEY=None` → Claude désactivé
+- 12 fichiers `.md` + 5 scripts Python documentant le sujet créaient plus de confusion que de solution
+- `WolframClient.is_available()` et clients LLM ne détectaient pas les placeholders d'un `.env` non rempli
+
+#### Solution livrée
+1. **`agent-multiloop-Gabriel-local/.env`** créé avec :
+   - Marqueur ULTRA-visible `>>>  COLLEZ VOTRE CLE ANTHROPIC CLAUDE ICI  <<<` (cadre ASCII)
+   - Sections `+--+` claires pour Anthropic, OpenAI, Wolfram, Ollama, Multiloop
+   - Alias `CLAUDE_API_KEY` + `ANTHROPIC_API_KEY` (le SDK officiel attend l'alias)
+2. **`src/core/config.py` instrumenté** : `LOADED_ENV_PATH` mémorise le `.env` chargé + log INFO au démarrage
+3. **Nouvelle commande CLI `env-check`** (ou `env`) :
+   - Tableau Rich des `.env` détectés dans toute l'arborescence
+   - Colonne "ACTIF" indique lequel est chargé en mémoire
+   - Détection automatique des placeholders (`COLLEZ-...`, `VOTRE-...`)
+   - État runtime des clés (`OK sk-ant-xxxx...`, `INVALIDE`, ou `ABSENTE`)
+   - Instructions exactes pour corriger (chemin du `.env`, balise à chercher, ligne à modifier, redémarrage Docker)
+4. **Détection placeholders côté clients** (régression-proof) :
+   - `WolframClient.is_available()` : détecte `COLLEZ`, `VOTRE`, `PLACEHOLDER`, etc.
+   - `OpenAIClient` : idem dans `__init__`
+   - `ClaudeClient` (`src/core/llm_manager.py`) : idem, log warning explicite
+5. **Guide unique** `CONFIG_ENV_GUIDE.md` à la racine du projet :
+   - TL;DR en 5 étapes
+   - Tableau comparatif des fichiers `.env` (lequel est le bon, lesquels sont sans rapport)
+   - Chaîne LLM expliquée (Ollama → Claude → OpenAI)
+6. **Archivage** : 16 fichiers obsolètes (12 .md + 4 scripts) déplacés vers `docs/archive/env_history/`
+
+#### Tests
+- `tests/test_env_config.py` : 10 nouveaux tests (`LOADED_ENV_PATH`, présence balises, contenu guide)
+- Total : **515/515 ✅** (0 régression)
 
 ### [2026-02-16] Modèle de Certitude + Boucle Logique + Réponse Modeste (P0)
 
@@ -293,4 +328,4 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 N/A (pas d'authentification, app CLI locale).
 
 ## Health Status
-✅ **Production-Ready v3.1** — 505/505 tests, CI configurée, Slow-Motion en 8 cadrans avec Modèle de Certitude + Boucle Logique + Réponse Modeste (la requête incohérente devient une requête modeste **effectivement résolue**), Axes cognitifs 2-5 + Plan Trifocal + Unicode-safe.
+✅ **Production-Ready v3.2** — 515/515 tests, `.env` unifié + `env-check` CLI, Slow-Motion 8 cadrans avec Modèle de Certitude + Boucle Logique + Réponse Modeste effective, Axes cognitifs 2-5 + Plan Trifocal + Unicode-safe.

@@ -22,6 +22,11 @@ class OpenAIClient:
         timeout: float = 90.0,
     ):
         self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
+        # Detection des placeholders d'un .env non rempli -> on neutralise
+        if self.api_key:
+            placeholders = ("COLLEZ", "VOTRE", "PLACEHOLDER", "sk-VOTRE", "sk-[")
+            if any(self.api_key.upper().startswith(p.upper()) for p in placeholders):
+                self.api_key = None
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens

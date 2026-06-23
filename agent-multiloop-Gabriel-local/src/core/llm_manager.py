@@ -29,6 +29,16 @@ class ClaudeClient:
         import os
         
         self.api_key = api_key or os.getenv("CLAUDE_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
+        # Detection des placeholders d'un .env non rempli -> on neutralise
+        if self.api_key:
+            placeholders = ("COLLEZ", "VOTRE", "PLACEHOLDER", "sk-ant-[")
+            if any(self.api_key.upper().startswith(p.upper()) for p in placeholders):
+                logger.warning(
+                    "CLAUDE_API_KEY contient un placeholder (%s...) - "
+                    "Claude desactive jusqu'a saisie d'une cle reelle sk-ant-...",
+                    self.api_key[:20],
+                )
+                self.api_key = None
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens

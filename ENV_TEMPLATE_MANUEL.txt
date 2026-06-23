@@ -1,0 +1,76 @@
+# ============================================================
+# GABRIEL MATHEMATICAL AGENT - CONFIGURATION FINALE
+# ============================================================
+# ⚠️  INSTRUCTIONS CRITIQUES:
+# 1. Ouvre ce fichier dans VS Code
+# 2. Remplace [VOTRE_CLÉ_CLAUDE] par ta vraie clé (SANS les crochets!)
+# 3. Remplace [VOTRE_CLÉ_OPENAI] par ta vraie clé (SANS les crochets!)
+# 4. Sauvegarde (Ctrl+S)
+# 5. Copie ce contenu vers le fichier container aussi
+# 6. Redémarre Docker
+# ============================================================
+
+# ============================================================
+# CLAUDE ANTHROPIC API (PRIORITAIRE - Cerveau Logique)
+# ============================================================
+# Générer depuis: https://console.anthropic.com/
+# Clique: API Keys → Create Key
+# Format: sk-ant-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX (52+ caractères)
+# REMPLACE [VOTRE_CLÉ_CLAUDE] par ta VRAIE clé sans crochets!
+CLAUDE_API_KEY=[VOTRE_CLÉ_CLAUDE]
+ANTHROPIC_API_KEY=[VOTRE_CLÉ_CLAUDE]
+
+# ============================================================
+# OPENAI API (FALLBACK - Tâches Fluides)
+# ============================================================
+# Générer depuis: https://platform.openai.com/api-keys
+# Clique: Create new secret key
+# Format: sk-proj-XXXXXX... ou sk-XXXXXX... (50+ caractères)
+# REMPLACE [VOTRE_CLÉ_OPENAI] par ta VRAIE clé sans crochets!
+OPENAI_API_KEY=[VOTRE_CLÉ_OPENAI]
+OPENAI_MODEL=gpt-4o
+
+# ============================================================
+# OLLAMA (LLM LOCAL - Démarrage Rapide)
+# ============================================================
+# En Docker: http://ollama:11434 (hostname du service)
+OLLAMA_HOST=http://ollama:11434
+OLLAMA_MODEL=llama3.2
+
+# ============================================================
+# CONFIGURATION AGENT GABRIEL
+# ============================================================
+DEFAULT_LANGUAGE=fr
+AGENT_USERNAME=Philippe Thomas
+AGENT_NAME=Mme Gabriel
+
+# ============================================================
+# CHEMINS CORPUS
+# ============================================================
+HOL_DIR=/theories
+PDF_DIR=/workspace/corpus_actions/pdf
+TEX_DIR=/workspace/corpus_actions/tex
+
+# ============================================================
+# GITHUB (optionnel)
+# ============================================================
+GITHUB_USERNAME=
+GITHUB_TOKEN=
+
+# ============================================================
+# MULTILOOP VALIDATION
+# ============================================================
+MULTILOOP_MAX_ITERATIONS=3
+MULTILOOP_MIN_SCORE=8.0
+
+# ============================================================
+# LLM ROUTING (Chaîne de fallback)
+# ============================================================
+LLM_PRIMARY=ollama
+LLM_FALLBACK_1=claude
+LLM_FALLBACK_2=openai
+
+# ============================================================
+# WOLFRAM ALPHA (optionnel)
+# ============================================================
+WOLFRAM_APP_ID=8PHEQAPGK2

@@ -131,7 +131,7 @@ class LLMRouterV2:
         return ModelConfig(
             name="Claude-3.5-Sonnet",
             api_key=api_key,
-            model_id="claude-3-5-sonnet-20241022",
+            model_id=os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5-20250929"),
             max_tokens=2000,  # Augmenté pour qualité
             temperature=0.7,
             priority=1,  # PRIORITAIRE

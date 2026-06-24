@@ -4,7 +4,7 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.2 — 515/515 tests Pytest ✅ — .env unifié + commande `env-check` + Modèle de Certitude + Boucle Logique + Réponse Modeste + Slow-Motion (8 cadrans) + 5 Axes cognitifs + Plan Trifocal**
+**Production-Ready v3.3 — 515/515 tests Pytest ✅ — Claude API verifie LIVE en bout-en-bout (modele Sonnet 4.5) + `env-check live` + .env unifié + Modèle de Certitude + Boucle Logique + Slow-Motion 8 cadrans + 5 Axes cognitifs + Plan Trifocal**
 
 ## Architecture
 ```
@@ -46,6 +46,37 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 - Corpus mathématique intégré + Slow Motion Debugging + Meta-Learning + CI
 
 ## Changelog
+
+### [2026-02-16] Modèle Claude 2026 + test live `env-check live` (P0 critique)
+
+**Suite au feedback Philippe : "ça fait 3 jours, 42 crédits restants, la clé Claude ne fonctionne TOUJOURS pas".**
+
+#### Cause racine identifiée et corrigée
+- ✅ La clé `sk-ant-api03-G3y3...` était valide
+- ✅ Le `.env` était bien chargé
+- ✅ `LLMManager` reconnaissait Claude (`is_available: True`)
+- ❌ **MAIS le modèle `claude-3-5-sonnet-20241022` est OBSOLÈTE depuis 2025**
+- ❌ L'API Anthropic retournait `404 not_found_error`
+- ❌ Le code attrapait l'exception et logguait `"Claude indisponible (CLAUDE_API_KEY manquante)"` (message trompeur)
+
+#### Correctifs
+1. **`src/core/llm_manager.py`** : `ClaudeClient.__init__` lit `CLAUDE_MODEL` depuis l'env, défaut `claude-sonnet-4-5-20250929`
+2. **`src/llm_router.py`** et **`src/llm_router_v2.py`** : hardcode obsolète remplacé par lecture de `CLAUDE_MODEL` env
+3. **`config.yaml`** : nouvelle section `llm.claude:` explicite avec documentation des modèles 2026
+4. **`.env`** + **`.env.example`** : ajout obligatoire de `CLAUDE_MODEL=claude-sonnet-4-5-20250929`
+5. **`env-check live`** (CLI) : nouveau sous-mode qui **APPELLE RÉELLEMENT L'API Claude** et affiche :
+   - `Claude LIVE ✓` (panneau vert) + réponse réelle + tokens consommés, ou
+   - `Claude LIVE ✗` (panneau rouge) + diagnostic précis (modèle obsolète / clé invalide / quota / réseau)
+6. **`env-check`** : signale en rouge les modèles `CLAUDE_MODEL` obsolètes (prefixes `claude-3-5-sonnet-2024`, `claude-3-haiku-2024`, etc.)
+7. **`CONFIG_ENV_GUIDE.md`** : tableau des modèles 2026 valides + liste explicite des modèles obsolètes à éviter
+
+#### Validation
+- Test bout-en-bout `Orchestrator.ask("Quel est le 17e nombre premier ?")` :
+  - 4 appels Claude réussis dans 1 cycle multiloop
+  - Score 9.5/10, 1 itération
+  - Réponse : *"Le 17e nombre premier est 59."*
+- `env-check live` confirme : `APPEL LIVE REUSSI - Reponse Claude : Le 17e nombre premier est 59. - Tokens : 28 in + 13 out`
+- **Total : 515/515 tests ✅ (0 régression)**
 
 ### [2026-02-16] Unification `.env` + commande `env-check` + détection des placeholders
 
@@ -328,4 +359,4 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 N/A (pas d'authentification, app CLI locale).
 
 ## Health Status
-✅ **Production-Ready v3.2** — 515/515 tests, `.env` unifié + `env-check` CLI, Slow-Motion 8 cadrans avec Modèle de Certitude + Boucle Logique + Réponse Modeste effective, Axes cognitifs 2-5 + Plan Trifocal + Unicode-safe.
+✅ **Production-Ready v3.3** — 515/515 tests, **Claude API confirmée fonctionnelle bout-en-bout** (modèle Sonnet 4.5, `env-check live` test live OK), `.env` unifié, Slow-Motion 8 cadrans avec Modèle de Certitude + Boucle Logique + Réponse Modeste, Axes cognitifs 2-5 + Plan Trifocal.

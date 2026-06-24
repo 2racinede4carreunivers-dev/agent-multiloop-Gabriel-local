@@ -9,14 +9,19 @@
    ```
    >>>  COLLEZ VOTRE CLE ANTHROPIC CLAUDE ICI  <<<
    ```
-3. **Remplacer** la ligne :
+3. **Remplacer** les **3 lignes** :
    ```
    CLAUDE_API_KEY=COLLEZ-VOTRE-CLE-ICI
+   ANTHROPIC_API_KEY=COLLEZ-VOTRE-CLE-ICI
+   CLAUDE_MODEL=claude-sonnet-4-5-20250929
    ```
-   par :
+   par (où `sk-ant-api03-XXXX` est ta vraie clé Anthropic) :
    ```
-   CLAUDE_API_KEY=sk-ant-api03-...votre-cle-reelle
+   CLAUDE_API_KEY=sk-ant-api03-XXXX...
+   ANTHROPIC_API_KEY=sk-ant-api03-XXXX...
+   CLAUDE_MODEL=claude-sonnet-4-5-20250929
    ```
+   > ⚠️ **IMPORTANT** : la ligne `CLAUDE_MODEL=claude-sonnet-4-5-20250929` est OBLIGATOIRE. Les anciens noms de modèles (`claude-3-5-sonnet-20241022`, `claude-3-haiku-20240307`, etc.) sont **OBSOLÈTES depuis 2025** et provoquent une erreur `404 not_found_error` silencieuse côté agent.
 4. **Redémarrer Docker** :
    ```
    docker-compose down
@@ -24,8 +29,23 @@
    ```
 5. **Vérifier** dans Gabriel :
    ```
-   Philippe > env-check
+   Philippe > env-check live
    ```
+   → Tu dois voir un panneau vert **`Claude LIVE ✓`** avec la vraie réponse de Claude.
+
+## Modèles Claude disponibles en 2026
+
+| Modèle (string `CLAUDE_MODEL`) | Vitesse | Coût | Qualité | Cas d'usage |
+|---|---|---|---|---|
+| **`claude-sonnet-4-5-20250929`** | rapide | $$ | excellent | ✅ **recommandé pour Gabriel** |
+| `claude-opus-4-5` | lent | $$$$ | maximum | preuves HOL difficiles, audit final |
+| `claude-3-5-haiku-latest` | très rapide | $ | bon | tâches simples (déprécation 2026-02) |
+
+❌ **À NE PLUS UTILISER** (404 not_found) :
+- `claude-3-5-sonnet-20241022`
+- `claude-3-5-sonnet-20240620`
+- `claude-3-haiku-20240307`
+- `claude-3-opus-20240229`
 
 ## Pourquoi il y a UN SEUL .env (et pas plusieurs)
 

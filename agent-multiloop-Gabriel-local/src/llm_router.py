@@ -103,7 +103,7 @@ class LLMRouter:
         return ModelConfig(
             name="Claude",
             api_key=api_key,
-            model_id="claude-3-5-sonnet-20241022",  # Dernière version
+            model_id=os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5-20250929"),  # CLAUDE_MODEL du .env ou defaut 2026
             max_tokens=4096,
             temperature=0.7,
             priority=1,  # Prioritaire

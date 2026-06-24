@@ -73,7 +73,7 @@ HELP_TEXT = """
   ask rules        Guide pour interagir efficacement avec Gabriel
   ci               Lance la suite pytest locale (236 tests) et affiche le rapport
   cognitive [r|reset] Auto-evaluation Gabriel (Axe 5) : stats par categorie / reset
-  env-check        Diagnostic des .env + voir ou placer la cle Anthropic Claude
+  env-check [live] Diagnostic .env. Avec 'live' : teste l'API Claude pour de vrai
   trifocal [sub]   Plan Trifocal FZg/HyRi/MsP (Section X) : axes, postulats, valider, riemann
   version          Affiche la version
 
@@ -1311,7 +1311,98 @@ class CLIInterface:
             console.print(
                 "\n  [bold green]Gabriel est pret a utiliser Claude (Anthropic).[/bold green]\n"
             )
+
+        # 5. TEST LIVE de l'API Claude (si demande)
+        tokens = cmd.strip().split()
+        if len(tokens) > 1 and tokens[1].lower() in ("live", "test", "ping"):
+            self._test_claude_live()
+        elif is_claude_valid:
+            console.print(
+                "  [dim]Pour tester en live l'API Claude (consomme 1 appel) : "
+                "[/dim][cyan]env-check live[/cyan]\n"
+            )
         return True
+
+    def _test_claude_live(self) -> None:
+        """Test live de l'API Claude (1 appel reel, ~1 cent)."""
+        from rich.text import Text as _Text
+
+        env_claude = os.environ.get("CLAUDE_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
+        env_model = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
+        if not env_claude or not env_claude.startswith("sk-ant-"):
+            console.print(
+                "  [red]Impossible de tester : pas de cle Claude valide.[/red]\n"
+            )
+            return
+        console.print(
+            f"\n  [dim]Test live -> appel API Claude ({env_model})...[/dim]\n"
+        )
+        try:
+            import anthropic
+            client = anthropic.Anthropic(api_key=env_claude, timeout=30)
+            response = client.messages.create(
+                model=env_model,
+                max_tokens=80,
+                messages=[{
+                    "role": "user",
+                    "content": "Reponds en 1 phrase exacte : quel est le 17e nombre premier ?",
+                }],
+            )
+            txt = response.content[0].text if response.content else "(vide)"
+            body = _Text()
+            body.append("APPEL LIVE REUSSI\n\n", style="bold bright_green")
+            body.append(f"  Modele utilise : ", style="bold yellow")
+            body.append(f"{env_model}\n", style="cyan")
+            body.append(f"  Reponse Claude : ", style="bold yellow")
+            body.append(f"{txt[:200]}\n", style="white")
+            body.append(f"  Tokens         : ", style="bold yellow")
+            body.append(
+                f"{response.usage.input_tokens} in + "
+                f"{response.usage.output_tokens} out\n",
+                style="dim",
+            )
+            console.print(Panel(
+                body, title="[bold bright_green]Claude LIVE ✓[/bold bright_green]",
+                border_style="bright_green", padding=(1, 2),
+            ))
+        except Exception as exc:
+            err_msg = str(exc)
+            body = _Text()
+            body.append("APPEL LIVE ECHOUE\n\n", style="bold red")
+            body.append(f"  Erreur : ", style="bold yellow")
+            body.append(f"{type(exc).__name__}\n", style="red")
+            body.append(f"  Detail : ", style="bold yellow")
+            body.append(f"{err_msg[:300]}\n", style="white")
+            body.append("\n  Diagnostic :\n", style="bold yellow")
+            if "not_found_error" in err_msg or "404" in err_msg:
+                body.append(
+                    f"    -> Le modele '{env_model}' n'existe plus.\n"
+                    "    -> Ajoutez dans .env :  "
+                    "CLAUDE_MODEL=claude-sonnet-4-5-20250929\n",
+                    style="white",
+                )
+            elif "authentication" in err_msg.lower() or "401" in err_msg:
+                body.append(
+                    "    -> Cle API invalide ou revoquee.\n"
+                    "    -> Generez une nouvelle cle sur "
+                    "console.anthropic.com/settings/keys\n",
+                    style="white",
+                )
+            elif "rate_limit" in err_msg.lower() or "429" in err_msg:
+                body.append(
+                    "    -> Quota atteint ou rate-limit.\n"
+                    "    -> Verifiez votre tier sur console.anthropic.com\n",
+                    style="white",
+                )
+            else:
+                body.append(
+                    "    -> Erreur inattendue. Verifiez la connexion reseau et "
+                    "console.anthropic.com.\n", style="white",
+                )
+            console.print(Panel(
+                body, title="[bold red]Claude LIVE ✗[/bold red]",
+                border_style="red", padding=(1, 2),
+            ))
 
     def _handle_cognitive(self, cmd: str) -> bool:
         """Commande `cognitive [report|reset]` : statistiques Axe 5 (MetaReasoner)."""

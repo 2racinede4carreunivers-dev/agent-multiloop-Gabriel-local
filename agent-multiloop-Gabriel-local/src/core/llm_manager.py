@@ -1,10 +1,12 @@
 """
-LLM Manager v2 - Chaîne de fallback: Ollama → Claude → OpenAI
-Nouvelle priorité: Claude est PRIORITAIRE après Ollama
+LLM Manager v3 - Avec système de mémoire Gabriel intégré
+Chaîne de fallback: Ollama → Claude → OpenAI + RAG sémantique/syntaxique
 """
 from __future__ import annotations
 
 import logging
+import sys
+from pathlib import Path
 from typing import Any
 
 from ..adapters.llm.ollama_client import OllamaClient
@@ -19,6 +21,21 @@ try:
     CLAUDE_AVAILABLE = True
 except ImportError:
     CLAUDE_AVAILABLE = False
+
+# ========================================================================
+# INTÉGRATION MÉMOIRE GABRIEL
+# ========================================================================
+
+INTEGRATEUR_MEMOIRE = None
+try:
+    # Importer l'intégrateur de mémoire
+    sys.path.insert(0, str(Path(__file__).parent))
+    from integrateur_memoire import IntegrateurMemoireGabriel
+    INTEGRATEUR_MEMOIRE = IntegrateurMemoireGabriel()
+    logger.info("✅ Système de mémoire Gabriel activé (RAG sémantique + syntaxique)")
+except Exception as e:
+    logger.warning(f"⚠️ Système de mémoire désactivé: {e}")
+    INTEGRATEUR_MEMOIRE = None
 
 
 class ClaudeClient:
@@ -54,7 +71,7 @@ class ClaudeClient:
         if self.api_key:
             try:
                 self.client = anthropic.Anthropic(api_key=self.api_key)
-                logger.info(f"✅ Claude client initialized: {model}")
+                logger.info(f"✅ Claude client initialized: {self.model}")
             except Exception as e:
                 logger.error(f"❌ Claude initialization failed: {e}")
     
@@ -112,12 +129,14 @@ class ClaudeClient:
 
 class LLMManager:
     """
-    LLM Manager v2 - Chaîne de fallback RÉVISÉE
+    LLM Manager v3 - Avec système de mémoire Gabriel
     
     NOUVELLE PRIORITÉ:
     1. Ollama (10s timeout) - local, rapide
     2. Claude (60s timeout) - expert logique, tâches complexes
     3. OpenAI (90s timeout) - fallback ultime
+    
+    + RAG sémantique/syntaxique + cache d'erreurs persistent
     """
 
     def __init__(self, config: dict[str, Any]):
@@ -128,61 +147,110 @@ class LLMManager:
 
         # Configuration primaire/fallbacks
         self.primary = llm_cfg.get("primary", "ollama")
-        self.fallback_1 = llm_cfg.get("fallback_1", "claude")  # NOUVEAU: Claude est fallback 1
-        self.fallback_2 = llm_cfg.get("fallback_2", "openai")  # OpenAI est fallback 2
+        self.fallback_1 = llm_cfg.get("fallback_1", "claude")
+        self.fallback_2 = llm_cfg.get("fallback_2", "openai")
 
         # Initialiser clients
         self.ollama = OllamaClient(
             base_url=ollama_cfg.get("base_url"),
             model=ollama_cfg.get("model", "llama3.2"),
-            timeout=float(ollama_cfg.get("timeout_seconds", 10)),  # 10s Ollama
+            timeout=float(ollama_cfg.get("timeout_seconds", 10)),
         )
 
         self.claude = ClaudeClient(
-            api_key=None,  # lit depuis env CLAUDE_API_KEY ou ANTHROPIC_API_KEY
-            model=claude_cfg.get("model") or None,  # None -> lit CLAUDE_MODEL ou defaut Sonnet 4.5
+            api_key=None,
+            model=claude_cfg.get("model") or None,
             temperature=float(claude_cfg.get("temperature", 0.7)),
             max_tokens=int(claude_cfg.get("max_tokens", 4096)),
-            timeout=float(claude_cfg.get("timeout_seconds", 60)),  # 60s Claude
+            timeout=float(claude_cfg.get("timeout_seconds", 60)),
         )
 
         self.openai = OpenAIClient(
-            api_key=None,  # lit depuis env OPENAI_API_KEY
+            api_key=None,
             model=openai_cfg.get("model", "gpt-4o"),
             temperature=float(openai_cfg.get("temperature", 0.2)),
             max_tokens=int(openai_cfg.get("max_tokens", 4096)),
-            timeout=float(openai_cfg.get("timeout_seconds", 90)),  # 90s OpenAI
+            timeout=float(openai_cfg.get("timeout_seconds", 90)),
         )
 
-        self._ollama_available: bool | None = None  # cache
+        self._ollama_available: bool | None = None
 
-        logger.info("✅ LLM Manager v2 Initialized")
+        logger.info("✅ LLM Manager v3 Initialized")
         logger.info("   Chaîne fallback: Ollama (10s) → Claude (60s) → OpenAI (90s)")
+        if INTEGRATEUR_MEMOIRE:
+            logger.info("   Mémoire: Activée (RAG + cache erreurs)")
 
     async def _check_ollama(self) -> bool:
         if self._ollama_available is None:
             self._ollama_available = await self.ollama.is_available()
         return self._ollama_available
 
-    async def generate(self, prompt: str, system: str | None = None, temperature: float = 0.2) -> str:
+    def _augmenter_prompt_avec_memoire(self, prompt: str, domaine: str = "general") -> str:
+        """Augmente le prompt avec contexte de mémoire (RAG sémantique + syntaxique)"""
+        
+        if not INTEGRATEUR_MEMOIRE:
+            return prompt
+        
+        try:
+            # RAG sémantique: contexte conceptuel
+            contexte_conceptuel = INTEGRATEUR_MEMOIRE.augmenter_prompt_conceptuel(prompt)
+            
+            # RAG syntaxique: patterns techniques
+            pattern = INTEGRATEUR_MEMOIRE.trouver_pattern_optimal(prompt, domaine)
+            lemmes = INTEGRATEUR_MEMOIRE.trouver_lemmes_pertinents(prompt, top_n=2)
+            
+            prompt_augmente = f"""{prompt}
+
+╔════════════════════════════════════════════════════════════════╗
+║              CONTEXTE MÉMOIRE GABRIEL INJECTÉ                 ║
+╚════════════════════════════════════════════════════════════════╝
+
+CADRE CONCEPTUEL:
+─────────────────
+{contexte_conceptuel[:500]}...
+
+TECHNIQUES RECOMMANDÉES:
+───────────────────────
+"""
+            
+            if pattern:
+                prompt_augmente += f"\nPattern optimal: {pattern.nom} (taux: {pattern.taux_reussite:.0%})\n"
+            
+            if lemmes:
+                prompt_augmente += "\nLemmes validés:\n"
+                for key, lemme in lemmes:
+                    prompt_augmente += f"  - {key}: {lemme['taux_reussite']:.0%}\n"
+            
+            return prompt_augmente
+        
+        except Exception as e:
+            logger.warning(f"⚠️ Erreur injection mémoire: {e}")
+            return prompt
+
+    async def generate(self, prompt: str, system: str | None = None, temperature: float = 0.2, 
+                      domaine: str = "general") -> str:
         """
-        NOUVELLE LOGIQUE:
-        1. Tenter Ollama (10s timeout)
-        2. Si échec → Tenter Claude (60s timeout) ← PRIORITÉ SUR OpenAI
-        3. Si échec → Tenter OpenAI (90s timeout)
-        4. Si tout échoue → Erreur
+        Génère avec mémoire intégrée
+        
+        1. Augmente prompt avec mémoire (RAG)
+        2. Ollama (10s)
+        3. Claude (60s) ← PRIORITAIRE
+        4. OpenAI (90s)
+        5. Enregistre erreurs si besoin
         """
-        # Sanitization UTF-8 contre les surrogates (\udcc3 etc.) qui font crasher
-        # le client HTTP des LLM lors de l'encodage. Sans coût pour les
-        # textes deja propres.
+        
+        # Sanitization UTF-8
         prompt = UTF8Sanitizer.sanitize(prompt) if prompt else prompt
         if system:
             system = UTF8Sanitizer.sanitize(system)
         
+        # Augmenter le prompt avec mémoire
+        prompt_augmente = self._augmenter_prompt_avec_memoire(prompt, domaine)
+        
         # ========== ÉTAPE 1: OLLAMA ==========
         if self.primary == "ollama" and await self._check_ollama():
             logger.info("🔵 Tentative 1/3: Ollama (llama3.2) - timeout 10s")
-            result = await self.ollama.generate(prompt, system=system, temperature=temperature)
+            result = await self.ollama.generate(prompt_augmente, system=system, temperature=temperature)
             if result and len(result.strip()) > 0:
                 logger.info("✅ Ollama a répondu")
                 return result
@@ -190,12 +258,12 @@ class LLMManager:
         elif self.primary == "ollama":
             logger.warning("⚠️ Ollama indisponible (daemon non détecté)")
 
-        # ========== ÉTAPE 2: CLAUDE (NOUVEAU) ==========
+        # ========== ÉTAPE 2: CLAUDE ==========
         if self.claude.is_available():
             logger.info("🔴 Tentative 2/3: Claude-3.5-Sonnet - timeout 60s")
-            result = await self.claude.generate(prompt, system=system, temperature=temperature)
+            result = await self.claude.generate(prompt_augmente, system=system, temperature=temperature)
             if result and len(result.strip()) > 0:
-                logger.info("✅ Claude a répondu")
+                logger.info("✅ Claude a répondu (avec mémoire injectée)")
                 return result
             logger.warning("⚠️ Claude timeout ou erreur")
         else:
@@ -204,9 +272,27 @@ class LLMManager:
         # ========== ÉTAPE 3: OPENAI ==========
         if self.openai.is_available():
             logger.info("🟢 Tentative 3/3: OpenAI (gpt-4o) - timeout 90s")
-            result = await self.openai.generate(prompt, system=system, temperature=temperature)
+            result = await self.openai.generate(prompt_augmente, system=system, temperature=temperature)
             if result and len(result.strip()) > 0:
-                logger.info("✅ OpenAI a répondu")
+                logger.info("✅ OpenAI a répondu (fallback)")
+                
+                # Enregistrer cette utilisation de fallback
+                if INTEGRATEUR_MEMOIRE:
+                    try:
+                        from gestionnaire_erreurs import TypeErreur
+                        INTEGRATEUR_MEMOIRE.enregistrer_erreur(
+                            lemme_name="claude_indisponible",
+                            domaine=domaine,
+                            tactique_tentee="claude_fallback_to_openai",
+                            type_erreur=TypeErreur.INCOMPLETE,
+                            message_erreur="Claude indisponible, utilisation OpenAI",
+                            code_hol="",
+                            hypotheses=[],
+                            suggestions=["Vérifier CLAUDE_API_KEY"]
+                        )
+                    except Exception as e:
+                        logger.warning(f"⚠️ Erreur enregistrement fallback: {e}")
+                
                 return result
             logger.error("❌ OpenAI timeout ou erreur")
         else:
@@ -216,12 +302,10 @@ class LLMManager:
         logger.critical("❌ TOUS LES LLM ONT ÉCHOUÉ")
         return "[ERREUR LLM] Ollama, Claude ET OpenAI sont inaccessibles."
 
-    async def chat(self, messages: list[dict], temperature: float = 0.2) -> str:
-        """
-        Chat multi-tours avec même logique de fallback:
-        Ollama → Claude → OpenAI
-        """
-        # Sanitization UTF-8 de chaque tour de chat
+    async def chat(self, messages: list[dict], temperature: float = 0.2, domaine: str = "general") -> str:
+        """Chat multi-tours avec mémoire"""
+        
+        # Sanitization UTF-8
         sanitized: list[dict] = []
         for msg in messages:
             new_msg = dict(msg)
@@ -229,6 +313,13 @@ class LLMManager:
                 new_msg["content"] = UTF8Sanitizer.sanitize(new_msg["content"])
             sanitized.append(new_msg)
         messages = sanitized
+        
+        # Augmenter dernier message avec mémoire
+        if messages and messages[-1].get("role") == "user":
+            messages[-1]["content"] = self._augmenter_prompt_avec_memoire(
+                messages[-1]["content"], 
+                domaine
+            )
         
         # OLLAMA
         if self.primary == "ollama" and await self._check_ollama():
@@ -238,9 +329,9 @@ class LLMManager:
                 return result
             logger.warning("⚠️ Ollama chat vide, fallback Claude")
 
-        # CLAUDE (NOUVEAU)
+        # CLAUDE
         if self.claude.is_available():
-            logger.info("🔴 Chat Claude")
+            logger.info("🔴 Chat Claude (mémoire injectée)")
             result = await self.claude.chat(messages, temperature=temperature)
             if result:
                 return result
@@ -248,7 +339,7 @@ class LLMManager:
 
         # OPENAI
         if self.openai.is_available():
-            logger.info("🟢 Chat OpenAI")
+            logger.info("🟢 Chat OpenAI (fallback)")
             result = await self.openai.chat(messages, temperature=temperature)
             if result:
                 return result
@@ -256,44 +347,34 @@ class LLMManager:
 
         return "[ERREUR LLM] Chat indisponible"
 
-
-# ============================================================
-# DEBUG: Affiche configuration fallback
-# ============================================================
-
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     
     print("\n" + "="*70)
-    print("LLM MANAGER v2 - CONFIGURATION FALLBACK")
+    print("LLM MANAGER v3 - AVEC SYSTÈME DE MÉMOIRE GABRIEL")
     print("="*70)
     
     print("""
-    NOUVELLE CHAÎNE DE FALLBACK:
+    CHAÎNE DE FALLBACK + MÉMOIRE:
     
     1️⃣ OLLAMA (llama3.2)
        └─ Timeout: 10s
-       └─ Local, rapide
-       └─ Si timeout → passer à Claude
+       └─ + Injection mémoire (RAG sémantique)
     
-    2️⃣ CLAUDE (claude-3-5-sonnet) ⭐ NOUVEAU - PRIORITAIRE
+    2️⃣ CLAUDE (claude-3-5-sonnet) ⭐ PRIORITAIRE
        └─ Timeout: 60s
-       └─ Expert logique & mathématiques
-       └─ Si timeout/erreur → passer à OpenAI
+       └─ + Injection mémoire (RAG sémantique + syntaxique)
     
     3️⃣ OPENAI (gpt-4o)
        └─ Timeout: 90s
-       └─ Fallback ultime
-       └─ Si timeout/erreur → ERREUR CRITIQUE
+       └─ + Injection mémoire (fallback)
     
-    CHANGEMENT MAJEUR:
-    ❌ AVANT: Ollama → OpenAI (Claude jamais utilisé)
-    ✅ APRÈS: Ollama → Claude → OpenAI (Claude prioritaire!)
-    
-    RÉSULTAT:
-    • Questions mathématiques: Claude prend le relais (expert)
-    • Réponses plus rigoureuses & HOL4 certifiées
-    • OpenAI reste fallback ultime (moins expert)
+    SYSTÈME DE MÉMOIRE:
+    ✅ RAG sémantique (axiomes, définitions)
+    ✅ RAG syntaxique (patterns, lemmes)
+    ✅ Cache d'erreurs persistent
+    ✅ Stratégie d'évitement (pas 3x même erreur)
+    ✅ Apprentissage continu
     """)
     
     print("="*70)

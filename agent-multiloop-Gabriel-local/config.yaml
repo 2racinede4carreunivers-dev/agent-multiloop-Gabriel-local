@@ -8,15 +8,25 @@ agent:
   language: "fr"
   user_name: "Philippe"
 
-# === LLM : Ollama primaire, OpenAI fallback ===
+# === LLM : Ollama primaire, Claude fallback, OpenAI dernier recours ===
 llm:
   primary: "ollama"
-  fallback: "openai"
+  fallback_1: "claude"             # priorite sur OpenAI pour HOL/maths
+  fallback_2: "openai"
   ollama:
     model: "llama3.2"
     base_url: "http://ollama:11434"  # Service Docker Compose
     timeout_seconds: 10              # 10s max par appel (au lieu de 60s)
     temperature: 0.2
+  claude:
+    # Si vide, lit CLAUDE_MODEL du .env, sinon defaut Sonnet 4.5
+    # Modeles disponibles en 2026 :
+    #   claude-sonnet-4-5-20250929   <- recommande (qualite/cout/vitesse)
+    #   claude-opus-4-5              <- maximum qualite (plus cher, plus lent)
+    model: ""
+    temperature: 0.7
+    max_tokens: 4096
+    timeout_seconds: 60
   openai:
     model: "gpt-5.4"          # gpt-5.4 / gpt-5.5 / gpt-4o / o3-pro
     temperature: 0.2

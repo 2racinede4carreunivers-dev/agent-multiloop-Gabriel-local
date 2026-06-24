@@ -1225,6 +1225,34 @@ class CLIInterface:
             )
         else:
             runtime.append("ABSENTE -> Claude DESACTIVE\n", style="bold red")
+        # CLAUDE_MODEL : signaler les modeles obsoletes
+        env_claude_model = os.environ.get("CLAUDE_MODEL", "")
+        if env_claude_model:
+            valid_2026_models = {
+                "claude-sonnet-4-5-20250929",
+                "claude-opus-4-5",
+                "claude-haiku-4-5",
+                "claude-sonnet-4-5",
+                "claude-opus-4-1",
+                "claude-3-5-haiku-latest",
+            }
+            deprecated_prefixes = (
+                "claude-3-5-sonnet-2024", "claude-3-haiku-2024",
+                "claude-3-opus-2024", "claude-3-sonnet-",
+            )
+            runtime.append("  CLAUDE_MODEL    : ", style="bold yellow")
+            if env_claude_model in valid_2026_models:
+                runtime.append(f"OK ({env_claude_model})\n",
+                               style="bold green")
+            elif any(env_claude_model.startswith(p) for p in deprecated_prefixes):
+                runtime.append(
+                    f"OBSOLETE ({env_claude_model}) -> changer pour "
+                    "'claude-sonnet-4-5-20250929'\n",
+                    style="bold red",
+                )
+            else:
+                runtime.append(f"INCONNU ({env_claude_model})\n",
+                               style="yellow")
         runtime.append("  OPENAI_API_KEY  : ", style="bold yellow")
         if is_openai_valid:
             runtime.append(f"OK ({env_openai[:7]}...{env_openai[-4:]})\n",

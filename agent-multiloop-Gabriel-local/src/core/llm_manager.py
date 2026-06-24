@@ -24,10 +24,11 @@ except ImportError:
 class ClaudeClient:
     """Client Anthropic Claude - nouveau dans v2"""
     
-    def __init__(self, api_key: str | None = None, model: str = "claude-3-5-sonnet-20241022", 
+    def __init__(self, api_key: str | None = None,
+                 model: str | None = None,
                  temperature: float = 0.7, max_tokens: int = 4096, timeout: float = 60):
         import os
-        
+
         self.api_key = api_key or os.getenv("CLAUDE_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
         # Detection des placeholders d'un .env non rempli -> on neutralise
         if self.api_key:
@@ -39,7 +40,12 @@ class ClaudeClient:
                     self.api_key[:20],
                 )
                 self.api_key = None
-        self.model = model
+        # Modele : argument explicite > variable d'env > defaut Sonnet 4.5
+        self.model = (
+            model
+            or os.getenv("CLAUDE_MODEL")
+            or "claude-sonnet-4-5-20250929"
+        )
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.timeout = timeout
@@ -134,7 +140,7 @@ class LLMManager:
 
         self.claude = ClaudeClient(
             api_key=None,  # lit depuis env CLAUDE_API_KEY ou ANTHROPIC_API_KEY
-            model=claude_cfg.get("model", "claude-3-5-sonnet-20241022"),
+            model=claude_cfg.get("model") or None,  # None -> lit CLAUDE_MODEL ou defaut Sonnet 4.5
             temperature=float(claude_cfg.get("temperature", 0.7)),
             max_tokens=int(claude_cfg.get("max_tokens", 4096)),
             timeout=float(claude_cfg.get("timeout_seconds", 60)),  # 60s Claude

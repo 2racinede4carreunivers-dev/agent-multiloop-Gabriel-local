@@ -47,6 +47,20 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 
 ## Changelog
 
+### [2026-02-17] Fichier maître `methode_spectral.thy` corrigé + Section XI fusionnée
+- Remplacement complet du fichier `theories/methode_spectral.thy` par la version maître téléversée (1950 lignes → 2191 lignes après fusion).
+- **6 erreurs corrigées dans la section "i-ième nombre premier"** :
+  1. `consts prime :: "nat ⇒ bool"` retiré (clash HOL). Import ajouté : `"HOL-Computational_Algebra.Primes"`.
+  2. Axiome `prime_position_exists` ajouté (manquait).
+  3. Preuve `prime_i_is_prime` refactorée via lemme intermédiaire `prime_i_spec` + `someI_ex`.
+  4. Preuve `prime_i_position` idem.
+  5. Preuve `prime_equation_prime_i` corrigée (suppression du `[OF p_def]` invalide).
+  6. Preuve `prime_equation_general_i` simplifiée (`unfolding ... _def by simp`).
+- **Section XI fusionnée** avant `end` : tailles_egales, terme_progression_simple, avant_dernier, dernier_terme, terme_suite_A/B (avec saut position 6), somme_suite, somme_A/B_close, rapport_spectral_AB, 3 conjectures.
+- Section XI conserve la **règle stricte** (`dernier = avant_dernier × r` → x^10 - x^8) avec note expliquant la divergence vs l'exemple textuel (x^10 - x^9).
+- Régression Pytest : **515/515 PASS**. Validation Isabelle nécessite le conteneur Docker dédié (non disponible dans ce sandbox).
+- Fichier final : 2191 lignes, 51 sections, 79 lemmes, 3 théorèmes, 112 définitions, 17 axiomatizations.
+
 ### [2026-02-16] Chasse au `.env` fantôme (v7.2 → v3.4)
 
 **Suite au feedback Philippe : "l'agent ne démarre pas, je soupçonne un .env fantôme quelque part".**

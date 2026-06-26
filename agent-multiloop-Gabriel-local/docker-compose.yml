@@ -1,6 +1,11 @@
 # ============================================================
-# Multi-Loop Math Agent - docker-compose.yml
+# Multi-Loop Math Agent - docker-compose.yml (CORRIGÉ)
 # Services : agent (multiloop), ollama, ollama-init, isabelle
+# 
+# CORRECTION v7.1:
+# ✓ env_file charge depuis RACINE (./.env → ../.env)
+# ✓ Volumes incluent .env de la racine
+# ✓ Évite la duplication et la confusion de chemin
 # ============================================================
 
 services:
@@ -15,8 +20,10 @@ services:
     container_name: llm-agent-multiloop-run
     restart: unless-stopped
 
+    # ✓ CORRECTION: Charger depuis RACINE du projet
     env_file:
-      - .env
+      - ../.env           # Remonte d'un niveau pour accéder à la racine
+      - .env?             # Optionnel: fallback local si existe
 
     environment:
       - OLLAMA_HOST=http://ollama:11434
@@ -35,6 +42,8 @@ services:
       - ./config.yaml:/home/agent/app/config.yaml:ro
       - ./tests:/home/agent/app/tests:ro
       - ./theories:/theories
+      # ✓ CORRECTION: Injecter .env depuis la racine
+      - ../.env:/home/agent/app/.env:ro
       - agent-data:/home/agent/app/data
       - agent-logs:/home/agent/app/logs
 

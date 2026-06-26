@@ -37,6 +37,13 @@ param(
     [switch]$PullOnly
 )
 
+# ============================================================
+# CORRECTION CRITIQUE : FORCER LE RÉPERTOIRE COURANT
+# ============================================================
+# Sans cette ligne, Docker lit un mauvais .env (souvent un .env corrompu
+# dans un dossier parent ou utilisateur), ce qui provoque l’erreur .env?
+Set-Location -Path $PSScriptRoot
+
 # ============================================================================
 # CONFIGURATION (adaptez ces chemins a votre installation locale)
 # ============================================================================
@@ -285,6 +292,7 @@ Write-Host '  |   Container : $ContainerName' -ForegroundColor Magenta
 Write-Host '  |   Mode      : Multi-Loop (Ollama/OpenAI + HOL + critique) |' -ForegroundColor Magenta
 Write-Host '  +===========================================================+' -ForegroundColor Magenta
 Write-Host ''
+Set-Location -Path "$PSScriptRoot"
 docker compose -f '$ComposeFile' -p '$ProjectName' run --rm --service-ports $ServiceMain python main_cli.py
 Write-Host ''
 Write-Host '[Agent termine - Entree pour fermer]' -ForegroundColor Yellow

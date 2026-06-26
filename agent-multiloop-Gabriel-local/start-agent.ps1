@@ -204,8 +204,21 @@ if ($claudeOk -and (-not $anthropic -or ($anthropic -notmatch "sk-ant-"))) {
 # 2. CLAUDE_MODEL (le modele obsolete causait le bug des 3 derniers jours)
 if (-not $claudeModel) {
     Write-Warn "CLAUDE_MODEL absent du .env. Defaut applique : claude-sonnet-4-5-20250929"
-    Write-Warn "  -> Ajoutez cette ligne dans $EnvFile :"
-    Write-Warn "     CLAUDE_MODEL=claude-sonnet-4-5-20250929"
+    Write-Host "   -> Voulez-vous l'ajouter automatiquement maintenant ?" -ForegroundColor Cyan
+    $rep = Read-Host "      (O = ajouter / N = ignorer, defaut sera applique)"
+    if ($rep -eq "O" -or $rep -eq "o") {
+        try {
+            # Ajouter sans casser l'encodage du .env
+            $newLine = "`r`n# Modele Claude (ajoute automatiquement par start-agent.ps1) :`r`nCLAUDE_MODEL=claude-sonnet-4-5-20250929`r`n"
+            Add-Content -Path $EnvFile -Value $newLine -Encoding utf8
+            Write-OK "CLAUDE_MODEL=claude-sonnet-4-5-20250929 ajoute a $EnvFile"
+        } catch {
+            Write-Err "Ajout automatique echoue : $_"
+            Write-Warn "Ajoutez manuellement : CLAUDE_MODEL=claude-sonnet-4-5-20250929"
+        }
+    } else {
+        Write-Host "   -> OK, le defaut claude-sonnet-4-5-20250929 sera applique par le code Python." -ForegroundColor DarkGray
+    }
 } else {
     $modelValue = ($claudeModel -split "=", 2)[1].Trim()
     $deprecated = @("claude-3-5-sonnet-2024", "claude-3-haiku-2024", "claude-3-opus-2024", "claude-3-sonnet-")

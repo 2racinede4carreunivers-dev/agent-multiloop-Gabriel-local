@@ -1,11 +1,11 @@
 # ============================================================
-# Multi-Loop Math Agent - docker-compose.yml (CORRIGÉ)
+# Multi-Loop Math Agent - docker-compose.yml
 # Services : agent (multiloop), ollama, ollama-init, isabelle
 # 
-# CORRECTION v7.1:
-# ✓ env_file charge depuis RACINE (./.env → ../.env)
-# ✓ Volumes incluent .env de la racine
-# ✓ Évite la duplication et la confusion de chemin
+# CORRECTION v7.2 (Philippe feedback - chasse au .env fantome) :
+# ✓ env_file pointe sur ./.env LOCAL (a cote du compose)
+# ✓ Plus de "../.env" qui faisait remonter au dossier parent
+# ✓ Le .env utilise est : agent-multiloop-Gabriel-local/.env
 # ============================================================
 
 services:
@@ -20,10 +20,9 @@ services:
     container_name: llm-agent-multiloop-run
     restart: unless-stopped
 
-    # ✓ CORRECTION: Charger depuis RACINE du projet
+    # Charger UN SEUL .env, celui de ce dossier (a cote du docker-compose.yml)
     env_file:
-      - ../.env           # Remonte d'un niveau pour accéder à la racine
-      - .env?             # Optionnel: fallback local si existe
+      - .env
 
     environment:
       - OLLAMA_HOST=http://ollama:11434
@@ -42,8 +41,8 @@ services:
       - ./config.yaml:/home/agent/app/config.yaml:ro
       - ./tests:/home/agent/app/tests:ro
       - ./theories:/theories
-      # ✓ CORRECTION: Injecter .env depuis la racine
-      - ../.env:/home/agent/app/.env:ro
+      # Monter le .env local (pas celui du dossier parent !)
+      - ./.env:/home/agent/app/.env:ro
       - agent-data:/home/agent/app/data
       - agent-logs:/home/agent/app/logs
 

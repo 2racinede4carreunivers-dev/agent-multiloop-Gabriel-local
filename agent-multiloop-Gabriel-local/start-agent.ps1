@@ -134,6 +134,29 @@ Write-OK "docker-compose.yml present"
 # ETAPE 2 : Verification du fichier .env
 # ============================================================================
 Write-Step "Verification du fichier .env"
+
+# === CHASSE AU .env FANTOME (dossier parent) ===
+# Si un .env existe dans le dossier PARENT de ce script, docker-compose
+# pouvait l'avoir lu en priorite (cause de bugs des 3 derniers jours).
+$parentEnv = Join-Path (Split-Path $ProjectRoot -Parent) ".env"
+if (Test-Path $parentEnv) {
+    Write-Warn ".env FANTOME detecte dans le dossier parent :"
+    Write-Warn "  $parentEnv"
+    Write-Warn "Ce fichier n'est PLUS utilise par docker-compose (corrige en v7.2)."
+    Write-Warn "Vous pouvez le SUPPRIMER ou le RENOMMER en .env.ANCIEN pour eviter toute confusion."
+    Write-Host ""
+    $reponse = Read-Host "Voulez-vous le renommer en .env.ANCIEN maintenant ? (O/N)"
+    if ($reponse -eq "O" -or $reponse -eq "o") {
+        $renamed = "$parentEnv.ANCIEN"
+        try {
+            Move-Item $parentEnv $renamed -Force
+            Write-OK "Fichier renomme : $renamed"
+        } catch {
+            Write-Err "Renommage echoue : $_"
+        }
+    }
+}
+
 if (-not (Test-Path $EnvFile)) {
     Write-Warn ".env absent."
     $source = $null
@@ -154,12 +177,60 @@ if (-not (Test-Path $EnvFile)) {
     }
 }
 
-$openaiKey = Get-Content $EnvFile -ErrorAction SilentlyContinue | Where-Object { $_ -match "^OPENAI_API_KEY=(.+)" }
-if (-not $openaiKey -or $openaiKey -match "VOTRE-CLE-OPENAI") {
-    Write-Warn "OPENAI_API_KEY non configuree (fallback OpenAI desactive)."
-    Write-Warn "L'agent utilisera Ollama uniquement."
+# === Verification des cles API (Claude prioritaire pour HOL/maths) ===
+$envLines = Get-Content $EnvFile -ErrorAction SilentlyContinue
+
+# 1. CLAUDE_API_KEY (prioritaire)
+$claudeKey   = $envLines | Where-Object { $_ -match "^CLAUDE_API_KEY=(.+)" }
+$anthropic   = $envLines | Where-Object { $_ -match "^ANTHROPIC_API_KEY=(.+)" }
+$claudeModel = $envLines | Where-Object { $_ -match "^CLAUDE_MODEL=(.+)" }
+
+$claudeOk = $false
+if ($claudeKey -and ($claudeKey -match "sk-ant-") -and ($claudeKey -notmatch "COLLEZ-")) {
+    Write-OK "CLAUDE_API_KEY configuree (sk-ant-...)"
+    $claudeOk = $true
+} elseif ($claudeKey -and ($claudeKey -match "COLLEZ-")) {
+    Write-Warn "CLAUDE_API_KEY contient le placeholder 'COLLEZ-VOTRE-CLE-ICI'."
+    Write-Warn "  -> Editez $EnvFile pour mettre votre vraie cle sk-ant-..."
 } else {
-    Write-OK ".env charge avec OPENAI_API_KEY configuree."
+    Write-Warn "CLAUDE_API_KEY absente. Claude desactive (fallback sur OpenAI ou Ollama)."
+}
+
+if ($claudeOk -and (-not $anthropic -or ($anthropic -notmatch "sk-ant-"))) {
+    Write-Warn "ANTHROPIC_API_KEY absente (alias SDK requis). Ajoutez la meme cle :"
+    Write-Warn "  ANTHROPIC_API_KEY=<votre-cle-sk-ant-...>"
+}
+
+# 2. CLAUDE_MODEL (le modele obsolete causait le bug des 3 derniers jours)
+if (-not $claudeModel) {
+    Write-Warn "CLAUDE_MODEL absent du .env. Defaut applique : claude-sonnet-4-5-20250929"
+    Write-Warn "  -> Ajoutez cette ligne dans $EnvFile :"
+    Write-Warn "     CLAUDE_MODEL=claude-sonnet-4-5-20250929"
+} else {
+    $modelValue = ($claudeModel -split "=", 2)[1].Trim()
+    $deprecated = @("claude-3-5-sonnet-2024", "claude-3-haiku-2024", "claude-3-opus-2024", "claude-3-sonnet-")
+    $isDeprecated = $false
+    foreach ($d in $deprecated) {
+        if ($modelValue.StartsWith($d)) { $isDeprecated = $true; break }
+    }
+    if ($isDeprecated) {
+        Write-Err "CLAUDE_MODEL='$modelValue' est OBSOLETE depuis 2025. Claude renverra 404 !"
+        Write-Err "  -> Remplacez par : CLAUDE_MODEL=claude-sonnet-4-5-20250929"
+        Write-Err "  -> Puis rebuild : docker compose down ; docker compose up --build"
+        exit 1
+    }
+    Write-OK "CLAUDE_MODEL=$modelValue"
+}
+
+# 3. OPENAI_API_KEY (fallback)
+$openaiKey = $envLines | Where-Object { $_ -match "^OPENAI_API_KEY=(.+)" }
+if (-not $openaiKey -or ($openaiKey -match "VOTRE-CLE-OPENAI") -or ($openaiKey -match "COLLEZ-")) {
+    Write-Warn "OPENAI_API_KEY non configuree (fallback OpenAI desactive)."
+    if (-not $claudeOk) {
+        Write-Warn "L'agent utilisera Ollama UNIQUEMENT (pas de fallback LLM)."
+    }
+} else {
+    Write-OK "OPENAI_API_KEY configuree (fallback secondaire)."
 }
 
 # ============================================================================

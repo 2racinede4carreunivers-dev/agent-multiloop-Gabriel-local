@@ -9,6 +9,7 @@ aiohttp>=3.9.0
 
 # --- LLM clients ---
 openai>=1.40.0
+anthropic>=0.40.0     # Claude Sonnet 4.5 / Opus 4.5 (2026)
 
 # --- Config / data ---
 pyyaml>=6.0.2

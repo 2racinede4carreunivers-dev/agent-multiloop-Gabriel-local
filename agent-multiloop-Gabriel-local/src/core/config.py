@@ -17,24 +17,49 @@ LOADED_ENV_PATH: Path | None = None
 
 
 def _load_env() -> None:
-    """Charge le fichier .env le plus pertinent. Loggue celui retenu."""
+    """Charge le fichier .env le plus pertinent. Loggue celui retenu.
+
+    NOTE : dans un conteneur Docker avec `docker-compose env_file: - .env`,
+    les variables sont DEJA injectees dans os.environ par docker-compose.
+    Dans ce cas, l'absence du fichier .env physique n'est pas un probleme.
+    """
     global LOADED_ENV_PATH
     candidates = [
         Path.cwd() / ".env",
         _ROOT / ".env",
         Path("/home/agent/app/.env"),
     ]
-    for candidate in candidates:
+    # Dedupliquer (les 3 candidats peuvent pointer au meme endroit dans Docker)
+    seen: set[Path] = set()
+    unique_candidates = []
+    for c in candidates:
+        rc = c.resolve()
+        if rc not in seen:
+            seen.add(rc)
+            unique_candidates.append(c)
+
+    for candidate in unique_candidates:
         if candidate.exists():
             load_dotenv(candidate)
             LOADED_ENV_PATH = candidate
             logger.info(".env charge depuis : %s", candidate)
             return
     LOADED_ENV_PATH = None
-    logger.warning(
-        ".env INTROUVABLE parmi les candidats : %s",
-        [str(c) for c in candidates],
-    )
+
+    # Cas Docker : env_file injecte les vars meme sans fichier .env physique
+    if os.environ.get("CLAUDE_API_KEY") or os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("OPENAI_API_KEY"):
+        logger.info(
+            "Aucun fichier .env physique, mais les variables d'environnement "
+            "sont presentes (probablement injectees par docker-compose env_file)."
+        )
+    else:
+        logger.warning(
+            ".env INTROUVABLE parmi les candidats : %s "
+            "ET aucune variable CLAUDE_API_KEY/OPENAI_API_KEY n'est presente dans l'environnement. "
+            "Verifiez que docker-compose.yml contient 'env_file: - .env' et "
+            "que le fichier .env existe a cote du docker-compose.yml.",
+            [str(c) for c in unique_candidates],
+        )
 
 
 _load_env()

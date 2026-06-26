@@ -4,7 +4,7 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.3 — 515/515 tests Pytest ✅ — Claude API verifie LIVE en bout-en-bout (modele Sonnet 4.5) + `env-check live` + .env unifié + Modèle de Certitude + Boucle Logique + Slow-Motion 8 cadrans + 5 Axes cognitifs + Plan Trifocal**
+**Production-Ready v3.4 — 515/515 tests Pytest ✅ — Bug du `.env` fantôme résolu (docker-compose lisait `../.env` au lieu de `./.env`) + start-agent.ps1 v6.3 valide Claude+Anthropic+Model + Claude API confirmée bout-en-bout + Sonnet 4.5 + 5 Axes cognitifs + Plan Trifocal**
 
 ## Architecture
 ```
@@ -46,6 +46,42 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 - Corpus mathématique intégré + Slow Motion Debugging + Meta-Learning + CI
 
 ## Changelog
+
+### [2026-02-16] Chasse au `.env` fantôme (v7.2 → v3.4)
+
+**Suite au feedback Philippe : "l'agent ne démarre pas, je soupçonne un .env fantôme quelque part".**
+
+#### LA CAUSE RACINE FINALE — trouvée dans `docker-compose.yml`
+```yaml
+env_file:
+  - ../.env       # ← REMONTAIT D'UN NIVEAU au-dessus du compose
+  - .env?         # ← syntaxe invalide
+volumes:
+  - ../.env:/home/agent/app/.env:ro
+```
+**Docker lisait le `.env` du dossier PARENT** (`C:\agent-multiloop-Gabriel-local-final\.env`), pas celui à côté du compose (`agent-multiloop-Gabriel-local\.env`).
+
+Conséquence : Philippe éditait le bon fichier mais Docker en lisait un autre depuis 3 jours. C'était LE fantôme qu'il cherchait.
+
+#### Correctifs livrés
+1. **`docker-compose.yml` v7.2** :
+   - `env_file: - .env` (LOCAL au compose, plus de `../`)
+   - `volumes: - ./.env:/home/agent/app/.env:ro` (LOCAL)
+   - Plus aucune ambiguïté de chemin
+2. **`start-agent.ps1` v6.3** :
+   - **Détecteur actif** : si un `.env` existe dans le dossier PARENT, le script avertit Philippe en gros + propose de le renommer en `.env.ANCIEN` interactivement
+   - **Vérifications étendues** : `CLAUDE_API_KEY`, `ANTHROPIC_API_KEY`, `CLAUDE_MODEL` (avec détection des modèles obsolètes — exit 1 si modèle déprécié → bloque le démarrage avec instructions)
+   - Avant : ne vérifiait que `OPENAI_API_KEY`
+3. **Résolution du merge** : conflit `llm_manager.py` (Updated upstream vs Stashed changes) → conservation de ma version qui détecte `CLAUDE_AVAILABLE` avec message explicite
+4. **`CONFIG_ENV_GUIDE.md`** : nouvelle section "ATTENTION — Le `.env` fantôme du dossier PARENT" en tête + commande PowerShell pour lister tous les `.env` sur Windows
+
+#### Pourquoi ça a échoué pendant 3 jours
+- **Cause 1** (corrigée v3.2) : pas de `.env` du tout
+- **Cause 2** (corrigée v3.3) : modèle Claude obsolète
+- **Cause 3** (corrigée v3.4 maintenant) : `docker-compose.yml` lisait `../.env` au lieu de `./.env`
+- Chaque correction révélait la suivante — c'était un **bug en couches** où chaque cause masquait les précédentes
+
+**📊 Tests : 515/515 ✅ (0 régression)**
 
 ### [2026-02-16] Modèle Claude 2026 + test live `env-check live` (P0 critique)
 
@@ -359,4 +395,4 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 N/A (pas d'authentification, app CLI locale).
 
 ## Health Status
-✅ **Production-Ready v3.3** — 515/515 tests, **Claude API confirmée fonctionnelle bout-en-bout** (modèle Sonnet 4.5, `env-check live` test live OK), `.env` unifié, Slow-Motion 8 cadrans avec Modèle de Certitude + Boucle Logique + Réponse Modeste, Axes cognitifs 2-5 + Plan Trifocal.
+✅ **Production-Ready v3.4** — 515/515 tests, **3 couches de bugs `.env` résolues** (absent → modèle obsolète → docker-compose `../` ), `start-agent.ps1` détecte activement les `.env` fantômes, Claude API confirmée bout-en-bout (Sonnet 4.5), Slow-Motion 8 cadrans + Modèle de Certitude + Boucle Logique, Axes cognitifs 2-5 + Plan Trifocal.

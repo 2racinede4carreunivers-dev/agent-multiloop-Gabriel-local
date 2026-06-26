@@ -69,11 +69,18 @@ class ClaudeClient:
         
         self.client = None
         if self.api_key:
-            try:
-                self.client = anthropic.Anthropic(api_key=self.api_key)
-                logger.info(f"✅ Claude client initialized: {self.model}")
-            except Exception as e:
-                logger.error(f"❌ Claude initialization failed: {e}")
+            if not CLAUDE_AVAILABLE:
+                logger.error(
+                    "❌ Module 'anthropic' non installé dans le container Docker.\n"
+                    "   -> Verifier que requirements.txt contient : anthropic>=0.40.0\n"
+                    "   -> Puis rebuild l'image : docker-compose down && docker-compose up --build"
+                )
+            else:
+                try:
+                    self.client = anthropic.Anthropic(api_key=self.api_key)
+                    logger.info(f"✅ Claude client initialized: model={self.model}")
+                except Exception as e:
+                    logger.error(f"❌ Claude initialization failed: {e}")
     
     def is_available(self) -> bool:
         """Vérifie si Claude est disponible"""

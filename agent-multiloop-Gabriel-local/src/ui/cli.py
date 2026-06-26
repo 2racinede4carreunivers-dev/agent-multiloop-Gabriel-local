@@ -1272,6 +1272,40 @@ class CLIInterface:
         ))
 
         # 4. Instructions
+        # Detection du package anthropic dans le container
+        try:
+            import anthropic  # noqa: F401
+            anthropic_ok = True
+        except ImportError:
+            anthropic_ok = False
+
+        if not anthropic_ok:
+            warn = _Text()
+            warn.append("PACKAGE ANTHROPIC NON INSTALLE\n",
+                        style="bold bright_red")
+            warn.append("\n")
+            warn.append(
+                "  Le module Python 'anthropic' n'est pas dans le container.\n"
+                "  Cause : ", style="white",
+            )
+            warn.append("'anthropic' absent de requirements.txt\n",
+                        style="yellow")
+            warn.append("  Solution :\n", style="bold yellow")
+            warn.append(
+                "    1. Verifier requirements.txt contient : ",
+                style="white",
+            )
+            warn.append("anthropic>=0.40.0\n", style="cyan")
+            warn.append("    2. Rebuild l'image :  ", style="white")
+            warn.append(
+                "docker-compose down && docker-compose up --build\n",
+                style="cyan",
+            )
+            console.print(Panel(
+                warn, title="[bold red]Anthropic SDK manquant[/bold red]",
+                border_style="red", padding=(1, 2),
+            ))
+
         if not is_claude_valid:
             instr = _Text()
             instr.append("COMMENT AJOUTER VOTRE CLE ANTHROPIC\n",

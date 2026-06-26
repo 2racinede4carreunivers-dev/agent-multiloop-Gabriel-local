@@ -5,6 +5,7 @@ Chaîne de fallback: Ollama → Claude → OpenAI + RAG sémantique/syntaxique
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -43,7 +44,7 @@ class ClaudeClient:
     
     def __init__(self, api_key: str | None = None,
                  model: str | None = None,
-                 temperature: float = 0.7, max_tokens: int = 4096, timeout: float = 60):
+                 temperature: float = 0.7, max_tokens: int = 4096, timeout: float = 30):
         import os
 
         self.api_key = api_key or os.getenv("CLAUDE_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
@@ -169,7 +170,11 @@ class LLMManager:
             model=claude_cfg.get("model") or None,
             temperature=float(claude_cfg.get("temperature", 0.7)),
             max_tokens=int(claude_cfg.get("max_tokens", 4096)),
-            timeout=float(claude_cfg.get("timeout_seconds", 60)),
+            timeout=float(
+                os.environ.get("CLAUDE_TIMEOUT_SECONDS")
+                or claude_cfg.get("timeout_seconds")
+                or 30
+            ),
         )
 
         self.openai = OpenAIClient(
@@ -177,13 +182,24 @@ class LLMManager:
             model=openai_cfg.get("model", "gpt-4o"),
             temperature=float(openai_cfg.get("temperature", 0.2)),
             max_tokens=int(openai_cfg.get("max_tokens", 4096)),
-            timeout=float(openai_cfg.get("timeout_seconds", 90)),
+            timeout=float(
+                os.environ.get("OPENAI_TIMEOUT_SECONDS")
+                or openai_cfg.get("timeout_seconds")
+                or 30
+            ),
         )
 
         self._ollama_available: bool | None = None
 
         logger.info("✅ LLM Manager v3 Initialized")
-        logger.info("   Chaîne fallback: Ollama (10s) → Claude (60s) → OpenAI (90s)")
+        logger.info(
+            "   Chaîne fallback: Ollama (%.0fs) → %s (%.0fs) → OpenAI %s (%.0fs)",
+            self.ollama.timeout,
+            getattr(self.claude, "model", "Claude"),
+            getattr(self.claude, "timeout", 30),
+            getattr(self.openai, "model", "gpt"),
+            getattr(self.openai, "timeout", 30),
+        )
         if INTEGRATEUR_MEMOIRE:
             logger.info("   Mémoire: Activée (RAG + cache erreurs)")
 
@@ -267,7 +283,11 @@ TECHNIQUES RECOMMANDÉES:
 
         # ========== ÉTAPE 2: CLAUDE ==========
         if self.claude.is_available():
-            logger.info("🔴 Tentative 2/3: Claude-3.5-Sonnet - timeout 60s")
+            logger.info(
+                "🔴 Tentative 2/3: %s - timeout %.0fs",
+                getattr(self.claude, "model", "Claude"),
+                getattr(self.claude, "timeout", 30),
+            )
             result = await self.claude.generate(prompt_augmente, system=system, temperature=temperature)
             if result and len(result.strip()) > 0:
                 logger.info("✅ Claude a répondu (avec mémoire injectée)")
@@ -278,7 +298,11 @@ TECHNIQUES RECOMMANDÉES:
 
         # ========== ÉTAPE 3: OPENAI ==========
         if self.openai.is_available():
-            logger.info("🟢 Tentative 3/3: OpenAI (gpt-4o) - timeout 90s")
+            logger.info(
+                "🟢 Tentative 3/3: OpenAI (%s) - timeout %.0fs",
+                getattr(self.openai, "model", "gpt"),
+                getattr(self.openai, "timeout", 30),
+            )
             result = await self.openai.generate(prompt_augmente, system=system, temperature=temperature)
             if result and len(result.strip()) > 0:
                 logger.info("✅ OpenAI a répondu (fallback)")

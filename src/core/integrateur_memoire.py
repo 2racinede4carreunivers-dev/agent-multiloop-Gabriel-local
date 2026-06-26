@@ -45,6 +45,13 @@ from gestionnaire_erreurs import (
     ERREURS_PERSISTEES
 )
 
+try:
+    from detecteur_asymetrique_ordonnee import router_requete
+    from gabriel_comparaison_asymetrique import GabrielComparaisonAsymetrique
+except ImportError:
+    router_requete = None
+    GabrielComparaisonAsymetrique = None
+
 # ========================================================================
 # CORE: INTÉGRATEUR DE MÉMOIRE
 # ========================================================================

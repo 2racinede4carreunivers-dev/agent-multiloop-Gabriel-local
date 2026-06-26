@@ -44,7 +44,7 @@ class ClaudeClient:
     
     def __init__(self, api_key: str | None = None,
                  model: str | None = None,
-                 temperature: float = 0.7, max_tokens: int = 4096, timeout: float = 30):
+                 temperature: float = 0.7, max_tokens: int = 4096, timeout: float = 20):
         import os
 
         self.api_key = api_key or os.getenv("CLAUDE_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
@@ -173,7 +173,7 @@ class LLMManager:
             timeout=float(
                 os.environ.get("CLAUDE_TIMEOUT_SECONDS")
                 or claude_cfg.get("timeout_seconds")
-                or 30
+                or 20
             ),
         )
 

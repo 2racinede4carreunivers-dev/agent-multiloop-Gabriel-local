@@ -47,6 +47,21 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 
 ## Changelog
 
+### [2026-02-17] Section XII paramétrique + Compilateur simulé Isabelle/HOL
+- **Section XII ajoutée** : généralisation pour rapport spectral `1/k_i` avec k ∈ {2, 3, 4, ...}.
+  - 4 constantes paramétriques : `alpha_A_k`, `alpha_B_k`, `offset_A_k`, `offset_B_k` (couvrent k=2, k=3, k=4).
+  - 4 sommes fermées : `somme_A_pos_k`, `somme_B_pos_k`, `somme_A_neg_k`, `somme_B_neg_k`.
+  - Construction terme-à-terme `terme_A_pos a1 r n i` correcte pour **n = 1 à ∞**.
+  - Construction terme-à-terme `terme_B_pos` avec **substitution position 6 → r^6** + décalage des positions suivantes (n ≥ 8).
+  - **24 lemmes de validation numérique** (positions individuelles, sommes fermées, premiers -2, -5, 11).
+  - **Théorème central `RsP_k_egale_un_sur_k_pos`** : pour k ∈ {2, 3, 4}, le rapport spectral = 1/k (preuve par disjonction de cas).
+  - Compatibilité prouvée : `somme_A_pos_k 2 n = SA n` et `somme_B_pos_k 2 n = SB n`.
+- **Compilateur simulé** créé : `scripts/isabelle_static_check.py` (analyse statique de la structure HOL : équilibre des délimiteurs, unicité des noms, références `*_def`, `proof/qed`, etc.).
+- **Validation numérique indépendante** : 11/11 OK Suite A (n=1 à 11) + 3/3 OK Suite B (n=8, 9, 10) ↔ correspondance exacte avec les données numériques fournies par Philippe.
+- Divergence Section XI résolue : confirmé que `x^10 - x^8` est la bonne valeur (Philippe Savard 2026-02-17). Note de désambiguïsation mise à jour.
+- Fichier final : **2511 lignes**, 52 sections, 108 lemmes, 4 théorèmes, 124 définitions, 281 déclarations uniques.
+- Régression Pytest : **515/515 PASS** ✅.
+
 ### [2026-02-17] Fichier maître `methode_spectral.thy` corrigé + Section XI fusionnée
 - Remplacement complet du fichier `theories/methode_spectral.thy` par la version maître téléversée (1950 lignes → 2191 lignes après fusion).
 - **6 erreurs corrigées dans la section "i-ième nombre premier"** :

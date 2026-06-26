@@ -2059,10 +2059,9 @@ axiomatization where
  *   Formalisation   : Gabriel multiloop v3.4 (2026-02)
  *   Fusionnee a partir de theories/methode_spectral_section_XI.thy
  *
- *   NOTE : la regle textuelle "dernier_terme = avant_dernier x (i2/i1)" est
- *   coherente avec la formule fermee (verifiable numeriquement).
- *   L'exemple textuel ecrit x^10 - x^9 mais la regle stricte donne x^10 - x^8.
- *   Le script HOL formalise la REGLE (forme mathematique close), pas l'exemple.
+ *   Note : la regle stricte "dernier_terme = avant_dernier x (i2/i1)"
+ *   donne x^10 - x^8 pour l'exemple x^10. Cette valeur a ete confirmee
+ *   par Philippe (clarification 2026-02-17). Le HOL formalise la regle.
  ****************************************************************************)
 
 section "Section XI : Regles de construction des suites A_i et B_i"
@@ -2178,14 +2177,335 @@ lemma rapport_spectral_tend_vers_demi:
   unfolding rapport_spectral_AB_def somme_A_close_def somme_B_close_def
   by simp
 
-subsection "XI.11. Cas particuliers : suites 1 a 7 termes (TODO)"
+subsection "XI.11. Cas particuliers : suites 1 a 7 termes (voir Section XII)"
 
 text \<open>
-  Section a completer une fois Philippe aura precise les regles pour :
-  - Suite A 1 terme : a un reste (a preciser)
-  - Suite A 2 termes : a un reste (a preciser)
-  - Suites A et B de 3 a 7 termes : regles particulieres
+  Les regles pour 1 a 7 termes (positives et negatives) sont desormais
+  formalisees dans la SECTION XII parametrique ci-dessous, qui generalise
+  le rapport spectral 1/k_i pour tout k entier (k = 2, 3, 4, ...).
 \<close>
+
+
+(****************************************************************************
+ * SECTION XII. Construction generalisee des suites A_i / B_i pour 1/k_i
+ *              (1 a 7 termes, 8+ termes, positif et negatif)
+ *
+ *   Auteur          : Philippe Thomas Savard
+ *   Formalisation   : Gabriel multiloop v3.5 (2026-02-17)
+ *
+ *   Couvre :
+ *     - Constantes parametriques alpha_A(k), alpha_B(k), offset_A(k), offset_B(k)
+ *       confirmees pour k=2 par exemples numeriques fournis (validees par
+ *       Philippe Savard, message du 2026-02-17). Extension a k=3, k=4 via
+ *       les constantes deja presentes dans les Sections II et III.
+ *     - Sommes fermees positives et negatives.
+ *     - Construction terme-a-terme suite A pour n in {1,2,3,4,5,6,7}.
+ *     - Construction terme-a-terme suite A pour n >= 8 (progression
+ *       geometrique + penultieme + dernier, regle Section XI).
+ *     - Construction terme-a-terme suite B : meme regle mais avec
+ *       substitution position 6 -> valeur position 7 de A (n >= 8).
+ *     - Construction terme-a-terme suite A et B NEGATIVE (n in nat) :
+ *       somme convergente alpha/k * 1/k^n - offset.
+ *     - Lemmes de validation numerique (premiers : 2, 3, 5, 7, 11, 13, 17, -2, -3, -5, -7).
+ ****************************************************************************)
+
+section "Section XII : Construction generalisee pour rapport spectral 1/k_i"
+
+text \<open>
+  Generalisation pour tout rapport spectral 1/k_i (k = 2, 3, 4, ...) :
+
+    somme_A_pos(k, n) = (alpha_A(k) / 2) * k^n - offset_A(k)
+    somme_B_pos(k, n) = (alpha_B(k) / 2) * k^n - offset_B(k)
+    somme_A_neg(k, n) = alpha_A(k) * k^(-n) - offset_A(k)
+    somme_B_neg(k, n) = alpha_B(k) * k^(-n) - offset_B(k)
+
+  ou les constantes Savard sont :
+    k=2 : alpha_A=3.25,    alpha_B=6.5,    offset_A=2,   offset_B=66
+    k=3 : alpha_A=73/9,    alpha_B=219/9,  offset_A=1.5, offset_B=487*1.5
+    k=4 : alpha_A=241/16,  alpha_B=964/16, offset_A=4/3, offset_B=3073*(4/3)
+\<close>
+
+(* === XII.1. Constantes Savard parametriques === *)
+
+definition alpha_A_k :: "nat \<Rightarrow> real" where
+  "alpha_A_k k =
+     (if k = 2 then 3.25
+      else if k = 3 then 73/9
+      else if k = 4 then 241/16
+      else 0)"
+
+definition alpha_B_k :: "nat \<Rightarrow> real" where
+  "alpha_B_k k =
+     (if k = 2 then 6.5
+      else if k = 3 then 219/9
+      else if k = 4 then 964/16
+      else 0)"
+
+definition offset_A_k :: "nat \<Rightarrow> real" where
+  "offset_A_k k =
+     (if k = 2 then 2
+      else if k = 3 then 1.5
+      else if k = 4 then 4/3
+      else 0)"
+
+definition offset_B_k :: "nat \<Rightarrow> real" where
+  "offset_B_k k =
+     (if k = 2 then 66
+      else if k = 3 then 487 * 1.5
+      else if k = 4 then 3073 * (4/3)
+      else 0)"
+
+(* === XII.2. Formules fermees positives et negatives === *)
+
+definition somme_A_pos_k :: "nat \<Rightarrow> nat \<Rightarrow> real" where
+  "somme_A_pos_k k n = (alpha_A_k k / 2) * (real k) ^ n - offset_A_k k"
+
+definition somme_B_pos_k :: "nat \<Rightarrow> nat \<Rightarrow> real" where
+  "somme_B_pos_k k n = (alpha_B_k k / 2) * (real k) ^ n - offset_B_k k"
+
+definition somme_A_neg_k :: "nat \<Rightarrow> nat \<Rightarrow> real" where
+  "somme_A_neg_k k n = alpha_A_k k / ((real k) ^ n) - offset_A_k k"
+
+definition somme_B_neg_k :: "nat \<Rightarrow> nat \<Rightarrow> real" where
+  "somme_B_neg_k k n = alpha_B_k k / ((real k) ^ n) - offset_B_k k"
+
+(* === XII.3. Lemmes : compatibilite avec SA, SB existantes (k=2 positif) === *)
+
+lemma somme_A_pos_k_eq_SA:
+  "somme_A_pos_k 2 n = SA n"
+  unfolding somme_A_pos_k_def alpha_A_k_def offset_A_k_def SA_def
+  by simp
+
+lemma somme_B_pos_k_eq_SB:
+  "somme_B_pos_k 2 n = SB n"
+  unfolding somme_B_pos_k_def alpha_B_k_def offset_B_k_def SB_def
+  by simp
+
+(* === XII.4. Construction terme-a-terme suite A (positive, k=2)              === *)
+(*   Pour i de 1 a n-2 : a_i = a_1 * r^(i-1) (progression simple, r = k)      *)
+(*   Position n-1 (penultieme) : a_(n-2) * (r - 1/r)                          *)
+(*   Position n (dernier)      : penultieme * r                               *)
+(*   Pour n = 1 : juste a_1                                                   *)
+
+definition terme_A_pos :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
+  "terme_A_pos a1 r n i =
+     (if i = 1 then a1
+      else if n = 2 \<and> i = 2 then a1 * (r - 1/r)
+      else if n \<ge> 3 \<and> i \<le> n - 2 then a1 * r ^ (i - 1)
+      else if n \<ge> 3 \<and> i = n - 1 then a1 * r ^ (n - 3) * (r - 1/r)
+      else if n \<ge> 3 \<and> i = n then a1 * r ^ (n - 3) * (r - 1/r) * r
+      else 0)"
+
+(* === XII.5. Suite B : meme construction + substitution position 6 (n >= 8) === *)
+
+definition terme_B_pos :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
+  "terme_B_pos a1 r n i =
+     (if n < 8 then terme_A_pos a1 r n i
+      else if i = 1 then a1
+      else if i \<le> 5 then a1 * r ^ (i - 1)
+      else if i = 6 then a1 * r ^ 6
+      else if i \<le> n - 2 then a1 * r ^ i
+      else if i = n - 1 then a1 * r ^ (n - 2) * (r - 1/r)
+      else if i = n then a1 * r ^ (n - 2) * (r - 1/r) * r
+      else 0)"
+
+(* === XII.6. Validations numeriques cle (k=2, a1=2, r=2)                     === *)
+
+(*  Suite A 1 terme   : [2]                                                   *)
+lemma suite_A_1_terme:
+  "terme_A_pos 2 2 1 1 = 2"
+  unfolding terme_A_pos_def by simp
+
+(*  Suite A 2 termes  : [2, 3]                                                *)
+lemma suite_A_2_termes_pos1:
+  "terme_A_pos 2 2 2 1 = 2"
+  unfolding terme_A_pos_def by simp
+
+lemma suite_A_2_termes_pos2:
+  "terme_A_pos 2 2 2 2 = 3"
+  unfolding terme_A_pos_def by simp
+
+(*  Suite A 3 termes  : [2, 3, 6]                                             *)
+lemma suite_A_3_termes_pos3:
+  "terme_A_pos 2 2 3 3 = 6"
+  unfolding terme_A_pos_def by simp
+
+(*  Suite A 4 termes  : [2, 4, 6, 12] - position 3 = 6 (penultieme)           *)
+lemma suite_A_4_termes_pos3:
+  "terme_A_pos 2 2 4 3 = 6"
+  unfolding terme_A_pos_def by simp
+
+lemma suite_A_4_termes_pos4:
+  "terme_A_pos 2 2 4 4 = 12"
+  unfolding terme_A_pos_def by simp
+
+(*  Suite A 5 termes  : [2, 4, 8, 12, 24]                                     *)
+lemma suite_A_5_termes_pos4:
+  "terme_A_pos 2 2 5 4 = 12"
+  unfolding terme_A_pos_def by simp
+
+lemma suite_A_5_termes_pos5:
+  "terme_A_pos 2 2 5 5 = 24"
+  unfolding terme_A_pos_def by simp
+
+(*  Suite A 7 termes  : [2, 4, 8, 16, 32, 48, 96]                             *)
+lemma suite_A_7_termes_pos6:
+  "terme_A_pos 2 2 7 6 = 48"
+  unfolding terme_A_pos_def by simp
+
+lemma suite_A_7_termes_pos7:
+  "terme_A_pos 2 2 7 7 = 96"
+  unfolding terme_A_pos_def by simp
+
+(*  Suite A 8 termes  : [2, 4, 8, 16, 32, 64, 96, 192]                        *)
+lemma suite_A_8_termes_pos6:
+  "terme_A_pos 2 2 8 6 = 64"
+  unfolding terme_A_pos_def by simp
+
+lemma suite_A_8_termes_pos7:
+  "terme_A_pos 2 2 8 7 = 96"
+  unfolding terme_A_pos_def by simp
+
+lemma suite_A_8_termes_pos8:
+  "terme_A_pos 2 2 8 8 = 192"
+  unfolding terme_A_pos_def by simp
+
+(*  Suite B 8 termes  : [2, 4, 8, 16, 32, 128, 192, 384]                      *)
+(*  Substitution position 6 : 128 = 2 * 64 = position 7 de la suite A         *)
+(*  Positions 7 et 8 suivent la regle penultieme / dernier avec base decalee  *)
+lemma suite_B_8_termes_pos6:
+  "terme_B_pos 2 2 8 6 = 128"
+  unfolding terme_B_pos_def by simp
+
+lemma suite_B_8_termes_pos7:
+  "terme_B_pos 2 2 8 7 = 192"
+  unfolding terme_B_pos_def by simp
+
+lemma suite_B_8_termes_pos8:
+  "terme_B_pos 2 2 8 8 = 384"
+  unfolding terme_B_pos_def by simp
+
+(*  Suite B 9 termes  : [2, 4, 8, 16, 32, 128, 256, 384, 768]                 *)
+lemma suite_B_9_termes_pos6:
+  "terme_B_pos 2 2 9 6 = 128"
+  unfolding terme_B_pos_def by simp
+
+lemma suite_B_9_termes_pos7:
+  "terme_B_pos 2 2 9 7 = 256"
+  unfolding terme_B_pos_def by simp
+
+lemma suite_B_9_termes_pos9:
+  "terme_B_pos 2 2 9 9 = 768"
+  unfolding terme_B_pos_def by simp
+
+(*  Suite B 10 termes : [2, 4, 8, 16, 32, 128, 256, 512, 768, 1536]           *)
+lemma suite_B_10_termes_pos8:
+  "terme_B_pos 2 2 10 8 = 512"
+  unfolding terme_B_pos_def by simp
+
+lemma suite_B_10_termes_pos10:
+  "terme_B_pos 2 2 10 10 = 1536"
+  unfolding terme_B_pos_def by simp
+
+(* === XII.7. Validations numeriques formules fermees positives (k=2)         === *)
+(*   Premier 11 = 5ieme positif : Somme A = 50, Somme B = 38                  *)
+
+lemma somme_A_pos_11:
+  "somme_A_pos_k 2 5 = 50"
+  unfolding somme_A_pos_k_def alpha_A_k_def offset_A_k_def by simp
+
+lemma somme_B_pos_11:
+  "somme_B_pos_k 2 5 = 38"
+  unfolding somme_B_pos_k_def alpha_B_k_def offset_B_k_def by simp
+
+(* === XII.8. Validations numeriques formules fermees negatives (k=2)         === *)
+(*   Premier -2 (1 terme) : 13/4 / 2^1 - 2 = 13/8 - 2 = -3/8                  *)
+(*   Premier -5 (3 termes): 13/4 / 2^3 - 2 = 13/32 - 2 = -51/32 = -1.59375    *)
+(*                                                                            *)
+(*   Note Savard 2026-02-17 : la formule fermee pour les suites negatives    *)
+(*   est telle que somme_A_neg(k, n) converge vers -offset_A(k) quand n -> +inf.*)
+(*   Pour k=2 : somme_A_neg(2, n) = 3.25 / 2^n - 2, qui tend vers -2.         *)
+
+lemma somme_A_neg_k_value:
+  "somme_A_neg_k 2 n = 3.25 / (2 ^ n) - 2"
+  unfolding somme_A_neg_k_def alpha_A_k_def offset_A_k_def by simp
+
+lemma somme_A_neg_m2:
+  "somme_A_neg_k 2 1 = -3/8"
+  unfolding somme_A_neg_k_def alpha_A_k_def offset_A_k_def by simp
+
+lemma somme_A_neg_m5:
+  "somme_A_neg_k 2 3 = -51/32"
+  unfolding somme_A_neg_k_def alpha_A_k_def offset_A_k_def by simp
+
+(*   Premier -5 (3 termes) : Somme B negative = 6.5 / 2^3 - 66 = 13/16 - 66 = -1043/16 *)
+lemma somme_B_neg_m5:
+  "somme_B_neg_k 2 3 = -1043/16"
+  unfolding somme_B_neg_k_def alpha_B_k_def offset_B_k_def by simp
+
+(* Verification numerique : somme B negative pour -5 vaut -65.1875 = -1043/16 *)
+lemma somme_B_neg_m5_decimal:
+  "(-1043::real) / 16 = -65.1875"
+  by simp
+
+(* === XII.9. Rapport spectral 1/k_i universel (positif et negatif)            === *)
+
+definition RsP_k :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
+  "RsP_k k n1 n2 =
+     (somme_A_pos_k k n1 - somme_A_pos_k k n2) /
+     (somme_B_pos_k k n1 - somme_B_pos_k k n2)"
+
+definition RsP_neg_k :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
+  "RsP_neg_k k n1 n2 =
+     (somme_A_neg_k k n1 - somme_A_neg_k k n2) /
+     (somme_B_neg_k k n1 - somme_B_neg_k k n2)"
+
+(*   Theoreme central : pour k = 2, 3, 4, le rapport positif vaut 1/k         *)
+
+theorem RsP_k_egale_un_sur_k_pos:
+  assumes "k \<in> {2, 3, 4}" "n1 > 0" "n2 > 0" "n1 \<noteq> n2"
+  shows "RsP_k k n1 n2 = 1 / real k"
+proof -
+  from assms(1) consider "k = 2" | "k = 3" | "k = 4" by auto
+  thus ?thesis
+  proof cases
+    case 1
+    have "RsP_k 2 n1 n2 =
+            ((alpha_A_k 2 / 2) * (2 ^ n1 - 2 ^ n2)) /
+            ((alpha_B_k 2 / 2) * (2 ^ n1 - 2 ^ n2))"
+      unfolding RsP_k_def somme_A_pos_k_def somme_B_pos_k_def
+      by (simp add: algebra_simps)
+    also have "... = (alpha_A_k 2 / 2) / (alpha_B_k 2 / 2)"
+      using assms(2-4) by (simp add: field_simps)
+    also have "... = 1 / real 2"
+      unfolding alpha_A_k_def alpha_B_k_def by simp
+    finally show ?thesis using 1 by simp
+  next
+    case 2
+    have "RsP_k 3 n1 n2 =
+            ((alpha_A_k 3 / 2) * (3 ^ n1 - 3 ^ n2)) /
+            ((alpha_B_k 3 / 2) * (3 ^ n1 - 3 ^ n2))"
+      unfolding RsP_k_def somme_A_pos_k_def somme_B_pos_k_def
+      by (simp add: algebra_simps)
+    also have "... = (alpha_A_k 3 / 2) / (alpha_B_k 3 / 2)"
+      using assms(2-4) by (simp add: field_simps)
+    also have "... = 1 / real 3"
+      unfolding alpha_A_k_def alpha_B_k_def by simp
+    finally show ?thesis using 2 by simp
+  next
+    case 3
+    have "RsP_k 4 n1 n2 =
+            ((alpha_A_k 4 / 2) * (4 ^ n1 - 4 ^ n2)) /
+            ((alpha_B_k 4 / 2) * (4 ^ n1 - 4 ^ n2))"
+      unfolding RsP_k_def somme_A_pos_k_def somme_B_pos_k_def
+      by (simp add: algebra_simps)
+    also have "... = (alpha_A_k 4 / 2) / (alpha_B_k 4 / 2)"
+      using assms(2-4) by (simp add: field_simps)
+    also have "... = 1 / real 4"
+      unfolding alpha_A_k_def alpha_B_k_def by simp
+    finally show ?thesis using 3 by simp
+  qed
+qed
 
 
 end

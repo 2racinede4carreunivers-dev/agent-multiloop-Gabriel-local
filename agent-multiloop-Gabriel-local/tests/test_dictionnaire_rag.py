@@ -19,13 +19,16 @@ from memory.dictionnaire_spectral import regime_count, total_lemmes
 # ==========================================================================
 # Dictionnaire spectral
 # ==========================================================================
-def test_dictionnaire_contient_10_regimes():
-    assert regime_count() == 10
-    # Les 9 regimes documentes + suites_finies
+def test_dictionnaire_contient_12_regimes():
+    """Dictionnaire : 10 regimes historiques + 2 nouveaux (Section XI/XII)."""
+    assert regime_count() == 12
     expected = {
+        # 10 regimes historiques
         "regime_1_2_positif", "regime_mixte", "regime_1_4", "regime_1_3",
         "regime_negatif", "ecarts_spectraux", "invariants_transition",
         "geometrie_critique", "blocs_asymetriques", "suites_finies",
+        # 2 regimes ajoutes 2026-02-17 (Section XI/XII)
+        "regime_construction_termes", "regime_parametrique_1_k",
     }
     assert set(list_regimes()) == expected
 

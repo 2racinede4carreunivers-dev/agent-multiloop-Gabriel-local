@@ -47,6 +47,17 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 
 ## Changelog
 
+### [2026-02-17] Synchronisation Theory <-> Agent Cognitif + Tests d'intégration
+- **`memory/methode_spectral_section_XII.py`** créé : règles Section XII paramétriques + helpers de calcul (`construire_suite_A`, `construire_suite_B`, `somme_A_pos`, `somme_B_pos`, `somme_A_neg`, `somme_B_neg`, `terme_A_pos`, `terme_B_pos`). 10 entrées RAG.
+- **`memory/dictionnaire_spectral.py`** étendu : 2 nouveaux régimes ajoutés (`regime_construction_termes`, `regime_parametrique_1_k`) — les 10 régimes historiques sont préservés.
+- **`scripts/sync_theory_to_agent.py`** créé : script de synchronisation complète (theory → static-check → modules memory → adaptateur RAG → détection). 6 checks, sortie verbose.
+- **`scripts/isabelle_static_check.py`** créé : compilateur Isabelle simulé (analyse statique structure HOL).
+- **`tests/test_section_XI_XII_integration.py`** créé : **33 tests pytest** (Suite A n=1..11, Suite B n=8..10 avec substitution, sommes négatives Savard, théorème RsP_k pour k=2,3,4, modules RAG, static-check).
+- `tests/test_dictionnaire_rag.py` ajusté : assertion passée de 10 à 12 régimes (nouveaux régimes XI/XII inclus).
+- Conteneur Docker : `theories/methode_spectral.thy` est monté via volume `./theories:/theories` dans `docker-compose.yml` (deja en place, aucun changement).
+- **Régression Pytest : 548/548 PASS** (515 anciens + 33 nouveaux) ✅
+- Synchronisation complète : `python3 scripts/sync_theory_to_agent.py` → `RESULTAT GLOBAL : SYNCHRONISATION OK`.
+
 ### [2026-02-17] Section XII paramétrique + Compilateur simulé Isabelle/HOL
 - **Section XII ajoutée** : généralisation pour rapport spectral `1/k_i` avec k ∈ {2, 3, 4, ...}.
   - 4 constantes paramétriques : `alpha_A_k`, `alpha_B_k`, `offset_A_k`, `offset_B_k` (couvrent k=2, k=3, k=4).

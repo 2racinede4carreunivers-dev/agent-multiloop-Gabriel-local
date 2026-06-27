@@ -8,7 +8,13 @@ Module pour que Gabriel comprenne et traite correctement
 les requêtes sur comparaison asymétrique ordonnée
 """
 
-from memory.comparaison_asymetrique_ordonnee import ComparaisonAsymetriqueOrdonnee
+from typing import Dict
+import sys
+from pathlib import Path
+
+# Import le module de comparaison
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "memory"))
+from comparaison_asymetrique_ordonnee import ComparaisonAsymetriqueOrdonnee
 
 class GabrielComparaisonAsymetrique:
     """Extension Gabriel pour comparaison asymétrique"""
@@ -130,28 +136,13 @@ PROPRIÉTÉ ÉTABLIE:
             'description': 'Le ratio converge vers 0.5 quand k augmente'
         }
 
-# ========================================================================
-# TEST
-# ========================================================================
-
 if __name__ == "__main__":
     gca = GabrielComparaisonAsymetrique()
-    
-    question = "Peux-tu représenter graphiquement la valeur des suites A et B pour une comparaison asymétrique ordonnée pour n=1 a n=1000?"
+    question = "Peux-tu représenter graphiquement pour une comparaison asymétrique ordonnée pour n=1 a n=1000?"
     
     if gca.detecter_comparaison_asymetrique(question):
-        print("Detection: COMPARAISON ASYMÉTRIQUE DÉTECTÉE\n")
-        
+        print("Detection: OK\n")
         params = gca.extraire_parametres(question)
-        print(f"Paramètres extraits: {params}\n")
-        
+        print(f"Parametres: {params}\n")
         response = gca.generer_reponse_comparaison(n_max=params['n_max'])
         print(response)
-        
-        graphique_data = gca.generer_graphique_convergence(n_max=params['n_max'])
-        print(f"\nDonnées graphique disponibles:")
-        print(f"  X (k): {len(graphique_data['x'])} points")
-        print(f"  Y (ratio): min={min(graphique_data['y']):.4f}, max={max(graphique_data['y']):.4f}")
-        print(f"  Convergence: Y → 0.5")
-    else:
-        print("NOT A COMPARAISON ASYMÉTRIQUE QUESTION")

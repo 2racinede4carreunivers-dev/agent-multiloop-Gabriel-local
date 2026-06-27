@@ -212,7 +212,18 @@ coverage_reports/
 *.crt
 
 # Dossiers sensibles
-memory/
+# Note: regles `memory/*` rendues specifiques pour ne PAS ignorer le code
+# Python du module RAG (dictionnaire spectral, adaptateur cognitif, sections
+# XI/XII de methode_spectral). Seuls les FICHIERS DE DONNEES sensibles sont
+# ignores, et ce dans TOUS les sous-dossiers `memory/` (via **/).
+**/memory/*.json
+**/memory/*.db
+**/memory/*.cache
+**/memory/cache/
+**/memory/secrets_*
+**/memory/*.private
+**/memory/user_data.json
+**/memory/personal_settings.json
 __pycache__/
 
 # Logs

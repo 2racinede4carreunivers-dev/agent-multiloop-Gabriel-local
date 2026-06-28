@@ -4,7 +4,20 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.7 — 611/611 tests Pytest ✅ — Commande `debat` v2 : OneDrive Windows + nommage chronologique contextuel + timeouts Claude/OpenAI alignés à 45s**
+**Production-Ready v3.8 — 648/648 tests Pytest ✅ — Auto-graphiques contextuels par question canonique + convention chaos-Savard alternee + visual polish PNG**
+
+### Changelog 2026-02 v3.8 (auto-graphs + chaos-Savard)
+- `src/spectral/ratios.py` :
+  - `_alternating_diff(X)` = `X[0] - X[1] - ... - X[n]` (formule alternee Savard).
+  - `ratio_chaos_savard(A, B) = (alt_SA(A) - alt_SA(B)) / (alt_SB(A) - alt_SB(B))`.
+  - `build_chaos_savard_blocks(k)` : A=[k+1..2k], B=[2k+1, 1..k].
+  - Valeurs Philippe k=2/3/4 reproduites à 1e-10 près.
+- `src/spectral/rsp_curve.py` : nouvelle config `"chaos-savard"`, convergence vers 1/2 à partir de k=5.
+- `src/engines/question_graphs.py` (NOUVEAU) : QUESTION_GRAPH_MAP, generate_graphs_for_question, detect_gap_question, detect_rsp_question.
+- Mapping : Q1.a/b/c/d → 1 PNG, Q2 → 2 PNG (SA+SB et Digamma), Q3.a/b/c → 1 PNG.
+- `src/visualization/png_renderer.py` : palette pro (bleu nuit, bordeaux, vert), annotations violettes sur points remarquables, watermark Gabriel, footer citable.
+- `src/ui/cli.py` : helper `_auto_generate_question_graphs` câblé dans modele rsp1x1/rsp/reconstruct/gap.
+- 37 nouveaux tests dans `tests/test_chaos_savard_and_question_graphs.py`.
 
 ### Changelog 2026-02 v3.7 (debat OneDrive + naming)
 - `src/multiloop/debat_orchestrator.py` :
@@ -12,9 +25,7 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
   - Fonction `_default_output_dir()` : lit `DEBAT_OUTPUT_DIR` env var (fallback `data/debats`).
   - `_build_filename_stem()` : format `YYYY-MM-DD_HHhMMmSSs_<slug>_<id8>` (tri alpha = tri chrono).
 - `docker-compose.yml` : mount `${HOST_DEBAT_DIR:-./data/debats}:/home/agent/app/data/debats-onedrive`.
-- `config.yaml` : `claude.timeout_seconds: 45` et `openai.timeout_seconds: 45` (alignés sur souhait Philippe).
-- 11 nouveaux tests (slugification, env var, nommage chronologique).
-- **`.env` non modifié** : snippet fourni à Philippe pour collage manuel.
+- `config.yaml` : `claude.timeout_seconds: 45` et `openai.timeout_seconds: 45`.
 
 ### Changelog 2026-02 v3.6 (debat command base)
 - `src/multiloop/debat_orchestrator.py` : 5 personas (analytique, logicien, sceptique, geometre, computationnaliste), mode rotation par défaut.

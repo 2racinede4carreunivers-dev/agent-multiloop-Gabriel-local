@@ -233,15 +233,124 @@ class TestSauvegarde:
         assert "Critique" in md
 
     @pytest.mark.asyncio
-    async def test_filename_format(self, orch):
-        result = await orch.run(theme="t", nb_tours=2)
+    async def test_filename_format_chronologique_contextuel(self, orch):
+        """Format attendu : YYYY-MM-DD_HHhMMmSSs_<slug>_<id>.{md,json}"""
+        result = await orch.run(
+            theme="Le rapport 1/k est-il une coincidence ?",
+            nb_tours=2,
+        )
         json_p = Path(result.json_path)
         md_p = Path(result.markdown_path)
-        # Format YYYY-MM-DD_<id>.json
+        # Extensions
         assert json_p.name.endswith(".json")
         assert md_p.name.endswith(".md")
+        # debat_id present
         assert result.debat_id in json_p.name
         assert result.debat_id in md_p.name
+        # Format chronologique : YYYY-MM-DD_HHhMMmSSs en debut
+        import re as _re
+        pattern = r"^\d{4}-\d{2}-\d{2}_\d{2}h\d{2}m\d{2}s_.+_[a-f0-9]{8}\.(md|json)$"
+        assert _re.match(pattern, json_p.name), \
+            f"Format JSON invalide : {json_p.name}"
+        assert _re.match(pattern, md_p.name), \
+            f"Format MD invalide : {md_p.name}"
+        # Slug du theme present dans le nom
+        assert "rapport" in json_p.name.lower()
+        assert "coincidence" in md_p.name.lower()
+
+    @pytest.mark.asyncio
+    async def test_filename_pas_de_caracteres_windows_interdits(self, orch):
+        """Caracteres interdits sur Windows : / \\ : * ? " < > |"""
+        result = await orch.run(
+            theme='Theme avec / \\ : * ? " < > | caracteres ?',
+            nb_tours=2,
+        )
+        for char in ["/", "\\", ":", "*", "?", '"', "<", ">", "|"]:
+            assert char not in Path(result.json_path).name, \
+                f"Caractere interdit '{char}' dans le nom JSON"
+            assert char not in Path(result.markdown_path).name, \
+                f"Caractere interdit '{char}' dans le nom MD"
+
+
+# ---------------------------------------------------------------------------
+# Slugification du theme
+# ---------------------------------------------------------------------------
+class TestSlugification:
+    def test_slug_simple(self):
+        from src.multiloop.debat_orchestrator import _slugify_theme
+        assert _slugify_theme("Rapport spectral") == "rapport-spectral"
+
+    def test_slug_avec_accents(self):
+        from src.multiloop.debat_orchestrator import _slugify_theme
+        assert _slugify_theme("Préuve géométrique évidente") == \
+            "preuve-geometrique-evidente"
+
+    def test_slug_caracteres_speciaux(self):
+        from src.multiloop.debat_orchestrator import _slugify_theme
+        slug = _slugify_theme("Le rapport 1/k est-il une coïncidence ?")
+        assert slug == "le-rapport-1-k-est-il-une-coincidence"
+
+    def test_slug_caracteres_windows_interdits(self):
+        from src.multiloop.debat_orchestrator import _slugify_theme
+        slug = _slugify_theme('a/b\\c:d*e?f"g<h>i|j')
+        for char in ["/", "\\", ":", "*", "?", '"', "<", ">", "|"]:
+            assert char not in slug
+
+    def test_slug_vide_retourne_debat(self):
+        from src.multiloop.debat_orchestrator import _slugify_theme
+        assert _slugify_theme("") == "debat"
+        assert _slugify_theme("???") == "debat"
+        assert _slugify_theme("   ") == "debat"
+
+    def test_slug_tronque_a_60_chars(self):
+        from src.multiloop.debat_orchestrator import _slugify_theme
+        long = "a" * 200
+        slug = _slugify_theme(long)
+        assert len(slug) <= 60
+
+    def test_slug_tronque_proprement_au_dernier_tiret(self):
+        from src.multiloop.debat_orchestrator import _slugify_theme
+        # Cinq mots avec mots de 12 chars chacun -> doit couper proprement
+        theme = "premier-mot deuxieme-mot troisieme-mot quatrieme-mot cinq-mot"
+        slug = _slugify_theme(theme)
+        assert len(slug) <= 60
+        # Ne se termine pas par un tiret
+        assert not slug.endswith("-")
+
+
+# ---------------------------------------------------------------------------
+# Variable d'env DEBAT_OUTPUT_DIR
+# ---------------------------------------------------------------------------
+class TestEnvDebatOutputDir:
+    def test_env_var_pris_en_compte(self, fake_llm, tmp_path, monkeypatch):
+        """Si DEBAT_OUTPUT_DIR est defini, utilise par defaut."""
+        from src.multiloop.debat_orchestrator import DebatOrchestrator
+        custom = tmp_path / "onedrive_custom"
+        monkeypatch.setenv("DEBAT_OUTPUT_DIR", str(custom))
+        orch = DebatOrchestrator(llm=fake_llm)
+        assert orch.audits_dir == custom
+        assert custom.exists()
+
+    def test_env_var_vide_fallback_default(
+        self, fake_llm, monkeypatch, tmp_path,
+    ):
+        """Si DEBAT_OUTPUT_DIR est vide ou absent, fallback sur data/debats."""
+        from src.multiloop.debat_orchestrator import DebatOrchestrator
+        monkeypatch.delenv("DEBAT_OUTPUT_DIR", raising=False)
+        monkeypatch.chdir(tmp_path)
+        orch = DebatOrchestrator(llm=fake_llm)
+        assert orch.audits_dir == Path("data/debats")
+
+    def test_audits_dir_explicite_override_env(
+        self, fake_llm, tmp_path, monkeypatch,
+    ):
+        """Si audits_dir est passe explicitement, il override l'env."""
+        from src.multiloop.debat_orchestrator import DebatOrchestrator
+        monkeypatch.setenv("DEBAT_OUTPUT_DIR", str(tmp_path / "ignored"))
+        explicit = tmp_path / "explicit_dir"
+        orch = DebatOrchestrator(llm=fake_llm, audits_dir=explicit)
+        assert orch.audits_dir == explicit
+        assert explicit.exists()
 
 
 # ---------------------------------------------------------------------------

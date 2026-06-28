@@ -28,14 +28,14 @@ llm:
     max_tokens: 4096
     # Plafond max d'attente Claude (lit CLAUDE_TIMEOUT_SECONDS du .env si defini).
     # Claude prend typiquement 15-25s pour une question HOL/maths.
-    # 20s = compromis vitesse/fiabilite (essai Philippe 26-02-2026).
-    # Si timeouts frequents : monter a 30s. Si ennuye d'attendre : essayer 15s.
-    timeout_seconds: 20
+    # 45s = choix Philippe 2026-02 (Sonnet 4.5 stable, evite l'attente excessive).
+    # Si timeouts frequents : monter a 60s. Si ennuye d'attendre : essayer 30s.
+    timeout_seconds: 45
   openai:
     model: "gpt-5.4"          # gpt-5.4 / gpt-5.5 / gpt-4o / o3-pro
     temperature: 0.2
     max_tokens: 4096
-    timeout_seconds: 30       # 30s max OpenAI (au lieu de 90s)
+    timeout_seconds: 45       # 45s max OpenAI (aligne sur Claude)
 
 # === Multi-loop self-critique ===
 multiloop:

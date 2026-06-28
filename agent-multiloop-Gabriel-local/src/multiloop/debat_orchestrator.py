@@ -11,6 +11,10 @@ Particularites de cette version :
   * ALTERNANCE Claude <-> OpenAI a chaque appel LLM (Ollama est ecarte du debat,
     car retire de la chaine multiloop en prod).
   * Sauvegarde DUALE : JSON signe + Markdown citable pretes pour publication.
+  * Nom de fichier CHRONOLOGIQUE + CONTEXTUEL : YYYY-MM-DD_HHhMMmSSs_<slug>_<id>.md
+  * Dossier de sortie configurable via la variable d'env DEBAT_OUTPUT_DIR
+    (defaut: data/debats/). Sur Docker, peut pointer vers /home/agent/app/data/
+    debats-onedrive qui est monte depuis HOST_DEBAT_DIR (OneDrive Windows).
 
 Sortie : objet DebatResult contenant tous les tours + synthese citable.
 """
@@ -20,6 +24,9 @@ import asyncio
 import datetime as dt
 import json
 import logging
+import os
+import re
+import unicodedata
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -29,6 +36,64 @@ from ..core.llm_manager import LLMManager
 from ..spectral.spectral_knowledge import build_grounded_system_prompt
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Slugification du theme pour nommage de fichier
+# =============================================================================
+_SLUG_MAX_CHARS = 60
+
+
+def _slugify_theme(theme: str, max_chars: int = _SLUG_MAX_CHARS) -> str:
+    """Convertit un theme en slug ASCII safe pour nom de fichier.
+
+    Etapes :
+      1. Decomposition Unicode + suppression des accents (NFD)
+      2. Minuscules
+      3. Caracteres non alphanumeriques -> tiret
+      4. Tirets multiples -> un seul
+      5. Tronque a max_chars (par defaut 60) sans couper un mot
+      6. Si vide apres nettoyage, retourne 'debat'
+
+    Exemples :
+      "Le rapport 1/k est-il une coincidence ?" -> "le-rapport-1-k-est-il-une-coincidence"
+      "Préuve Isabelle close ?"                 -> "preuve-isabelle-close"
+    """
+    if not theme:
+        return "debat"
+    # Decomposition NFD : 'é' -> 'e' + accent
+    decomposed = unicodedata.normalize("NFD", theme)
+    ascii_only = decomposed.encode("ascii", "ignore").decode("ascii")
+    # Tout en minuscules
+    lower = ascii_only.lower()
+    # Remplacer non-alphanumerique par tiret
+    slugged = re.sub(r"[^a-z0-9]+", "-", lower)
+    # Compresser les tirets multiples + supprimer les tirets de bord
+    slugged = re.sub(r"-+", "-", slugged).strip("-")
+    if not slugged:
+        return "debat"
+    if len(slugged) <= max_chars:
+        return slugged
+    # Tronquer sans couper un mot : couper au dernier tiret avant max_chars
+    truncated = slugged[:max_chars]
+    last_dash = truncated.rfind("-")
+    if last_dash > max_chars // 2:
+        truncated = truncated[:last_dash]
+    return truncated.rstrip("-") or "debat"
+
+
+def _default_output_dir() -> Path:
+    """Determine le dossier de sortie par defaut.
+
+    Priorite :
+      1. Variable d'env DEBAT_OUTPUT_DIR (path absolu ou relatif)
+      2. data/debats/ (fallback historique pour les tests et le mode local)
+    """
+    env_path = os.environ.get("DEBAT_OUTPUT_DIR", "").strip()
+    if env_path:
+        return Path(env_path)
+    return Path("data/debats")
+
 
 
 # =============================================================================
@@ -201,10 +266,15 @@ class DebatOrchestrator:
     def __init__(
         self,
         llm: LLMManager,
-        audits_dir: Path | str = "data/debats",
+        audits_dir: Path | str | None = None,
     ):
         self.llm = llm
-        self.audits_dir = Path(audits_dir)
+        # Si audits_dir est explicitement passe (tests), on l'utilise.
+        # Sinon, on lit DEBAT_OUTPUT_DIR via _default_output_dir().
+        if audits_dir is None:
+            self.audits_dir = _default_output_dir()
+        else:
+            self.audits_dir = Path(audits_dir)
         self.audits_dir.mkdir(parents=True, exist_ok=True)
         self.gabriel_system = build_grounded_system_prompt()
         # Provider counter : 0=Claude, 1=OpenAI, repete
@@ -426,11 +496,30 @@ class DebatOrchestrator:
         return await self._call_llm(prompt, self.gabriel_system, temperature=0.3)
 
     # ------------------------------------------------------------------
-    # Sauvegardes (JSON + Markdown)
+    # Sauvegardes (JSON + Markdown) avec nommage chronologique + contextuel
     # ------------------------------------------------------------------
+    def _build_filename_stem(self, result: DebatResult) -> str:
+        r"""Construit le radical du fichier : <YYYY-MM-DD>_<HHhMMmSSs>_<slug>_<id>.
+
+        Garantit :
+          - Tri chronologique naturel (date+heure en prefixe)
+          - Contexte lisible (slug du theme)
+          - Unicite (id 8 chars uuid en suffixe)
+          - Compatible Windows (pas de : ? * < > | / \ " dans le nom)
+        """
+        # Parse la date ISO du resultat
+        try:
+            ts = dt.datetime.fromisoformat(result.date)
+        except ValueError:
+            ts = dt.datetime.now()
+        date_part = ts.strftime("%Y-%m-%d")
+        time_part = ts.strftime("%Hh%Mm%Ss")
+        slug = _slugify_theme(result.theme)
+        return f"{date_part}_{time_part}_{slug}_{result.debat_id}"
+
     def _save_json(self, result: DebatResult) -> Path:
-        date_str = result.date.split("T")[0]
-        path = self.audits_dir / f"{date_str}_{result.debat_id}.json"
+        stem = self._build_filename_stem(result)
+        path = self.audits_dir / f"{stem}.json"
         path.write_text(
             json.dumps(result.to_dict(), ensure_ascii=False, indent=2),
             encoding="utf-8",
@@ -438,8 +527,8 @@ class DebatOrchestrator:
         return path
 
     def _save_markdown(self, result: DebatResult) -> Path:
-        date_str = result.date.split("T")[0]
-        path = self.audits_dir / f"{date_str}_{result.debat_id}.md"
+        stem = self._build_filename_stem(result)
+        path = self.audits_dir / f"{stem}.md"
         lines: list[str] = []
         lines.append("# Debat contradictoire — Gabriel vs Critique Virtuel")
         lines.append("")

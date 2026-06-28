@@ -45,6 +45,10 @@ services:
       - ./.env:/home/agent/app/.env:ro
       - agent-data:/home/agent/app/data
       - agent-logs:/home/agent/app/logs
+      # Debats archives sur OneDrive (variable HOST_DEBAT_DIR du .env)
+      # Sur Windows : "C:\Users\HP 3\OneDrive\debat-Gabriel-spectral" -> /home/agent/app/data/debats-onedrive
+      # Si HOST_DEBAT_DIR est vide, ce volume est ignore (le defaut ./data/debats prend le relais).
+      - ${HOST_DEBAT_DIR:-./data/debats}:/home/agent/app/data/debats-onedrive
 
     networks:
       - agent-network

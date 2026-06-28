@@ -4,7 +4,14 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.4 — 515/515 tests Pytest ✅ — Bug du `.env` fantôme résolu (docker-compose lisait `../.env` au lieu de `./.env`) + start-agent.ps1 v6.3 valide Claude+Anthropic+Model + Claude API confirmée bout-en-bout + Sonnet 4.5 + 5 Axes cognitifs + Plan Trifocal**
+**Production-Ready v3.6 — 600/600 tests Pytest ✅ — Commande `debat <theme>` ajoutée (Gabriel vs Critique Virtuel avec 5 personas, alternance Claude/OpenAI, sortie JSON+Markdown citable)**
+
+### Changelog 2026-02 (debat command)
+- `src/multiloop/debat_orchestrator.py` : 5 personas (analytique, logicien, sceptique, geometre, computationnaliste), mode rotation par défaut.
+- Alternance Claude ↔ OpenAI à chaque appel LLM (Ollama exclu du débat).
+- Sauvegarde duale : `data/debats/<date>_<id>.json` + `<date>_<id>.md` (publication-ready).
+- `src/ui/cli.py` : commande `debat`, `debat personas`, `debat --persona=K --tours=N <theme>`. Bug `cmd_lower` corrigé.
+- 25 nouveaux tests dans `tests/test_debat_orchestrator.py`.
 
 ## Architecture
 ```

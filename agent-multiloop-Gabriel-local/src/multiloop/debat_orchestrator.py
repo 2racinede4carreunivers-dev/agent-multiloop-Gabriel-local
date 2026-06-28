@@ -242,6 +242,9 @@ class DebatOrchestrator:
 
         debat_id = str(uuid.uuid4())[:8]
         t0 = dt.datetime.now()
+        # Reset du compteur d'alternance : chaque debat commence par Claude
+        # (la these initiale de Gabriel est toujours sur Claude).
+        self._provider_counter = 0
         logger.info(
             "Debat %s sur theme=%r persona=%s nb_tours=%d",
             debat_id, theme[:60], persona, nb_tours,

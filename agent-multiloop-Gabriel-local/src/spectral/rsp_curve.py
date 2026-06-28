@@ -3,17 +3,20 @@ rsp_curve.py — Calcul d'une courbe d'evolution du rapport spectral
 pour k = 1, 2, ..., k_max, avec rendu ASCII en terminal.
 
 Configurations supportees :
-  - "1x1"   : pour chaque k, paire (prime_k, prime_(k+1)) -> attendu 1/2
-  - "sym"   : pour chaque k, deux blocs symetriques de taille k -> attendu 1/2
-  - "chaos" : pour chaque k, A de taille k et B de taille k+2 chaotique
-  - "ord"   : pour chaque k, A=(p1..pk) B=(p(k+1)..p(2k+1)) ordonne ->
-              proche de 1 pour petit k, tend vers 1/2 quand k grandit
+  - "1x1"          : pour chaque k, paire (prime_k, prime_(k+1)) -> attendu 1/2
+  - "sym"          : pour chaque k, deux blocs symetriques de taille k -> attendu 1/2
+  - "chaos"        : pour chaque k, A de taille k et B de taille k+2 chaotique
+  - "ord"          : asymetrie ordonnee A=k, B=k+1 -> 1 pour petit k, vers 1/2 grand k
+  - "chaos-savard" : convention alternee Savard (formule alt(X)=X[0]-X[1]-...)
+                     A = [p_{k+1}..p_{2k}], B = [p_{2k+1}, p_1..p_k]
+                     Diverge fortement pour k=1 puis converge vers 1/2.
 """
 from __future__ import annotations
 
 from typing import Any, Optional
 
 from ..core.spectral_core import SpectralMethodCore
+from .ratios import build_chaos_savard_blocks, ratio_chaos_savard
 
 
 def compute_rsp_curve(
@@ -25,6 +28,10 @@ def compute_rsp_curve(
     Calcule le RsP pour k de 1 a k_max.
     Retourne une liste de dicts : [{'k': 1, 'RsP_decimal': 0.5, 'RsP_fraction': '1/2', ...}, ...]
     """
+    # Cas special chaos-savard : formule alternee specifique
+    if config == "chaos-savard":
+        return _compute_curve_chaos_savard(core, k_max)
+
     points = []
     for k in range(1, k_max + 1):
         try:
@@ -43,6 +50,52 @@ def compute_rsp_curve(
         except (ValueError, IndexError) as exc:
             points.append({"k": k, "error": str(exc)})
     return points
+
+
+def _compute_curve_chaos_savard(
+    core: SpectralMethodCore,
+    k_max: int,
+) -> list[dict[str, Any]]:
+    """Construit la courbe chaos-Savard : convention alternee Philippe Thomas Savard.
+
+    Pour chaque k, calcule RsP_chaos_savard(A, B) avec :
+      A = positions [k+1, ..., 2k]
+      B = positions [2k+1, 1, 2, ..., k]
+      |A| = k, |B| = k+1
+      RsP = (alt_SA(A) - alt_SA(B)) / (alt_SB(A) - alt_SB(B))
+      alt(X) = X[0] - X[1] - ... - X[n]
+    """
+    points: list[dict[str, Any]] = []
+    primes = core.prime_list
+    for k in range(1, k_max + 1):
+        try:
+            if 2 * k + 1 > len(primes):
+                raise IndexError(f"2k+1 > {len(primes)} (taille table primes)")
+            A_pos, B_pos = build_chaos_savard_blocks(k)
+            ratio = ratio_chaos_savard(A_pos, B_pos, model="1/2")
+            r_float = float(ratio)
+            matches_half = ratio == 0.5
+            near_half = abs(r_float - 0.5) <= 0.05
+            # Pour l'affichage : convertir les positions en primes reels
+            A_primes = [primes[p - 1] for p in A_pos]
+            B_primes = [primes[p - 1] for p in B_pos]
+            points.append({
+                "k": k,
+                "A": A_primes,
+                "B": B_primes,
+                "A_positions": A_pos,
+                "B_positions": B_pos,
+                "configuration": "chaos-savard",
+                "RsP_fraction": f"{ratio.numerator}/{ratio.denominator}",
+                "RsP_decimal": r_float,
+                "matches_half": matches_half,
+                "near_half": near_half,
+                "error": None,
+            })
+        except (ValueError, IndexError) as exc:
+            points.append({"k": k, "error": str(exc)})
+    return points
+
 
 
 def _build_config(core: SpectralMethodCore, config: str, k: int) -> tuple[list[int], list[int]]:

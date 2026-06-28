@@ -1161,6 +1161,9 @@ class CLIInterface:
                 reports = engine.answer_all_questions()
                 for r in reports:
                     console.print(Panel(r.to_text(), border_style="green"))
+                # Auto-graphique pour CHAQUE question canonique
+                for qcode in ("Q1.a", "Q1.b", "Q1.c", "Q1.d"):
+                    self._auto_generate_question_graphs(qcode, {})
                 return True
 
             if action == "rsp1x1":
@@ -1173,6 +1176,8 @@ class CLIInterface:
                 # Axe 2/3/4/5 : trace cognitive par modele
                 self._render_traced_rsp1x1(n1, n2)
                 self._save_modele_audit(report, cmd)
+                # Auto-graphique : Q1.a (RsP 1x1)
+                self._auto_generate_question_graphs("Q1.a", {"n1": n1, "n2": n2})
                 return True
 
             if action == "rsp":
@@ -1187,6 +1192,10 @@ class CLIInterface:
                 report = engine.compute_rsp_nxn_all_models(A_pos, B_pos, case=case)
                 console.print(Panel(report.to_text(), border_style="green"))
                 self._save_modele_audit(report, cmd)
+                # Auto-graphique : Q1.b/c/d selon le cas
+                from src.engines.question_graphs import detect_rsp_question
+                qcode = detect_rsp_question(case)
+                self._auto_generate_question_graphs(qcode, {"case": case})
                 return True
 
             if action == "reconstruct":
@@ -1201,6 +1210,8 @@ class CLIInterface:
                 if actual_prime is not None:
                     self._render_traced_reconstruct(n, actual_prime)
                 self._save_modele_audit(report, cmd)
+                # Auto-graphique : Q2 (SA+SB + Digamma pour n=1..100)
+                self._auto_generate_question_graphs("Q2", {"n": n})
                 return True
 
             if action == "gap":
@@ -1213,12 +1224,72 @@ class CLIInterface:
                 # Axe 2/3/4/5 : trace cognitive (gap est independant du modele)
                 self._render_traced_gap(p1, p2)
                 self._save_modele_audit(report, cmd)
+                # Auto-graphique : Q3.a/b/c selon signes de p1 et p2
+                from src.engines.question_graphs import detect_gap_question
+                qcode = detect_gap_question(p1, p2)
+                self._auto_generate_question_graphs(qcode, {"p1": p1, "p2": p2})
                 return True
 
             console.print(f"  [red]Action inconnue : '{action}'. Tapez 'modele' pour l'aide.[/red]")
         except (ValueError, ZeroDivisionError) as exc:
             console.print(f"  [red]Erreur : {exc}[/red]")
         return True
+
+    def _auto_generate_question_graphs(
+        self,
+        qcode: str,
+        params: dict,
+    ) -> None:
+        """Genere automatiquement le(s) graphique(s) PNG specifiques a une question.
+
+        Appele apres l'affichage du rapport de chaque question canonique
+        (Q1.a, Q1.b, Q1.c, Q1.d, Q2, Q3.a, Q3.b, Q3.c).
+
+        Chaque question genere UNIQUEMENT son graphique adapte (pas tous).
+        Si matplotlib est absent ou si une erreur survient, on logue
+        silencieusement sans casser la commande utilisateur.
+        """
+        try:
+            from src.engines.question_graphs import (
+                generate_graphs_for_question, graph_count_for,
+            )
+        except ImportError:
+            return
+
+        if graph_count_for(qcode) == 0:
+            return
+
+        core = self.orchestrator.pipeline.spectral_core
+        try:
+            paths = generate_graphs_for_question(
+                question=qcode,
+                core=core,
+                params=params,
+                output_dir=Path("data/graphs"),
+                dpi=150,
+            )
+        except Exception as exc:
+            logger.warning("auto-graph %s : %s", qcode, exc)
+            return
+
+        if not paths:
+            return
+
+        # Affiche un panneau Rich indiquant les PNG generes
+        lines = [
+            f"  [bold]Question[/bold]   : {qcode}",
+            f"  [bold]Nombre[/bold]     : {len(paths)} graphique"
+            + ("s" if len(paths) > 1 else ""),
+        ]
+        for p in paths:
+            lines.append(f"    [cyan]{p}[/cyan]")
+        lines.append("")
+        lines.append("  [dim]PNG haute resolution (150 dpi) avec annotations et formule citable.[/dim]")
+        console.print(Panel(
+            "\n".join(lines),
+            title=f"[bright_green]>>>  Graphique auto-genere ({qcode})  <<<[/bright_green]",
+            border_style="bright_green", padding=(1, 2),
+        ))
 
     async def _handle_debat(self, cmd: str) -> bool:
         """Commande `debat <theme>` : lance un debat contradictoire Gabriel vs Critique.

@@ -73,36 +73,100 @@ def render_png(
     xs = [p.n for p in pts]
     ys = [p.y_float for p in pts]
 
-    fig, ax = plt.subplots(figsize=(9, 5.5), dpi=dpi)
+    # Palette scientifique cohérente (bleu nuit + bordeaux + vert cible)
+    COLOR_PRIMARY   = "#1f4e8c"   # bleu nuit
+    COLOR_SECONDARY = "#c0392b"   # bordeaux
+    COLOR_TARGET    = "#27ae60"   # vert
+    COLOR_ANNOTATE  = "#8e44ad"   # violet (points remarquables)
+    COLOR_GRID      = "#cccccc"
 
-    # Style scientifique sobre
-    ax.plot(xs, ys, marker="o", markersize=3.5, linewidth=1.3,
-            color="#1f4e8c", label=curve.kind.value)
+    fig, ax = plt.subplots(figsize=(10, 6), dpi=dpi)
+    fig.patch.set_facecolor("#fafafa")
+    ax.set_facecolor("#ffffff")
 
-    # Serie secondaire
+    # Courbe principale (marqueurs + ligne)
+    ax.plot(xs, ys, marker="o", markersize=4.5, linewidth=1.6,
+            color=COLOR_PRIMARY, label=curve.kind.value,
+            markeredgecolor="white", markeredgewidth=0.6, zorder=3)
+
+    # Serie secondaire si présente
     if curve.secondary_points:
         sec_xs = [p.n for p in curve.secondary_points if p.y_float is not None]
         sec_ys = [p.y_float for p in curve.secondary_points if p.y_float is not None]
-        ax.plot(sec_xs, sec_ys, marker="s", markersize=3.0, linewidth=1.0,
-                color="#c0392b", linestyle="--", label=curve.secondary_label)
+        ax.plot(sec_xs, sec_ys, marker="s", markersize=4.0, linewidth=1.3,
+                color=COLOR_SECONDARY, linestyle="--",
+                label=curve.secondary_label,
+                markeredgecolor="white", markeredgewidth=0.5, zorder=3)
 
     # Ligne de reference
     if curve.target_line is not None:
-        ax.axhline(curve.target_line, color="#27ae60", linestyle=":",
-                   linewidth=1.5,
-                   label=curve.target_label or f"cible {curve.target_line:.4g}")
+        ax.axhline(curve.target_line, color=COLOR_TARGET, linestyle=":",
+                   linewidth=1.8,
+                   label=curve.target_label or f"cible {curve.target_line:.4g}",
+                   zorder=2)
 
-    ax.set_title(curve.title, fontsize=12, fontweight="bold")
-    ax.set_xlabel(curve.x_label, fontsize=10)
-    ax.set_ylabel(curve.y_label, fontsize=10)
-    ax.grid(True, alpha=0.3, linestyle=":")
-    ax.legend(loc="best", fontsize=9, framealpha=0.9)
+    # Annotations sur points remarquables (premier, dernier, extremums)
+    if len(pts) >= 2 and curve.target_line is not None:
+        # Premier point
+        ax.annotate(
+            f"{ys[0]:.4f}",
+            xy=(xs[0], ys[0]),
+            xytext=(8, 8), textcoords="offset points",
+            fontsize=8, color=COLOR_ANNOTATE,
+            bbox=dict(boxstyle="round,pad=0.25", fc="white", ec=COLOR_ANNOTATE, lw=0.7, alpha=0.85),
+            zorder=4,
+        )
+        # Dernier point
+        ax.annotate(
+            f"{ys[-1]:.4f}",
+            xy=(xs[-1], ys[-1]),
+            xytext=(-50, 8), textcoords="offset points",
+            fontsize=8, color=COLOR_ANNOTATE,
+            bbox=dict(boxstyle="round,pad=0.25", fc="white", ec=COLOR_ANNOTATE, lw=0.7, alpha=0.85),
+            zorder=4,
+        )
+        # Point divergent max (si distance a la cible > 5%)
+        if curve.target_line is not None:
+            distances = [abs(y - curve.target_line) for y in ys]
+            i_max = distances.index(max(distances))
+            if distances[i_max] > 0.05 and i_max not in (0, len(ys) - 1):
+                ax.annotate(
+                    f"max ecart\n{ys[i_max]:.4f}",
+                    xy=(xs[i_max], ys[i_max]),
+                    xytext=(10, -30), textcoords="offset points",
+                    fontsize=7.5, color=COLOR_ANNOTATE,
+                    bbox=dict(boxstyle="round,pad=0.25", fc="white",
+                              ec=COLOR_ANNOTATE, lw=0.7, alpha=0.85),
+                    arrowprops=dict(arrowstyle="->", color=COLOR_ANNOTATE,
+                                    lw=0.7, alpha=0.7),
+                    zorder=4,
+                )
 
-    # Footer scientifique
+    # Titre et axes
+    ax.set_title(curve.title, fontsize=13, fontweight="bold", pad=15,
+                 color="#222222")
+    ax.set_xlabel(curve.x_label, fontsize=10.5, color="#444444")
+    ax.set_ylabel(curve.y_label, fontsize=10.5, color="#444444")
+    ax.grid(True, alpha=0.4, linestyle=":", color=COLOR_GRID, zorder=1)
+    ax.legend(loc="best", fontsize=9.5, framealpha=0.92, edgecolor="#888888")
+
+    # Spines plus douces
+    for spine in ("top", "right"):
+        ax.spines[spine].set_visible(False)
+    for spine in ("left", "bottom"):
+        ax.spines[spine].set_color("#888888")
+        ax.spines[spine].set_linewidth(0.8)
+
+    # Footer scientifique (formule + timestamp)
     footer = f"Formule : {curve.formula}    |    Genere le : {curve.generated_at[:19]}Z"
-    fig.text(0.5, 0.01, footer, ha="center", fontsize=7, style="italic", color="#555555")
+    fig.text(0.5, 0.01, footer, ha="center", fontsize=7.5,
+             style="italic", color="#555555")
+    # Watermark Gabriel
+    fig.text(0.99, 0.01, "Gabriel Multi-Loop Agent  -  Methode Spectrale Savard",
+             ha="right", fontsize=6.5, color="#888888", style="italic")
 
-    plt.tight_layout(rect=[0, 0.03, 1, 1])
-    plt.savefig(out_path, dpi=dpi, bbox_inches="tight")
+    plt.tight_layout(rect=[0, 0.035, 1, 1])
+    plt.savefig(out_path, dpi=dpi, bbox_inches="tight",
+                facecolor=fig.get_facecolor())
     plt.close(fig)
     return out_path

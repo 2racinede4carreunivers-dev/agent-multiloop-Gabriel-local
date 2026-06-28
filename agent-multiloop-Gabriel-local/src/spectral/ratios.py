@@ -98,6 +98,91 @@ def ratio_asymmetric_chaotic(A_indices: list[int], B_indices: list[int], model: 
 
 
 # =============================================================
+# 5. Chaos-Savard (convention alternee Philippe Thomas Savard)
+# =============================================================
+#
+# Convention specifique observee par Philippe Thomas Savard pour la
+# convergence de l'asymetrie chaotique vers 1/2 :
+#
+#   alt(X) = X[0] - X[1] - X[2] - ... - X[n]
+#          = X[0] - sum(X[1:])
+#
+#   RsP_chaos_savard(A, B) = (alt_SA(A) - alt_SA(B)) / (alt_SB(A) - alt_SB(B))
+#
+# Construction canonique des blocs A et B pour la courbe k=1..K :
+#   A = [p_{k+1}, p_{k+2}, ..., p_{2k}]                  (k primes intermediaires)
+#   B = [p_{2k+1}, p_1, p_2, ..., p_k]                   (le suivant + k initiaux)
+#   |A| = k, |B| = k+1
+#
+# La courbe montre une divergence (-0.072 a k=1) qui converge tres vite
+# vers 1/2 (0.5015 a k=5, ~1/2 pour k >= 6).
+# =============================================================
+
+
+def _alternating_diff(values: list[Fraction]) -> Fraction:
+    """alt([x0, x1, x2, ...]) = x0 - x1 - x2 - ... - xn = x0 - sum(x[1:])."""
+    if not values:
+        raise ValueError("Liste vide pour alternating_diff")
+    return values[0] - sum(values[1:], Fraction(0))
+
+
+def ratio_chaos_savard(
+    A_indices: list[int],
+    B_indices: list[int],
+    model: str = "1/2",
+) -> Fraction:
+    """Rapport spectral selon la convention alternee chaos-Savard.
+
+    RsP = (alt_SA(A) - alt_SA(B)) / (alt_SB(A) - alt_SB(B))
+    avec alt(X) = X[0] - X[1] - ... - X[n].
+
+    Necessite |A| >= 1 et |B| >= 1.
+    Leve ValueError si le denominateur est nul.
+    """
+    if not A_indices or not B_indices:
+        raise ValueError("A et B doivent etre non vides.")
+    fns = get_suite_functions(model)
+    alt_sa_A = _alternating_diff([Fraction(fns["A"](i)) for i in A_indices])
+    alt_sa_B = _alternating_diff([Fraction(fns["A"](i)) for i in B_indices])
+    alt_sb_A = _alternating_diff([Fraction(fns["B"](i)) for i in A_indices])
+    alt_sb_B = _alternating_diff([Fraction(fns["B"](i)) for i in B_indices])
+    num = alt_sa_A - alt_sa_B
+    den = alt_sb_A - alt_sb_B
+    if den == 0:
+        raise ValueError(
+            "Denominateur alterne nul (alt_SB(A) - alt_SB(B) = 0) : "
+            "division impossible."
+        )
+    return num / den
+
+
+def build_chaos_savard_blocks(
+    k: int,
+    primes_positions: list[int] | None = None,
+) -> tuple[list[int], list[int]]:
+    """Construit les blocs A et B canoniques pour la courbe chaos-Savard a l'index k.
+
+    Convention Philippe Thomas Savard :
+      A = [p_{k+1}, ..., p_{2k}]      (positions k+1 .. 2k)
+      B = [p_{2k+1}, p_1, ..., p_k]   (position 2k+1 + positions 1..k)
+
+    Args:
+        k: index de la courbe (k >= 1). Le triplet (|A|, |B|) = (k, k+1).
+        primes_positions: liste optionnelle de positions a utiliser. Si None,
+                          retourne directement les positions [k+1..2k] et
+                          [2k+1, 1, 2, .., k].
+
+    Returns:
+        (A_positions, B_positions) en termes de position 1-indexee.
+    """
+    if k < 1:
+        raise ValueError(f"k doit etre >= 1, recu {k}")
+    A = list(range(k + 1, 2 * k + 1))           # positions k+1 .. 2k
+    B = [2 * k + 1] + list(range(1, k + 1))      # position 2k+1 + positions 1..k
+    return A, B
+
+
+# =============================================================
 # Dispatcher unifie
 # =============================================================
 

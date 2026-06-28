@@ -111,10 +111,31 @@ class ProofPlanner:
                 "Decrire le plan trifocal (FZg, HyRi, MsP).",
                 "Conclure sur la condition geometrique HypR_demi_solFinal.",
             ]
-        else:
+        elif intent in {"epistemological", "conversation", "general"}:
             plan["steps"] = [
-                "Comprendre la question en s'appuyant sur le corpus Savard.",
-                "Generer une reponse grounded.",
-                "Critiquer et raffiner si necessaire.",
+                "Verifier que la question reste DANS LE DOMAINE Savard "
+                "(geometrie spectrale, theorie univers carre, RH, fonction zeta).",
+                "Si HORS-DOMAINE : refuser poliment en une phrase et proposer "
+                "un sujet spectral connexe.",
+                "Si DANS LE DOMAINE : mener une conversation NUANCEE en employant "
+                "le LEXIQUE TECHNIQUE Savard (RsP, suite A/B, digamma, plan trifocal, "
+                "asymetrie ordonnee/chaotique, postulat spectral, etc.).",
+                "Citer naturellement Riemann/Euler/Hilbert/Hardy/von Mangoldt si pertinent.",
+                "Exprimer une OPINION mathematique informee si la question est "
+                "epistemologique, en la marquant explicitement comme telle.",
+                "Conclure en invitant Philippe a approfondir un point precis.",
+            ]
+        else:
+            # Conversation libre / question hors des 3 intents techniques.
+            # Garde-fou domaine + lexique technique injectes via le system prompt.
+            plan["steps"] = [
+                "Verifier que la question relève du domaine Savard (geometrie spectrale, "
+                "theorie univers carre, RH, fonction zeta). Si HORS-DOMAINE, refuser poliment.",
+                "Mener une conversation NUANCEE en s'appuyant sur le lexique technique "
+                "Savard (RsP, suites A/B, digamma, plan trifocal, asymetrie, axiomes).",
+                "Citer Riemann/Euler/Hilbert/Hardy/von Mangoldt si pertinent.",
+                "Exprimer une opinion epistemologique informee si la question le demande, "
+                "en la marquant comme telle ('mon intuition mathematique suggere...').",
+                "Inviter Philippe a preciser ou approfondir.",
             ]
         return plan

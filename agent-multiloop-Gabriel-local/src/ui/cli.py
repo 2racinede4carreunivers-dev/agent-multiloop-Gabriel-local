@@ -6,8 +6,11 @@ import logging
 import os
 from pathlib import Path
 
-from rich.console import Console
+from rich.align import Align
+from rich.console import Console, Group
 from rich.panel import Panel
+from rich.rule import Rule
+from rich.table import Table
 from rich.text import Text
 
 from ..core.config import load_config
@@ -31,6 +34,117 @@ BANNER = """
 |       Methode Spectrale  *  Isabelle/HOL  *  Multi-Loop    |
 +============================================================+
 """
+
+
+def _build_banner_panels() -> Group:
+    """Construit le banner d'ouverture Rich (version pro, multi-panneaux).
+
+    Affiche :
+      1. Un grand titre accrocheur 'BIENVENUE SUR L'AGENT LOCAL Mme. GABRIEL'
+      2. Carte d'identite (auteurs, date, lieu, specialite)
+      3. Citation de Philippe Thomas Savard sur la Methode Spectrale
+      4. Statut technique (container, modeles LLM, multi-loop)
+    """
+    # --- Panel 1 : titre accrocheur ----------------------------------
+    titre_lines = Text.assemble(
+        ("                                                            \n", "bold"),
+        ("    BIENVENUE SUR L'AGENT LOCAL  ", "bold bright_white on deep_pink4"),
+        ("Mme. GABRIEL", "bold bright_yellow on deep_pink4"),
+        ("    \n", "bold bright_white on deep_pink4"),
+        ("                                                            ", "bold"),
+    )
+    titre_panel = Panel(
+        Align.center(titre_lines),
+        border_style="bright_magenta",
+        padding=(1, 4),
+        title="[bold bright_cyan]Multi-Loop Mathematical Agent  v3.5[/bold bright_cyan]",
+        subtitle="[dim]Methode Spectrale  -  Isabelle/HOL  -  RAG Cognitif[/dim]",
+    )
+
+    # --- Panel 2 : carte d'identite ----------------------------------
+    carte = Table.grid(padding=(0, 2), expand=True)
+    carte.add_column(style="bold cyan", justify="right", no_wrap=True)
+    carte.add_column(style="white")
+    carte.add_row("Auteur scientifique :", "[bold bright_white]Philippe Thomas Savard[/bold bright_white]")
+    carte.add_row(
+        "Equipe applicative :",
+        "[bold]E1[/bold] [dim](emergent.sh)[/dim]   "
+        "[bold]Gordon[/bold] [dim](Docker Desktop)[/dim]   "
+        "[bold]Copilot[/bold] [dim](Microsoft)[/dim]   "
+        "[bold]Philippe Thomas Savard[/bold]",
+    )
+    carte.add_row("Date :", "Le vingt-sept juin deux-mille vingt-six")
+    carte.add_row("Lieu :", "Levis, Chaudiere-Appalaches, Canada")
+    carte.add_row(
+        "Specialite :",
+        "[italic]La geometrie du spectre des nombres premiers[/italic]\n"
+        "[dim](Solution personnelle de Savard a l'enigme de Bernhard Riemann)[/dim]",
+    )
+    carte_panel = Panel(
+        carte,
+        border_style="cyan",
+        padding=(1, 2),
+        title="[bold]Carte d'identite[/bold]",
+        title_align="left",
+    )
+
+    # --- Panel 3 : citation Savard -----------------------------------
+    citation_texte = Text.assemble(
+        ("\"", "bright_yellow"),
+        (
+            "La geometrie du spectre des nombres premiers revele un ",
+            "italic white",
+        ),
+        ("rapport spectral universel 1/k", "italic bold bright_yellow"),
+        (
+            " commun a tous les nombres premiers P de l'ensemble des entiers. "
+            "La ou l'arithmetique classique impose un ecart minimal d'une unite "
+            "entre deux entiers, cette ",
+            "italic white",
+        ),
+        ("geometrie spectrale", "italic bold bright_cyan"),
+        (
+            " admet un rapport strictement inferieur a 1 — typiquement ",
+            "italic white",
+        ),
+        ("1/2", "italic bold bright_green"),
+        (
+            " — devoilant une structure cachee qui organise la distribution des nombres premiers.",
+            "italic white",
+        ),
+        ("\"", "bright_yellow"),
+        ("\n\n— Philippe Thomas Savard", "dim italic"),
+    )
+    citation_panel = Panel(
+        Align.center(citation_texte),
+        border_style="bright_yellow",
+        padding=(1, 3),
+        title="[bold bright_yellow]>>>  Methode Spectrale - Postulat fondateur  <<<[/bold bright_yellow]",
+    )
+
+    # --- Panel 4 : statut technique ----------------------------------
+    tech = Table.grid(padding=(0, 2), expand=True)
+    tech.add_column(style="bold green", no_wrap=True)
+    tech.add_column(style="white")
+    tech.add_row("[OK] Container :", "[bright_white]llm-agent-multiloop-run[/bright_white]")
+    tech.add_row(
+        "[OK] Mode :",
+        "Multi-Loop  (Ollama -> Claude Sonnet 4.5 -> OpenAI GPT-4o)",
+    )
+    tech.add_row("[OK] Validation :", "Isabelle/HOL  +  Slow-Motion Debugger  +  RAG (12 regimes)")
+    tech.add_row(
+        "[OK] Capacite :",
+        "1000 premiers indexes  -  Sections I a XII de methode_spectral.thy",
+    )
+    tech_panel = Panel(
+        tech,
+        border_style="green",
+        padding=(1, 2),
+        title="[bold green]Statut technique[/bold green]",
+        title_align="left",
+    )
+
+    return Group(titre_panel, Text(""), carte_panel, Text(""), citation_panel, Text(""), tech_panel)
 
 
 HELP_TEXT = """
@@ -116,7 +230,8 @@ class CLIInterface:
         return self._debug_session
 
     def banner(self) -> None:
-        console.print(Text(BANNER, style="bold magenta"))
+        console.print(_build_banner_panels())
+        console.print()
 
     def help(self) -> None:
         console.print(Text(HELP_TEXT, style="cyan"))
@@ -2229,16 +2344,30 @@ class CLIInterface:
                 "  [dim]Raccourcis clavier actifs (Tab=completion, Ctrl+R=recherche, "
                 "Up/Down=historique). Tapez 'commandes' pour tout voir.[/dim]"
             )
-        console.print(f"\n  Agent Multi-Loop pret. Bonjour {self.user_name} !", style="bold")
-        console.print("  Tapez 'aide' pour l'aide rapide, 'commandes' pour la liste complete, 'quitter' pour sortir.", style="dim")
         console.print(
-            "  [bold green]>>> Pour decouvrir Gabriel :[/bold green]  "
-            "[cyan]ask[/cyan] = commandes principales  |  "
-            "[cyan]ask type[/cyan] = fonctions  |  "
-            "[cyan]ask rules[/cyan] = guide d'interaction"
+            Panel(
+                Text.assemble(
+                    ("  Agent pret  -  ", "bold bright_green"),
+                    (f"Bonjour {self.user_name} !\n", "bold bright_white"),
+                    ("  Tapez ", "dim"),
+                    ("'aide'", "bold cyan"),
+                    (" pour le menu rapide, ", "dim"),
+                    ("'commandes'", "bold cyan"),
+                    (" pour tout voir, ", "dim"),
+                    ("'quitter'", "bold cyan"),
+                    (" pour sortir.\n", "dim"),
+                    ("  Decouverte guidee : ", "dim"),
+                    ("ask", "bold magenta"),
+                    (" / ", "dim"),
+                    ("ask type", "bold magenta"),
+                    (" / ", "dim"),
+                    ("ask rules", "bold magenta"),
+                ),
+                border_style="bright_green",
+                padding=(0, 2),
+            )
         )
         console.print()
-        console.print("  " + "-" * 56)
 
         while True:
             try:

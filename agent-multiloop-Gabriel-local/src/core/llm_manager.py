@@ -44,7 +44,7 @@ class ClaudeClient:
     
     def __init__(self, api_key: str | None = None,
                  model: str | None = None,
-                 temperature: float = 0.7, max_tokens: int = 4096, timeout: float = 20):
+                 temperature: float = 0.7, max_tokens: int = 4096, timeout: float = 60):
         import os
 
         self.api_key = api_key or os.getenv("CLAUDE_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
@@ -173,7 +173,7 @@ class LLMManager:
             timeout=float(
                 os.environ.get("CLAUDE_TIMEOUT_SECONDS")
                 or claude_cfg.get("timeout_seconds")
-                or 20
+                or 60  # augmente de 20s -> 60s (2026-06-28, eviter timeouts Sonnet 4.5)
             ),
         )
 
@@ -185,7 +185,7 @@ class LLMManager:
             timeout=float(
                 os.environ.get("OPENAI_TIMEOUT_SECONDS")
                 or openai_cfg.get("timeout_seconds")
-                or 30
+                or 45  # augmente de 30s -> 45s en coherence avec Claude 60s
             ),
         )
 

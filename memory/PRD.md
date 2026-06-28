@@ -47,6 +47,22 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 
 ## Changelog
 
+### [2026-06-28] Améliorations UX & robustesse (v3.5)
+- **🎨 Banner Rich pro 4 panneaux** :
+  1. Titre accrocheur en grandes lettres : « BIENVENUE SUR L'AGENT LOCAL Mme. GABRIEL »
+  2. Carte d'identité (auteurs : Philippe Thomas Savard / E1 emergent.sh / Gordon Docker Desktop / Copilot Microsoft, date « le vingt-sept juin deux-mille vingt-six », lieu « Lévis, Chaudière-Appalaches, Canada »)
+  3. Citation Savard reformulée style pro/accrocheur sur la géométrie spectrale
+  4. Statut technique (container, modèles LLM, validation Isabelle/HOL/RAG/12 régimes)
+  + panneau de bienvenue final avec ✓ pret + raccourcis colorés
+- **⏱️ Timeouts LLM augmentés** (`src/core/llm_manager.py` + `.env`) :
+  - Claude : **20s → 60s** (évite les timeouts récurrents observés en session 2026-06-27)
+  - OpenAI : **30s → 45s** (cohérence avec Claude)
+  - Ollama : 10s (inchangé)
+- **🧠 Intégrateur mémoire activé** : nouveau `src/core/integrateur_memoire.py` qui ponte vers le RAG officiel `memory/adaptateur_cognitif_rag.py` (12 régimes, 37 lemmes, Sections XI + XII chargées). Plus de warning « No module named 'integrateur_memoire' » au démarrage.
+- **🔧 Parser tuples confirmé robuste** : `_extract_tuples` gère `(23 41,7)` → `[23, 41, 7]`, `(-3 et 29)` → `[-3, 29]`, etc. Tests paramétrés ajoutés (6 cas).
+- **Tests** : 11 nouveaux tests pytest (`test_ui_pro_banner_and_memoire.py`) pour banner, integrateur, timeouts, parser.
+- **Régression Pytest : 559/559 PASS** ✅ (548 → 559)
+
 ### [2026-02-17] Synchronisation Theory <-> Agent Cognitif + Tests d'intégration
 - **`memory/methode_spectral_section_XII.py`** créé : règles Section XII paramétriques + helpers de calcul (`construire_suite_A`, `construire_suite_B`, `somme_A_pos`, `somme_B_pos`, `somme_A_neg`, `somme_B_neg`, `terme_A_pos`, `terme_B_pos`). 10 entrées RAG.
 - **`memory/dictionnaire_spectral.py`** étendu : 2 nouveaux régimes ajoutés (`regime_construction_termes`, `regime_parametrique_1_k`) — les 10 régimes historiques sont préservés.

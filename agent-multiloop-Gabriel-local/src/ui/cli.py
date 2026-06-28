@@ -252,6 +252,10 @@ HELP_TEXT = """
   splash / about / banner   Reaffiche le banner d'ouverture (utile pour les
                             captures d'ecran et demos en direct)
   citation / cite  Affiche les 5 citations historiques sur l'Hypothese de Riemann
+  debat <theme>    Debat contradictoire Gabriel vs Critique (5 personas, JSON+MD)
+                   ex: debat --persona=logicien --tours=4 La preuve est-elle close ?
+  debat personas   Liste les 5 personas (analytique, logicien, sceptique,
+                   geometre, computationnaliste)
   corpus           Resume des fichiers .thy charges
   corpus detail    Vue detaillee : sections, defs, lemmes par fichier
   primes           Statut de la table des nombres premiers
@@ -384,6 +388,8 @@ class CLIInterface:
         if c in {"citation", "citations", "cite"}:
             self._show_all_citations()
             return True
+        if c == "debat" or c.startswith("debat ") or c.startswith("debat-"):
+            return await self._handle_debat(cmd)
         if c == "cognitive" or c.startswith("cognitive "):
             return self._handle_cognitive(cmd)
         if c == "env-check" or c == "env" or c.startswith("env "):
@@ -921,6 +927,16 @@ class CLIInterface:
                 ('debug "<q>"',
                  "Mode debug interactif (decompose/bypass/comment)"),
             ]),
+            ("[bold cyan]DEBAT CONTRADICTOIRE[/bold cyan]", [
+                ("debat <theme>",
+                 "Debat Gabriel vs Critique (rotation 5 personas)"),
+                ("debat personas",
+                 "Liste les 5 personas (analytique|logicien|sceptique|geometre|computationnaliste)"),
+                ("debat --persona=<k> <th>",
+                 "Force une persona unique"),
+                ("debat --tours=<N> <th>",
+                 "Configure le nombre de tours (defaut 3)"),
+            ]),
             ("[bold cyan]TESTS & CI[/bold cyan]", [
                 ("ci  (tests, pytest)",
                  "Lance les 236 tests pytest locaux"),
@@ -1203,6 +1219,158 @@ class CLIInterface:
         except (ValueError, ZeroDivisionError) as exc:
             console.print(f"  [red]Erreur : {exc}[/red]")
         return True
+
+    async def _handle_debat(self, cmd: str) -> bool:
+        """Commande `debat <theme>` : lance un debat contradictoire Gabriel vs Critique.
+
+        Sous-commandes :
+          debat personas / debat list   Liste les 5 personas disponibles
+          debat <theme>                  Lance un debat en rotation des 5 personas
+          debat --persona=<key> <theme>  Force une persona unique
+          debat --tours=<N> <theme>      Configure le nombre de tours (defaut 3)
+          debat --persona=logicien --tours=4 <theme>
+        """
+        from rich.table import Table as _Table
+        from ..multiloop.debat_orchestrator import DebatOrchestrator, PERSONAS
+
+        raw = cmd.strip()
+        # Supprime le "debat " prefix (case-insensitive)
+        if raw.lower().startswith("debat "):
+            args_str = raw[6:].strip()
+        elif raw.lower() == "debat":
+            args_str = ""
+        else:
+            args_str = raw
+
+        # Sous-commande : list / personas
+        if args_str.lower() in {"list", "personas", "persona", ""}:
+            if args_str == "":
+                console.print(Panel(
+                    "  [bold]Commande debat[/bold] - debat contradictoire Gabriel vs Critique\n\n"
+                    "  Usage :\n"
+                    "    [yellow]debat <theme>[/yellow]\n"
+                    "        Lance un debat en rotation des 5 personas\n"
+                    "    [yellow]debat --persona=<key> <theme>[/yellow]\n"
+                    "        Force une persona (analytique|logicien|sceptique|\n"
+                    "        geometre|computationnaliste)\n"
+                    "    [yellow]debat --tours=<N> <theme>[/yellow]\n"
+                    "        Nombre de tours Critique+Gabriel (defaut 3)\n"
+                    "    [yellow]debat personas[/yellow]   Liste les 5 personas\n\n"
+                    "  Exemples :\n"
+                    "    [cyan]debat Le rapport 1/k est-il une coincidence ?[/cyan]\n"
+                    "    [cyan]debat --persona=logicien --tours=4 La preuve Isabelle est-elle close ?[/cyan]\n"
+                    "    [cyan]debat --persona=sceptique La Methode Spectrale est-elle falsifiable ?[/cyan]\n\n"
+                    "  Sortie : data/debats/<date>_<id>.json + .md (citables)",
+                    title="[cyan]Aide debat[/cyan]", border_style="cyan",
+                ))
+                return True
+            tbl = _Table(
+                title="5 Personas de Critique Virtuel", border_style="cyan",
+                show_lines=True,
+            )
+            tbl.add_column("Cle", style="bold yellow", no_wrap=True)
+            tbl.add_column("Nom", style="cyan", no_wrap=True)
+            tbl.add_column("Specialite")
+            for entry in DebatOrchestrator.list_personas():
+                tbl.add_row(entry["cle"], entry["nom"], entry["specialite"])
+            console.print(tbl)
+            console.print(
+                "[dim]  Mode par defaut : rotation (chaque tour utilise la persona suivante).[/dim]\n"
+            )
+            return True
+
+        # Parsing des flags --persona=... --tours=...
+        persona = "rotation"
+        nb_tours = DebatOrchestrator.NB_TOURS_DEFAUT
+        theme_parts: list[str] = []
+        for tok in args_str.split():
+            low = tok.lower()
+            if low.startswith("--persona="):
+                persona = tok.split("=", 1)[1].strip().lower()
+            elif low.startswith("--tours="):
+                try:
+                    nb_tours = max(1, int(tok.split("=", 1)[1]))
+                except ValueError:
+                    console.print(
+                        f"[yellow]--tours invalide : '{tok}' (entier attendu)[/yellow]"
+                    )
+                    return True
+            else:
+                theme_parts.append(tok)
+        theme = " ".join(theme_parts).strip()
+
+        if not theme:
+            console.print(
+                "[yellow]Usage : debat <theme>  "
+                "(ex : debat Le rapport 1/k est-il une coincidence ?)[/yellow]\n"
+                "[dim]Tapez 'debat' sans argument pour voir l'aide complete.[/dim]"
+            )
+            return True
+        if persona != "rotation" and persona not in PERSONAS:
+            console.print(
+                f"[yellow]Persona inconnue : '{persona}'.\n"
+                f"Valides : rotation, {', '.join(PERSONAS.keys())}[/yellow]"
+            )
+            return True
+
+        # Lancement
+        llm = self.orchestrator.pipeline.llm
+        orch = DebatOrchestrator(llm=llm)
+        console.print(Panel(
+            f"  [bold]Theme[/bold]     : {theme}\n"
+            f"  [bold]Persona[/bold]   : {persona}\n"
+            f"  [bold]Tours[/bold]     : {nb_tours} (Gabriel-these + "
+            f"{nb_tours - 1} x Critique+Gabriel + Synthese)\n"
+            f"  [dim]Alternance Claude <-> OpenAI a chaque appel LLM.[/dim]",
+            title="[bright_magenta]>>>  Debat contradictoire en cours...  <<<[/bright_magenta]",
+            border_style="bright_magenta",
+        ))
+        try:
+            result = await orch.run(theme=theme, nb_tours=nb_tours, persona=persona)
+        except ValueError as exc:
+            console.print(f"[red]Erreur debat : {exc}[/red]")
+            return True
+        except Exception as exc:
+            console.print(f"[red]Erreur inattendue debat : {exc}[/red]")
+            logger.exception("debat KO")
+            return True
+
+        # Affichage des tours en panneaux alternes
+        for tour in result.tours:
+            if tour.role == "gabriel":
+                titre = (
+                    f"[bold bright_yellow]Tour {tour.numero} - Gabriel[/bold bright_yellow]"
+                    f"  [dim](via {tour.provider})[/dim]"
+                )
+                border = "bright_yellow"
+            else:
+                persona_meta = PERSONAS.get(tour.persona or "", {})
+                titre = (
+                    f"[bold bright_cyan]Tour {tour.numero} - Critique : "
+                    f"{persona_meta.get('nom', tour.persona)}[/bold bright_cyan]"
+                    f"  [dim](via {tour.provider})[/dim]"
+                )
+                border = "bright_cyan"
+            console.print(Panel(tour.texte, title=titre, border_style=border, padding=(1, 2)))
+            console.print()
+
+        console.print(Panel(
+            result.synthese_citable,
+            title="[bold bright_green]Synthese citable (publication academique)[/bold bright_green]",
+            border_style="bright_green", padding=(1, 2),
+        ))
+        console.print()
+        console.print(Panel(
+            f"  [bold]JSON[/bold]      : {result.json_path}\n"
+            f"  [bold]Markdown[/bold]  : {result.markdown_path}\n"
+            f"  [bold]ID[/bold]        : {result.debat_id}\n"
+            f"  [bold]Duree[/bold]     : {result.duree_secondes:.1f} s\n"
+            f"  [bold]Tours[/bold]     : {len(result.tours)}\n"
+            f"  [dim]Le fichier .md est pret a etre cite dans un article.[/dim]",
+            title="[green]Debat sauvegarde[/green]", border_style="green",
+        ))
+        return True
+
 
     def _handle_trifocal(self, cmd: str) -> bool:
         """Commande `trifocal [axes|postulats|valider <n> [modele]|riemann]`.

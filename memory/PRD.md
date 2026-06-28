@@ -4,14 +4,23 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.6 — 600/600 tests Pytest ✅ — Commande `debat <theme>` ajoutée (Gabriel vs Critique Virtuel avec 5 personas, alternance Claude/OpenAI, sortie JSON+Markdown citable)**
+**Production-Ready v3.7 — 611/611 tests Pytest ✅ — Commande `debat` v2 : OneDrive Windows + nommage chronologique contextuel + timeouts Claude/OpenAI alignés à 45s**
 
-### Changelog 2026-02 (debat command)
+### Changelog 2026-02 v3.7 (debat OneDrive + naming)
+- `src/multiloop/debat_orchestrator.py` :
+  - Fonction `_slugify_theme()` : Unicode NFD + ASCII + slug Windows-safe, tronqué à 60 chars au dernier tiret.
+  - Fonction `_default_output_dir()` : lit `DEBAT_OUTPUT_DIR` env var (fallback `data/debats`).
+  - `_build_filename_stem()` : format `YYYY-MM-DD_HHhMMmSSs_<slug>_<id8>` (tri alpha = tri chrono).
+- `docker-compose.yml` : mount `${HOST_DEBAT_DIR:-./data/debats}:/home/agent/app/data/debats-onedrive`.
+- `config.yaml` : `claude.timeout_seconds: 45` et `openai.timeout_seconds: 45` (alignés sur souhait Philippe).
+- 11 nouveaux tests (slugification, env var, nommage chronologique).
+- **`.env` non modifié** : snippet fourni à Philippe pour collage manuel.
+
+### Changelog 2026-02 v3.6 (debat command base)
 - `src/multiloop/debat_orchestrator.py` : 5 personas (analytique, logicien, sceptique, geometre, computationnaliste), mode rotation par défaut.
 - Alternance Claude ↔ OpenAI à chaque appel LLM (Ollama exclu du débat).
-- Sauvegarde duale : `data/debats/<date>_<id>.json` + `<date>_<id>.md` (publication-ready).
+- Sauvegarde duale : JSON + Markdown citable.
 - `src/ui/cli.py` : commande `debat`, `debat personas`, `debat --persona=K --tours=N <theme>`. Bug `cmd_lower` corrigé.
-- 25 nouveaux tests dans `tests/test_debat_orchestrator.py`.
 
 ## Architecture
 ```

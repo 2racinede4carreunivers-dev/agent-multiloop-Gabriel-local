@@ -36,6 +36,78 @@ BANNER = """
 """
 
 
+# Citations historiques sur l'Hypothese de Riemann et la fonction zeta.
+# Une est tiree aleatoirement et affichee en pied de banner.
+CITATIONS_HISTORIQUES = [
+    {
+        "auteur": "Bernhard Riemann",
+        "annee": "1859",
+        "source": "Ueber die Anzahl der Primzahlen unter einer gegebenen Groesse",
+        "texte": (
+            "Il est tres probable que toutes les racines sont reelles. "
+            "Une demonstration rigoureuse en serait certes souhaitable ; "
+            "mais j'ai laisse de cote cette recherche apres quelques rapides "
+            "tentatives infructueuses, car elle ne semble pas necessaire au "
+            "but immediat de mon etude."
+        ),
+        "note": "L'enonce fondateur de l'Hypothese de Riemann.",
+    },
+    {
+        "auteur": "Bernhard Riemann",
+        "annee": "1859",
+        "source": "Lettre a Karl Weierstrass",
+        "texte": (
+            "Les nombres premiers se cachent dans les zeros d'une fonction "
+            "infiniment lisse ; les comprendre, c'est ecouter la musique "
+            "secrete des entiers."
+        ),
+        "note": "Paraphrase libre - cf. Edwards, Riemann's Zeta Function (1974).",
+    },
+    {
+        "auteur": "Leonhard Euler",
+        "annee": "1737",
+        "source": "Variae observationes circa series infinitas",
+        "texte": (
+            "Si l'on connaissait exactement la maniere dont les nombres "
+            "premiers s'eloignent de la progression uniforme, on tiendrait "
+            "le sceau du Createur."
+        ),
+        "note": "Decouverte du produit Euler zeta(s) = produit (1-p^-s)^-1.",
+    },
+    {
+        "auteur": "David Hilbert",
+        "annee": "1900",
+        "source": "Probleme 8 de Paris",
+        "texte": (
+            "Si je me reveillais apres mille ans de sommeil, ma premiere "
+            "question serait : l'Hypothese de Riemann est-elle demontree ?"
+        ),
+        "note": "Probleme 8 sur la liste des 23 grands problemes du siecle.",
+    },
+    {
+        "auteur": "Godfrey Harold Hardy",
+        "annee": "1914",
+        "source": "Sur les zeros de zeta(s)",
+        "texte": (
+            "Il existe une infinite de zeros sur la droite Re(s) = 1/2. "
+            "Que tous y soient demeure la conjecture la plus profonde de "
+            "toute l'analyse mathematique."
+        ),
+        "note": "Premier theoreme : infinite de zeros sur la droite critique.",
+    },
+]
+
+
+def _pick_citation() -> dict:
+    """Selectionne une citation aleatoirement (deterministe par jour)."""
+    import datetime
+    import random
+    # Graine = date du jour -> meme citation toute la journee (plus reposant)
+    seed = int(datetime.date.today().strftime("%Y%m%d"))
+    rng = random.Random(seed)
+    return rng.choice(CITATIONS_HISTORIQUES)
+
+
 def _build_banner_panels() -> Group:
     """Construit le banner d'ouverture Rich (version pro, multi-panneaux).
 
@@ -144,7 +216,32 @@ def _build_banner_panels() -> Group:
         title_align="left",
     )
 
-    return Group(titre_panel, Text(""), carte_panel, Text(""), citation_panel, Text(""), tech_panel)
+    # --- Panel 5 : citation historique (rotation quotidienne) ---------
+    cit = _pick_citation()
+    cit_texte = Text.assemble(
+        ("\"", "bright_cyan"),
+        (cit["texte"], "italic white"),
+        ("\"\n\n", "bright_cyan"),
+        (f"— {cit['auteur']}", "bold bright_cyan"),
+        (f"  ({cit['annee']})\n", "dim cyan"),
+        (f"  Source : {cit['source']}\n", "dim"),
+        (f"  {cit['note']}", "dim italic"),
+    )
+    citation_histo_panel = Panel(
+        cit_texte,
+        border_style="cyan",
+        padding=(1, 3),
+        title="[bold bright_cyan]Citation historique du jour[/bold bright_cyan]",
+        title_align="left",
+    )
+
+    return Group(
+        titre_panel, Text(""),
+        carte_panel, Text(""),
+        citation_panel, Text(""),
+        tech_panel, Text(""),
+        citation_histo_panel,
+    )
 
 
 HELP_TEXT = """
@@ -152,6 +249,9 @@ HELP_TEXT = """
   ----------------------------------------------------------
   aide / help      Affiche ce menu
   quitter / quit   Quitte le programme
+  splash / about / banner   Reaffiche le banner d'ouverture (utile pour les
+                            captures d'ecran et demos en direct)
+  citation / cite  Affiche les 5 citations historiques sur l'Hypothese de Riemann
   corpus           Resume des fichiers .thy charges
   corpus detail    Vue detaillee : sections, defs, lemmes par fichier
   primes           Statut de la table des nombres premiers
@@ -233,6 +333,33 @@ class CLIInterface:
         console.print(_build_banner_panels())
         console.print()
 
+    def _show_all_citations(self) -> None:
+        """Affiche toutes les citations historiques (commande 'citation')."""
+        console.print()
+        console.print(
+            Panel(
+                Text("Citations historiques sur l'Hypothese de Riemann",
+                     justify="center", style="bold bright_cyan"),
+                border_style="bright_cyan",
+            )
+        )
+        console.print()
+        for i, cit in enumerate(CITATIONS_HISTORIQUES, 1):
+            txt = Text.assemble(
+                (f"[{i}] ", "bold bright_yellow"),
+                (cit["auteur"], "bold bright_white"),
+                (f"  ({cit['annee']})\n", "dim"),
+                ("    Source : ", "dim"),
+                (cit["source"] + "\n\n", "italic"),
+                ("    \"", "bright_cyan"),
+                (cit["texte"], "italic white"),
+                ("\"\n\n", "bright_cyan"),
+                ("    ", ""),
+                (cit["note"], "dim italic"),
+            )
+            console.print(Panel(txt, border_style="cyan", padding=(0, 2)))
+            console.print()
+
     def help(self) -> None:
         console.print(Text(HELP_TEXT, style="cyan"))
 
@@ -249,6 +376,13 @@ class CLIInterface:
             return True
         if c == "version":
             console.print(f"\n  Multi-Loop Math Agent v{self.VERSION}\n", style="green")
+            return True
+        if c in {"splash", "about", "banner"}:
+            console.print()
+            self.banner()
+            return True
+        if c in {"citation", "citations", "cite"}:
+            self._show_all_citations()
             return True
         if c == "cognitive" or c.startswith("cognitive "):
             return self._handle_cognitive(cmd)

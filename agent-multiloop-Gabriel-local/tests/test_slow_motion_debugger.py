@@ -25,7 +25,24 @@ from src.multiloop.request_decomposer import RequestDecomposer
 from src.multiloop.slow_motion_debugger import SlowMotionDebugger
 
 
-THEORIES = str(ROOT / "theories")
+def _resolve_theories_dir() -> str:
+    """Resout le dossier theories (local, container Docker, ou env var)."""
+    import os as _os
+    env_dir = _os.environ.get("GABRIEL_THEORIES_DIR")
+    if env_dir and Path(env_dir).is_dir():
+        return env_dir
+    for cand in (
+        ROOT / "theories",
+        Path("/theories"),
+        Path("/home/agent/app/theories"),
+        Path("/app/agent-multiloop-Gabriel-local/theories"),
+    ):
+        if cand.is_dir():
+            return str(cand)
+    return str(ROOT / "theories")  # fallback
+
+
+THEORIES = _resolve_theories_dir()
 
 
 # ============================================================

@@ -20,6 +20,27 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def _resolve_theory_path(filename: str = "methode_spectral.thy") -> Path:
+    """Resout le chemin du fichier .thy en testant plusieurs emplacements.
+
+    En local : ROOT/theories/<filename>.
+    Dans Docker : /theories/<filename> (mount externe), /home/agent/app/theories/<filename>,
+    ou le chemin ROOT classique.
+    """
+    import os as _os
+    candidates = [
+        Path(_os.environ.get("GABRIEL_THEORIES_DIR", "")) / filename,
+        ROOT / "theories" / filename,
+        Path("/theories") / filename,
+        Path("/home/agent/app/theories") / filename,
+        Path("/app/agent-multiloop-Gabriel-local/theories") / filename,
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return ROOT / "theories" / filename  # default (sera caught by assert)
+
+
 # =============================================================================
 # Section XII : verifications numeriques des helpers
 # =============================================================================
@@ -160,14 +181,28 @@ class TestSectionsXIXIIEnregistrement:
 # =============================================================================
 class TestTheoryFile:
     def test_methode_spectral_thy_existe(self):
-        assert (ROOT / "theories" / "methode_spectral.thy").exists()
+        thy_path = _resolve_theory_path("methode_spectral.thy")
+        assert thy_path.exists(), (
+            f"methode_spectral.thy introuvable parmi les emplacements teste(s). "
+            f"Defini GABRIEL_THEORIES_DIR pour pointer vers le dossier theories."
+        )
 
     def test_methode_spectral_thy_static_check(self):
         """Le static-check passe (0 erreur). Warnings autorises."""
+        thy_path = _resolve_theory_path("methode_spectral.thy")
+        if not thy_path.exists():
+            pytest.skip(f"methode_spectral.thy introuvable a {thy_path}")
+        # Le script de static-check vit dans le repo, pas dans le mount theories
+        script_candidates = [
+            ROOT / "scripts" / "isabelle_static_check.py",
+            Path("/home/agent/app/scripts/isabelle_static_check.py"),
+            Path("/app/agent-multiloop-Gabriel-local/scripts/isabelle_static_check.py"),
+        ]
+        script = next((s for s in script_candidates if s.exists()), None)
+        if script is None:
+            pytest.skip("isabelle_static_check.py introuvable")
         result = subprocess.run(
-            [sys.executable,
-             str(ROOT / "scripts" / "isabelle_static_check.py"),
-             str(ROOT / "theories" / "methode_spectral.thy")],
+            [sys.executable, str(script), str(thy_path)],
             capture_output=True, text=True, check=False,
         )
         assert result.returncode == 0, f"static-check FAIL:\n{result.stdout}"

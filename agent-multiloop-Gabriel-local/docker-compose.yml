@@ -40,7 +40,13 @@ services:
       - ./main_cli.py:/home/agent/app/main_cli.py:ro
       - ./config.yaml:/home/agent/app/config.yaml:ro
       - ./tests:/home/agent/app/tests:ro
+      - ./scripts:/home/agent/app/scripts:ro
       - ./theories:/theories
+      # Mount supplementaire de theories DANS le repo root (pour les tests qui
+      # utilisent ROOT/theories et le code CertaintyKernel) :
+      - ./theories:/home/agent/app/theories:ro
+      # Guide de configuration (utilise par tests/test_env_config.py) :
+      - ./CONFIG_ENV_GUIDE.md:/home/agent/app/CONFIG_ENV_GUIDE.md:ro
       # Module RAG cognitif Gabriel (sinon : No module named 'memory')
       - ./memory:/home/agent/app/memory
       # Monter le .env local (pas celui du dossier parent !)

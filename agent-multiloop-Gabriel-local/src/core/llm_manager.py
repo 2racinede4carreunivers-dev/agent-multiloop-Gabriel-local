@@ -209,43 +209,16 @@ class LLMManager:
         return self._ollama_available
 
     def _augmenter_prompt_avec_memoire(self, prompt: str, domaine: str = "general") -> str:
-        """Augmente le prompt avec contexte de mémoire (RAG sémantique + syntaxique)"""
-        
+        """Augmente le prompt avec contexte de mémoire (RAG sémantique Gabriel).
+
+        Utilise l'API consolidee de IntegrateurMemoireGabriel.augmenter_prompt()
+        qui detecte automatiquement les regimes spectraux et injecte le contexte.
+        """
         if not INTEGRATEUR_MEMOIRE:
             return prompt
-        
+
         try:
-            # RAG sémantique: contexte conceptuel
-            contexte_conceptuel = INTEGRATEUR_MEMOIRE.augmenter_prompt_conceptuel(prompt)
-            
-            # RAG syntaxique: patterns techniques
-            pattern = INTEGRATEUR_MEMOIRE.trouver_pattern_optimal(prompt, domaine)
-            lemmes = INTEGRATEUR_MEMOIRE.trouver_lemmes_pertinents(prompt, top_n=2)
-            
-            prompt_augmente = f"""{prompt}
-
-╔════════════════════════════════════════════════════════════════╗
-║              CONTEXTE MÉMOIRE GABRIEL INJECTÉ                 ║
-╚════════════════════════════════════════════════════════════════╝
-
-CADRE CONCEPTUEL:
-─────────────────
-{contexte_conceptuel[:500]}...
-
-TECHNIQUES RECOMMANDÉES:
-───────────────────────
-"""
-            
-            if pattern:
-                prompt_augmente += f"\nPattern optimal: {pattern.nom} (taux: {pattern.taux_reussite:.0%})\n"
-            
-            if lemmes:
-                prompt_augmente += "\nLemmes validés:\n"
-                for key, lemme in lemmes:
-                    prompt_augmente += f"  - {key}: {lemme['taux_reussite']:.0%}\n"
-            
-            return prompt_augmente
-        
+            return INTEGRATEUR_MEMOIRE.augmenter_prompt(prompt, domaine=domaine)
         except Exception as e:
             logger.warning(f"⚠️ Erreur injection mémoire: {e}")
             return prompt

@@ -4,7 +4,17 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.10 — 679/679 tests Pytest ✅ — Bug critique `augmenter_prompt_conceptuel` corrigé : plus aucune `AttributeError` dans le pipeline LLM**
+**Production-Ready v3.11 — 692/692 tests Pytest ✅ — 6 fails du container Docker corrigés via résolution multi-emplacements des chemins**
+
+### Changelog 2026-02 v3.11 (fix 6 fails container Docker - chemins portables)
+- `tests/test_env_config.py` : helper `_find_repo_root()` + `REPO_ROOT` dynamique. Tous les chemins absolus `/app/agent-multiloop-Gabriel-local/...` remplacés par `REPO_ROOT / "..."`. Tests TestConfigGuide skip proprement si CONFIG_ENV_GUIDE.md absent.
+- `tests/test_section_XI_XII_integration.py` : helper `_resolve_theory_path()` qui essaye 5 emplacements (env var, ROOT, /theories mount, /home/agent/app/theories, /app/...).
+- `tests/test_slow_motion_debugger.py` : helper `_resolve_theories_dir()` analogue (35 certitudes chargées ≥ 25 requises).
+- `docker-compose.yml` : 3 mounts supplémentaires pour cohérence :
+  - `./CONFIG_ENV_GUIDE.md:/home/agent/app/CONFIG_ENV_GUIDE.md:ro`
+  - `./theories:/home/agent/app/theories:ro` (en plus de `/theories`)
+  - `./scripts:/home/agent/app/scripts:ro`
+- 13 nouveaux tests sentinelles dans `tests/test_paths_resolution_container_fix.py`.
 
 ### Changelog 2026-02 v3.10 (fix Philippe : API IntegrateurMemoireGabriel)
 - `src/core/llm_manager.py` :

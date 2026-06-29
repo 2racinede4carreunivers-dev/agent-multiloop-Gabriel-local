@@ -43,9 +43,7 @@ class TestEnvLoading:
         # LOADED_ENV_PATH peut etre None si aucun .env n'existe
         # Mais ici on cree un .env canonique a /app/agent-multiloop-Gabriel-local/.env
         # donc il doit etre charge.
-        expected_path = (
-            Path("/app/agent-multiloop-Gabriel-local/.env").resolve()
-        )
+        expected_path = (REPO_ROOT / ".env").resolve()
         if expected_path.exists():
             assert config_module.LOADED_ENV_PATH is not None
             assert Path(config_module.LOADED_ENV_PATH).resolve() == expected_path
@@ -53,12 +51,12 @@ class TestEnvLoading:
     def test_dotenv_charge_les_variables_clauded(self):
         """Apres chargement, CLAUDE_API_KEY doit etre dans os.environ
         (meme avec valeur placeholder)."""
-        if not Path("/app/agent-multiloop-Gabriel-local/.env").exists():
+        if not (REPO_ROOT / ".env").exists():
             pytest.skip(".env canonique absent")
         assert os.environ.get("CLAUDE_API_KEY") is not None
 
     def test_dotenv_charge_anthropic_alias(self):
-        if not Path("/app/agent-multiloop-Gabriel-local/.env").exists():
+        if not (REPO_ROOT / ".env").exists():
             pytest.skip(".env canonique absent")
         # ANTHROPIC_API_KEY est l'alias pour le SDK officiel
         assert os.environ.get("ANTHROPIC_API_KEY") is not None
@@ -68,7 +66,7 @@ class TestEnvLoading:
 # Contenu du .env canonique (presence des balises)
 # ==========================================================================
 class TestEnvContent:
-    ENV_PATH = Path("/app/agent-multiloop-Gabriel-local/.env")
+    ENV_PATH = REPO_ROOT / ".env"
 
     def test_balise_anthropic_presente(self):
         if not self.ENV_PATH.exists():

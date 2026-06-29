@@ -4,19 +4,22 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.9 — 667/667 tests Pytest ✅ — Auto-graphes contextuels désormais déclenchés AUSSI en langue naturelle + détection chaos-Savard dans phrases libres**
+**Production-Ready v3.10 — 679/679 tests Pytest ✅ — Bug critique `augmenter_prompt_conceptuel` corrigé : plus aucune `AttributeError` dans le pipeline LLM**
+
+### Changelog 2026-02 v3.10 (fix Philippe : API IntegrateurMemoireGabriel)
+- `src/core/llm_manager.py` :
+  - `_augmenter_prompt_avec_memoire` : remplace 3 appels cassés (`augmenter_prompt_conceptuel`, `trouver_pattern_optimal`, `trouver_lemmes_pertinents`) par un seul appel à `INTEGRATEUR_MEMOIRE.augmenter_prompt(prompt, domaine)`.
+  - Code passe de ~40 lignes à ~14 lignes (DRY + séparation des responsabilités).
+- 12 nouveaux tests sentinelles dans `tests/test_integrateur_memoire_api_fix.py` :
+  - API publique stable (`augmenter_prompt`, `detecter_regimes`, `info`)
+  - Anciennes méthodes inexistantes (sentinelles `not hasattr`)
+  - Vérification statique du code source via `inspect.getsource`
+  - Smoke tests fonctionnels (prompt spectral, vide, info dict)
+- `docker-compose.yml` : volume `./memory:/home/agent/app/memory` ajouté (v3.9bis).
 
 ### Changelog 2026-02 v3.9 (fixes Philippe : NL + chaos-Savard trigger)
-- `src/visualization/auto_trigger.py` :
-  - Nouveau champ `VisualizationIntent.rsp_config` (Optional[str]) pour distinguer chaos-savard / ord / sym / 1x1.
-  - `_RSP_CONFIG_PATTERNS` : détection prioritaire de "asymetrique chaotique" / "chaos savard" / "convention alternee" / "asymetrique ordonnee" / "n×n symetrique" AVANT le fallback générique "rapport spectral" → RATIO_SA_SB.
-  - Défaut n_max=15 pour chaos-savard (convergence rapide), 50 sinon.
-- `src/core/pipeline_with_gap_detection.py` :
-  - Nouvelle méthode `_maybe_attach_question_graphs()` appelée APRÈS le pipeline standard.
-  - Détecte Q2 (position+prime), Q1.b/c/d (configuration), Q3.a/b/c (gap_type) dans `structured_data`.
-  - Annexe les chemins PNG au `answer_text` (panneau Markdown) + `structured_data['auto_graphs_paths']`.
-  - `_build_visualization_answer` utilise `_build_rsp_curve_data` si `rsp_config` détecté.
-- 19 nouveaux tests dans `tests/test_auto_graphs_nl_and_chaos_savard_trigger.py`.
+- `src/visualization/auto_trigger.py` : nouveau champ `VisualizationIntent.rsp_config` + `_RSP_CONFIG_PATTERNS` pour détection chaos-savard / ord / sym dans le langage naturel.
+- `src/core/pipeline_with_gap_detection.py` : nouvelle méthode `_maybe_attach_question_graphs()` après pipeline standard détecte Q2/Q1.x/Q3.x dans `structured_data`.
 
 ### Changelog 2026-02 v3.8 (auto-graphs + chaos-Savard)
 - `src/spectral/ratios.py` :

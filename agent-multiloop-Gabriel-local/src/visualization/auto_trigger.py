@@ -29,10 +29,68 @@ class VisualizationIntent:
     confidence: float = 1.0  # 0..1
     reasoning: str = ""      # Pourquoi cette detection (pour audit)
     matched_keywords: list[str] = None  # type: ignore
+    # Si non-None, la visualisation utilise une courbe RsP (config 1x1/sym/chaos-savard/ord)
+    # au lieu d'une CurveKind classique. Le champ kind est alors utilise comme placeholder
+    # (typiquement CurveKind.RATIO_SA_SB) et le calcul passe par compute_rsp_curve.
+    rsp_config: Optional[str] = None
 
     def __post_init__(self):
         if self.matched_keywords is None:
             self.matched_keywords = []
+
+
+# =============================================================
+# Patterns RsP-config : detection PRIORITAIRE des configs specifiques
+# avant le fallback generique "rapport spectral" -> RATIO_SA_SB.
+# Ordre : du plus specifique au moins specifique.
+# =============================================================
+_RSP_CONFIG_PATTERNS: list[tuple[str, list[str]]] = [
+    # chaos-savard : convention alternee Philippe Thomas Savard
+    ("chaos-savard", [
+        r"chaos[\s\-_]?savard",
+        r"chaotique[\s\-_]?savard",
+        r"savard[\s\-_]?chaos",
+        r"convention\s+alternee",
+        r"formule\s+alternee",
+        r"asymetri\w*\s+chaotique",        # "asymetrique chaotique" / "asymetrie chaotique"
+        r"chaotique\s+asymetri\w*",
+        r"comparaison\s+chaotique",
+        r"\bchaotique\b",                   # standalone (en dernier des patterns chaos)
+    ]),
+    # asymetrique ordonnee
+    ("ord", [
+        r"asymetri\w*\s+ordonn\w*",
+        r"ordonn\w*\s+asymetri\w*",
+        r"comparaison\s+ordonn\w*",
+        r"\bordonn\w*\b",                   # standalone
+    ]),
+    # n×n symetrique
+    ("sym", [
+        r"n\s*\*\s*n\s+symetri\w*",
+        r"symetri\w*\s+n\s*\*\s*n",
+        r"symetri\w*\s+n\s*x\s*n",
+        r"n\s*x\s*n\s+symetri\w*",
+        r"comparaison\s+symetri\w*",
+        r"\bsymetri\w*\b",
+    ]),
+    # 1x1
+    ("1x1", [
+        r"1\s*x\s*1",
+        r"rapport\s+1\s*x\s*1",
+    ]),
+]
+
+
+def _detect_rsp_config(qnorm: str) -> tuple[Optional[str], list[str]]:
+    """Identifie une config RsP specifique. Retourne (config, mots-cles)."""
+    matched: list[str] = []
+    for cfg, patterns in _RSP_CONFIG_PATTERNS:
+        for pat in patterns:
+            m = re.search(pat, qnorm, re.IGNORECASE)
+            if m:
+                matched.append(m.group(0).strip())
+                return cfg, matched
+    return None, matched
 
 
 # --------------------------------------------------------------------------
@@ -234,34 +292,51 @@ def detect_visualization_intent(question: str) -> Optional[VisualizationIntent]:
     if not viz_hits:
         return None
 
-    # 2) Identifier le type de courbe
+    # 2) PRIORITE : detecter une config RsP specifique (chaos-savard, ord, sym, 1x1)
+    rsp_cfg, rsp_matches = _detect_rsp_config(qnorm)
+
+    # 3) Identifier le type de courbe (CurveKind classique)
     kind, kind_matches = _detect_kind(qnorm)
+
+    # Si on a une config RsP, on force kind=RATIO_SA_SB (placeholder pour le rendu)
+    if rsp_cfg is not None:
+        kind = CurveKind.RATIO_SA_SB
+        kind_matches = rsp_matches + kind_matches
+
     if kind is None:
         return None
 
-    # 3) Identifier l'intervalle (defaut 1..50)
+    # 4) Identifier l'intervalle (defaut 1..50)
     rng = _detect_range(qnorm)
     if rng is None:
-        n_min, n_max = _DEFAULT_N_MIN, _DEFAULT_N_MAX
-        range_source = "defaut (1..50)"
+        # Pour chaos-savard, defaut 1..15 (au-dela c'est tres proche de 1/2)
+        if rsp_cfg == "chaos-savard":
+            n_min, n_max = 1, 15
+            range_source = "defaut chaos-savard (1..15)"
+        else:
+            n_min, n_max = _DEFAULT_N_MIN, _DEFAULT_N_MAX
+            range_source = "defaut (1..50)"
     else:
         n_min, n_max = rng
         range_source = f"detecte ({n_min}..{n_max})"
 
-    # 4) Detection PNG
+    # 5) Detection PNG
     want_png = _detect_png_intent(qnorm)
 
-    # 5) Confidence (heuristique simple)
+    # 6) Confidence (heuristique simple)
     # +0.4 pour mot-cle viz, +0.4 pour type identifie, +0.2 si intervalle explicite
     confidence = 0.4 + 0.4 + (0.2 if rng is not None else 0.0)
 
     matched = viz_hits[:3] + kind_matches[:2]
-    reasoning = (
-        f"Mots-cles visualisation : {', '.join(viz_hits[:3])}. "
-        f"Type identifie : {kind.value} (matches : {', '.join(kind_matches[:2])}). "
-        f"Intervalle : {range_source}. "
-        f"PNG demande : {'oui' if want_png else 'non'}."
-    )
+    reasoning_parts = [
+        f"Mots-cles visualisation : {', '.join(viz_hits[:3])}.",
+        f"Type identifie : {kind.value} (matches : {', '.join(kind_matches[:2])}).",
+    ]
+    if rsp_cfg is not None:
+        reasoning_parts.append(f"Config RsP detectee : {rsp_cfg}.")
+    reasoning_parts.append(f"Intervalle : {range_source}.")
+    reasoning_parts.append(f"PNG demande : {'oui' if want_png else 'non'}.")
+    reasoning = " ".join(reasoning_parts)
 
     return VisualizationIntent(
         kind=kind,
@@ -271,4 +346,5 @@ def detect_visualization_intent(question: str) -> Optional[VisualizationIntent]:
         confidence=confidence,
         reasoning=reasoning,
         matched_keywords=matched,
+        rsp_config=rsp_cfg,
     )

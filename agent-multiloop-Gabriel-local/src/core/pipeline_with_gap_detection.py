@@ -130,7 +130,98 @@ class PipelineWithGapDetection:
 
         # --- 2) PIPELINE STANDARD ---
         logger.info(f"Q[{qid}] Pas d'écart détecté, pipeline standard")
-        return await self.pipeline.process(question)
+        result = await self.pipeline.process(question)
+
+        # --- 3) AUTO-GRAPHIQUES POST-RECONSTRUCTION (Q2, Q1.x, Q3.x) ---
+        # Si le pipeline standard vient de repondre a une question canonique,
+        # on declenche les graphes adaptes (Q2=SA+SB+Digamma, Q1.x=courbe RsP,
+        # Q3.x=courbe gap). Pas d'impact sur la reponse principale.
+        try:
+            result = self._maybe_attach_question_graphs(qid, question, result)
+        except Exception as exc:
+            logger.warning(f"Q[{qid}] auto-graphs post-pipeline echec : {exc}")
+
+        return result
+
+    def _maybe_attach_question_graphs(
+        self, qid: str, question: str, result: FinalAnswer
+    ) -> FinalAnswer:
+        """Detecte la question canonique repondue et ajoute les graphes en consequence.
+
+        Logique :
+          - structured_data contient 'position'/'prime' + intent 'reconstruction' -> Q2
+          - structured_data contient un cas RsP (sym/chaos/ord) -> Q1.b/c/d
+          - structured_data contient delta_p / gap_type -> Q3.a/b/c
+
+        Le path PNG est appendu a la fin de answer_text avec un panneau lisible.
+        """
+        from ..engines.question_graphs import (
+            generate_graphs_for_question, detect_gap_question, detect_rsp_question,
+        )
+
+        data = result.structured_data or {}
+        qcode: Optional[str] = None
+        params: dict[str, Any] = {}
+
+        # Heuristique de detection : intent reconstruction + position dans data
+        # Le pipeline expose souvent {position, n, num_terms, p, prime, model}
+        if "position" in data and ("prime" in data or "p" in data):
+            qcode = "Q2"
+            params = {"n": data.get("position")}
+        elif "configuration" in data:
+            cfg = str(data.get("configuration", "")).lower()
+            if "ord" in cfg:
+                qcode = "Q1.d"
+            elif "chao" in cfg:
+                qcode = "Q1.c"
+            elif "sym" in cfg and "1x1" not in cfg:
+                qcode = "Q1.b"
+            elif "1x1" in cfg:
+                qcode = "Q1.a"
+        elif "delta_p" in data or "gap_type" in data:
+            gtype = str(data.get("gap_type", "")).lower()
+            if "++" in gtype or "+,+" in gtype:
+                qcode = "Q3.a"
+            elif "--" in gtype or "-,-" in gtype:
+                qcode = "Q3.b"
+            else:
+                qcode = "Q3.c"
+
+        if qcode is None:
+            return result
+
+        # Generer les PNG correspondants
+        from pathlib import Path
+        paths = generate_graphs_for_question(
+            question=qcode,
+            core=self.pipeline.spectral_core,
+            params=params,
+            output_dir=Path("data/graphs"),
+            dpi=150,
+        )
+        if not paths:
+            return result
+
+        logger.info(
+            f"Q[{qid}] auto-graphs {qcode} : {len(paths)} PNG genere(s)"
+        )
+        # Annexe au answer_text : mini panneau Markdown
+        lines = ["", "", "---", "", f"### Graphique(s) auto-genere(s) ({qcode})"]
+        for p in paths:
+            lines.append(f"- `{p}`")
+        lines.append("")
+        lines.append(
+            "_Genere automatiquement par Gabriel : un seul graphique pour la "
+            "question correspondante, PNG haute resolution citable (150 dpi)._"
+        )
+        result.answer_text = result.answer_text + "\n".join(lines)
+        # Ajout dans structured_data pour audit
+        result.structured_data = {
+            **(result.structured_data or {}),
+            "auto_graphs_question": qcode,
+            "auto_graphs_paths": [str(p) for p in paths],
+        }
+        return result
 
     def _try_visualization(self, qid: str, question: str) -> Optional[FinalAnswer]:
         """Detecte et execute une visualisation si la question le demande.
@@ -168,14 +259,26 @@ class PipelineWithGapDetection:
             compute_curve, render_ascii, render_png, MATPLOTLIB_AVAILABLE,
         )
 
-        # Calcul (entiers exacts)
-        curve = compute_curve(
-            self.pipeline.spectral_core,
-            intent.kind,
-            intent.n_min,
-            intent.n_max,
-            scale="auto",
-        )
+        # Si une config RsP est detectee (chaos-savard / ord / sym / 1x1),
+        # on utilise compute_rsp_curve via le helper de question_graphs
+        # plutot que la courbe classique compute_curve.
+        if getattr(intent, "rsp_config", None) is not None:
+            from ..engines.question_graphs import _build_rsp_curve_data
+            curve = _build_rsp_curve_data(
+                self.pipeline.spectral_core,
+                intent.rsp_config,
+                intent.n_min,
+                intent.n_max,
+            )
+        else:
+            # Calcul classique (entiers exacts)
+            curve = compute_curve(
+                self.pipeline.spectral_core,
+                intent.kind,
+                intent.n_min,
+                intent.n_max,
+                scale="auto",
+            )
 
         # Rendu ASCII inclus dans la reponse texte
         ascii_view = render_ascii(curve, width=70, height=16)

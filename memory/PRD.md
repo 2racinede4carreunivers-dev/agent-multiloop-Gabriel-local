@@ -4,7 +4,17 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.11 — 692/692 tests Pytest ✅ — 6 fails du container Docker corrigés via résolution multi-emplacements des chemins**
+**Production-Ready v3.12 — 701/701 tests Pytest ✅ — Bug du test absurde du placeholder corrigé + parser pytest devenu ordre-agnostique**
+
+### Changelog 2026-02 v3.12 (fix Philippe : 2 bugs simultanés)
+- `tests/test_env_config.py` : **suppression du test absurde** `test_balise_anthropic_presente` qui assertait la présence du placeholder `"COLLEZ VOTRE CLE ANTHROPIC CLAUDE ICI"` dans le `.env` réel utilisateur. Ce test échouait dès que Gabriel était correctement configuré.
+- `src/ui/ci_status.py` : refonte du parser de résumé pytest :
+  - Ancien : un seul `_SUMMARY_RE` avec ordre fixe (passed/failed/errors/skipped) → cassait avec "1 failed, 687 passed..."
+  - Nouveau : 4 regex indépendantes (`_PASSED_RE`, `_FAILED_RE`, `_ERRORS_RE`, `_SKIPPED_RE`) + helper `_parse_summary_line()` ordre-agnostique.
+- 10 nouveaux tests dans `tests/test_ci_regex_and_env_placeholder_fix.py` :
+  - Sentinelles anti-régression (le test absurde ne peut plus être réintroduit)
+  - 5 cas de parsing avec ordres différents (incluant le cas exact Philippe)
+  - Tests sur CISummary.badge
 
 ### Changelog 2026-02 v3.11 (fix 6 fails container Docker - chemins portables)
 - `tests/test_env_config.py` : helper `_find_repo_root()` + `REPO_ROOT` dynamique. Tous les chemins absolus `/app/agent-multiloop-Gabriel-local/...` remplacés par `REPO_ROOT / "..."`. Tests TestConfigGuide skip proprement si CONFIG_ENV_GUIDE.md absent.

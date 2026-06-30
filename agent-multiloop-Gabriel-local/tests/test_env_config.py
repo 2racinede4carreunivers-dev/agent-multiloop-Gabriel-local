@@ -68,11 +68,10 @@ class TestEnvLoading:
 class TestEnvContent:
     ENV_PATH = REPO_ROOT / ".env"
 
-    def test_balise_anthropic_presente(self):
-        if not self.ENV_PATH.exists():
-            pytest.skip(".env canonique absent")
-        content = self.ENV_PATH.read_text(encoding="utf-8")
-        assert "COLLEZ VOTRE CLE ANTHROPIC CLAUDE ICI" in content
+    # NOTE : il n'y a PAS de test qui verifie qu'un placeholder est present dans .env.
+    # Ce serait absurde : le placeholder doit etre REMPLACE par la vraie cle utilisateur.
+    # Si jamais on veut tester "la cle n'est pas un placeholder", c'est dans
+    # src/adapters/llm/*.py qui detecte les placeholders et neutralise la cle.
 
     def test_clauded_et_anthropic_keys_presentes(self):
         if not self.ENV_PATH.exists():

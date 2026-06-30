@@ -84,16 +84,37 @@ def _find_tests_dir() -> Path:
 
 _TESTS_DIR = _find_tests_dir()
 
-# Regex pour parser la ligne de résumé pytest :
-# "161 passed, 1 warning in 1.99s" ou "159 passed, 2 failed in 2.3s" etc.
-_SUMMARY_RE = re.compile(
-    r"(?:(?P<passed>\d+)\s+passed)?"
-    r"(?:.*?(?P<failed>\d+)\s+failed)?"
-    r"(?:.*?(?P<errors>\d+)\s+error)?"
-    r"(?:.*?(?P<skipped>\d+)\s+skipped)?"
-    r".*?in\s+(?P<dur>[\d.]+)s",
-    re.IGNORECASE,
-)
+# Regex pour parser la ligne de résumé pytest.
+# Pytest produit des lignes comme :
+#   "667 passed, 1 warning in 1.99s"
+#   "1 failed, 687 passed, 4 skipped, 2 warnings in 21.27s"
+#   "6 failed, 655 passed, 6 skipped, 2 warnings in 40.66s"
+# L'ORDRE des nombres varie selon la presence d'echecs : il faut parser
+# CHAQUE compteur independamment via une regex globale.
+_DURATION_RE = re.compile(r"in\s+([\d.]+)s", re.IGNORECASE)
+_PASSED_RE = re.compile(r"(\d+)\s+passed", re.IGNORECASE)
+_FAILED_RE = re.compile(r"(\d+)\s+failed", re.IGNORECASE)
+_ERRORS_RE = re.compile(r"(\d+)\s+error", re.IGNORECASE)
+_SKIPPED_RE = re.compile(r"(\d+)\s+skipped", re.IGNORECASE)
+
+
+def _parse_summary_line(line: str) -> tuple[int, int, int, int, float]:
+    """Parse une ligne de resume pytest en (passed, failed, errors, skipped, duration).
+
+    Ordre-agnostique : marche pour "X passed, Y failed", "Y failed, X passed", etc.
+    Si une categorie est absente, retourne 0.
+    """
+    def _first_int(rgx: re.Pattern, text: str) -> int:
+        m = rgx.search(text)
+        return int(m.group(1)) if m else 0
+
+    passed = _first_int(_PASSED_RE, line)
+    failed = _first_int(_FAILED_RE, line)
+    errors = _first_int(_ERRORS_RE, line)
+    skipped = _first_int(_SKIPPED_RE, line)
+    dur_match = _DURATION_RE.search(line)
+    duration = float(dur_match.group(1)) if dur_match else 0.0
+    return passed, failed, errors, skipped, duration
 
 
 def run_pytest_local(timeout_s: int = 120) -> CISummary:
@@ -148,16 +169,7 @@ def run_pytest_local(timeout_s: int = 120) -> CISummary:
             break
 
     if summary_line:
-        m = _SUMMARY_RE.search(summary_line)
-        if m:
-            passed = int(m.group("passed") or 0)
-            failed = int(m.group("failed") or 0)
-            errors = int(m.group("errors") or 0)
-            skipped = int(m.group("skipped") or 0)
-            try:
-                duration = float(m.group("dur"))
-            except (TypeError, ValueError):
-                duration = 0.0
+        passed, failed, errors, skipped, duration = _parse_summary_line(summary_line)
 
     total = passed + failed + errors + skipped
     ok = (proc.returncode == 0) and (failed == 0) and (errors == 0) and (passed > 0)

@@ -194,42 +194,81 @@ class GapSolver:
         )
     
     def _solve_mixed(self, p1: int, p2: int) -> Optional[GapResult]:
-        """CAS (-,+)."""
+        """CAS (-,+).
+
+        Note ZÉRO SPÉCIAL : si p_min = -2 (premier négatif le plus proche de
+        zéro), alors pos_min = -1 et pos_suivant_min = 0. Position 0 ne
+        correspond à aucun premier (zéro est traité comme un point
+        symbolique dans la Méthode Spectrale). La formule SA(0) reste
+        cependant calculable directement : SA(0) = (3.25/2)·2^0 - 2 = -0.375.
+        """
         logger.info(f"Solving gap (-,+) MIXED : p1={p1}, p2={p2}")
-        
+
         if p1 < p2:
             p_min, p_max = p1, p2
         else:
             p_min, p_max = p2, p1
-        
+
         abs_min = abs(p_min)
         pos_min_abs = prime_position(abs_min)
         pos_max = prime_position(p_max)
-        
+
         if pos_min_abs is None or pos_max is None:
+            logger.error(
+                f"_solve_mixed: position introuvable pour |p_min|={abs_min} "
+                f"ou p_max={p_max}"
+            )
             return None
-        
+
         pos_min = -pos_min_abs
         pos_suivant_min = pos_min + 1
-        
-        abs_suivant = abs(pos_suivant_min)
-        p_suivant_min_candidate = nth_prime(abs_suivant)
-        
-        if p_suivant_min_candidate is None:
-            return None
-        
-        p_suivant_min = -p_suivant_min_candidate
-        
+        zero_bridge = (pos_suivant_min == 0)
+
+        if zero_bridge:
+            # Cas limite : p_min = -2. Le « premier suivant » franchit
+            # zéro (position 0). On garde la formule SA(0) mais
+            # p_suivant_min est symboliquement 0.
+            p_suivant_min = 0
+            logger.info(
+                "_solve_mixed: pont ZÉRO activé (p_min=-2). "
+                "pos_suivant_min=0, SA(0) sera utilisée."
+            )
+        else:
+            abs_suivant = abs(pos_suivant_min)
+            p_suivant_min_candidate = nth_prime(abs_suivant)
+            if p_suivant_min_candidate is None:
+                logger.error(
+                    f"_solve_mixed: nth_prime({abs_suivant}) a retourné None"
+                )
+                return None
+            p_suivant_min = -p_suivant_min_candidate
+
         sa_suivant_min = self._compute_SA_negative(pos_suivant_min)
         sb_max = self._compute_SB(pos_max)
         digamma_max = self._compute_digamma_int(pos_max, p_max)
         digamma_min = self._compute_digamma_int_negative(pos_min, p_min)
-        
+
         term_a = sa_suivant_min - (sb_max - digamma_max)
         term_b = digamma_min
         gap_float = (term_a - term_b) / 64
         gap_count = int(round(gap_float))
-        
+
+        logger.info(
+            f"(-,+) MIXED : SA({pos_suivant_min})={sa_suivant_min:.4f}, "
+            f"SB({pos_max})={sb_max:.4f}, dgm_max={digamma_max:.4f}, "
+            f"dgm_min={digamma_min:.4f}"
+        )
+        logger.info(
+            f"(-,+) MIXED : ({term_a:.4f} - {term_b:.4f}) / 64 = "
+            f"{gap_float:.4f} → {gap_count}"
+        )
+
+        explanation = (
+            f"Entre {p_min} et {p_max} : {gap_count} nombres (ZÉRO SPÉCIAL)"
+        )
+        if zero_bridge:
+            explanation += " [pont ZÉRO : p_min=-2, SA(0) utilisé]"
+
         return GapResult(
             p1=p_min, p2=p_max, gap_type="mixed",
             position_min=pos_min, position_max=pos_max,
@@ -238,8 +277,12 @@ class GapSolver:
             digamma_min=digamma_min,
             gap_count=gap_count, gap_float=gap_float,
             formula_used="gap = (SA(n_next) - (SB(n_max) - dgm(n_max)) - dgm(n_min)) / 64 [MIXTE]",
-            explanation=f"Entre {p_min} et {p_max} : {gap_count} nombres (ZÉRO SPÉCIAL)",
-            validation={"source": "methode_spectral.thy::gap_mixed", "zero_special": True},
+            explanation=explanation,
+            validation={
+                "source": "methode_spectral.thy::gap_mixed",
+                "zero_special": True,
+                "zero_bridge": zero_bridge,
+            },
         )
     
     # ========================================================================

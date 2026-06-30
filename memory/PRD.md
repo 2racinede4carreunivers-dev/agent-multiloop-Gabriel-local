@@ -4,7 +4,25 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.12 — 701/701 tests Pytest ✅ — Bug du test absurde du placeholder corrigé + parser pytest devenu ordre-agnostique**
+**Production-Ready v3.13 — 729/729 tests Pytest ✅ — Fix GapSolver « pont ZÉRO » pour écart mixte (-2, +37)**
+
+### Changelog 2026-02 v3.13 (fix Philippe : GapSolver mixed avec p_min = -2)
+- **Bug** : `_solve_mixed(-2, +37)` retournait `None` → pipeline log « GapSolver échoué pour mixed ».
+- **Cause racine** : `pos_min = -1`, donc `pos_suivant_min = 0`, et `nth_prime(0)` retourne silencieusement `None` (indexing 1-based).
+- **Fix** dans `src/spectral/gap_solver_corrected.py::_solve_mixed` :
+  - Détection du « pont ZÉRO » : si `pos_suivant_min == 0`, on utilise `SA(0) = (3.25/2)·2⁰ - 2 = -0.375` directement et on assigne `p_suivant_min = 0` symboliquement (zéro est un point spécial dans la Méthode Spectrale).
+  - `validation['zero_bridge']` ajouté au `GapResult` pour traçabilité (booléen).
+  - Logs détaillés (SA, SB, digamma, term_a/b, gap_float, gap_count).
+- **Validation manuelle** sur l'exemple Philippe `(-31, +17)` → -47 ✓ et sur le bug `(-2, +37)` → -38 (= |-2 - 37| - 1) ✓.
+- **28 nouveaux tests** dans `tests/test_gap_solver_mixed_negative_positive.py` :
+  - Cas référence Philippe (-31, +17) avec digamma_max = -738 ✓
+  - Régression du bug (-2, +37) → ±38 + `zero_bridge=True`
+  - Paramétré `(-2, p_max)` pour 11 primes positifs
+  - Paramétré 10 cas mixed sans pont zéro (invariant `|gap| = |p1-p2| - 1`)
+  - Symétrie d'arguments `(p_neg, p_pos)` == `(p_pos, p_neg)`
+  - `SA(0) = -0.375` vérifié
+  - Routage `solve_gap` → `_solve_mixed`
+- Testing agent : **100% backend pass, aucun problème critique/mineur**.
 
 ### Changelog 2026-02 v3.12 (fix Philippe : 2 bugs simultanés)
 - `tests/test_env_config.py` : **suppression du test absurde** `test_balise_anthropic_presente` qui assertait la présence du placeholder `"COLLEZ VOTRE CLE ANTHROPIC CLAUDE ICI"` dans le `.env` réel utilisateur. Ce test échouait dès que Gabriel était correctement configuré.

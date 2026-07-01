@@ -61,11 +61,51 @@ def test_banque_covers_key_regimes(banque_content: str):
 
 
 def test_banque_has_validation_status_markers(banque_content: str):
-    """Chaque Q doit avoir un statut à valider (Philippe marquera [OK]/[KO])."""
-    status_lines = banque_content.count("**Statut** : [ ] à valider")
-    assert status_lines == 15, (
-        f"Chaque Q&R doit avoir un statut '[ ] à valider' (Philippe "
-        f"validera par [OK]/[KO]), trouvé {status_lines}/15"
+    """Chaque Q doit avoir un statut (soit '[ ] à valider' initialement,
+    soit '[OK]', '[Ok]', '[ok]', ou '[KO]', '[Ko]', '[ko]' après validation
+    par Philippe)."""
+    import re
+    # Toutes les variantes acceptées
+    pattern = re.compile(
+        r"^\*\*Statut\*\* : \[(?: |OK|Ok|ok|KO|Ko|ko)\]",
+        re.MULTILINE,
+    )
+    matches = pattern.findall(banque_content)
+    assert len(matches) == 15, (
+        f"La banque doit avoir 15 marqueurs de statut Q&R (chaque Q "
+        f"marquée [ ] / [OK] / [KO] avec variations de casse), "
+        f"trouvé {len(matches)}"
+    )
+
+
+def test_banque_validation_progress(banque_content: str) -> None:
+    """Snapshot de l'état de validation Philippe (informatif, pas bloquant).
+    Compte les Q&R validées [OK]/[Ok]/[ok], rejetées [KO]/[Ko]/[ko] et
+    encore en attente [ ]."""
+    import re
+    ok_pattern = re.compile(
+        r"^\*\*Statut\*\* : \[(?:OK|Ok|ok)\]", re.MULTILINE
+    )
+    ko_pattern = re.compile(
+        r"^\*\*Statut\*\* : \[(?:KO|Ko|ko)\]", re.MULTILINE
+    )
+    pending_pattern = re.compile(r"^\*\*Statut\*\* : \[ \]", re.MULTILINE)
+
+    n_ok = len(ok_pattern.findall(banque_content))
+    n_ko = len(ko_pattern.findall(banque_content))
+    n_pending = len(pending_pattern.findall(banque_content))
+    total = n_ok + n_ko + n_pending
+
+    # Invariant : total = 15 (le fichier a 15 Q)
+    assert total == 15, (
+        f"Somme des statuts (OK+KO+pending) doit valoir 15, "
+        f"obtenu {n_ok} OK + {n_ko} KO + {n_pending} pending = {total}"
+    )
+    # État attendu au 2026-07-01 : les 15 Q&R sont validées [OK] par Philippe
+    # (commit github/main 0639761 "Titre: Réponse pour E1 Q et R .")
+    assert n_ok == 15, (
+        f"Les 15 Q&R doivent être marquées [OK]/[Ok]/[ok] par Philippe. "
+        f"État actuel : {n_ok} OK, {n_ko} KO, {n_pending} pending"
     )
 
 

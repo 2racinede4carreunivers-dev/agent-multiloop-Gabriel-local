@@ -284,6 +284,8 @@ HELP_TEXT = """
   citer <id> [fmt] Genere une citation (fmt = markdown | latex | text)
   contexte         Affiche le contexte mathematique actuel
   memoire          Affiche les echanges en memoire
+  conversation     Affiche la memoire conversationnelle courte (3 derniers tours)
+  conversation reset  Reinitialise la memoire conversationnelle courte
   aide  (h, ?)     Aide rapide (cet ecran)
   commandes (cmd)  Liste complete + raccourcis clavier (recommande)
   ask              Interpeller Gabriel : principales commandes pour interagir
@@ -685,6 +687,33 @@ class CLIInterface:
             return True
         if c == "memoire":
             console.print(f"\n  Memoire :\n{self.orchestrator.get_memory()}\n", style="cyan")
+            return True
+        if c == "conversation":
+            cm = self.orchestrator.conversation_memory
+            if cm.is_empty():
+                console.print(
+                    "\n  [dim]Memoire conversationnelle courte : vide.[/dim]\n"
+                    "  [dim](Elle se remplit automatiquement apres chaque question ; "
+                    "les 3 derniers tours sont injectes dans le prompt LLM.)[/dim]\n"
+                )
+            else:
+                console.print(
+                    f"\n  [cyan]Memoire conversationnelle courte : {len(cm)}/{cm.max_turns} tours[/cyan]\n"
+                )
+                for i, t in enumerate(cm.turns(), start=1):
+                    rel = -(len(cm) - i + 1)
+                    q_preview = t.question[:150] + ("..." if len(t.question) > 150 else "")
+                    a_preview = t.answer[:150] + ("..." if len(t.answer) > 150 else "")
+                    console.print(f"  [yellow][Tour {rel}][/yellow]")
+                    console.print(f"    [dim]Q :[/dim] {q_preview}")
+                    console.print(f"    [dim]A :[/dim] {a_preview}\n")
+            return True
+        if c == "conversation reset" or c == "reset conversation":
+            self.orchestrator.reset_conversation()
+            console.print(
+                "\n  [green]Memoire conversationnelle reinitialisee.[/green] "
+                "[dim](historique commande CLI conserve)[/dim]\n"
+            )
             return True
         if c.startswith("debug "):
             # Mode debugger manuel : extrait la question (avec ou sans guillemets)

@@ -13,6 +13,10 @@ from typing import Any
 from ..adapters.llm.ollama_client import OllamaClient
 from ..adapters.llm.openai_client import OpenAIClient
 from ..adapters.llm.utf8_sanitizer import UTF8Sanitizer
+from .conversational_memory import (
+    ConversationalMemory,
+    merge_context_into_prompt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -191,6 +195,18 @@ class LLMManager:
 
         self._ollama_available: bool | None = None
 
+        # === Mémoire conversationnelle courte (P1) ===
+        # Ring-buffer des N derniers Q&A, injecté dans le prompt LLM
+        # UNIQUEMENT quand include_conversation=True est demandé
+        # (par défaut : désactivé pour ne pas polluer critic/audit/debat).
+        conv_cfg = (config.get("conversation", {}) or {}) if config else {}
+        conv_max_turns = int(conv_cfg.get("max_turns", 3))
+        conv_max_chars = int(conv_cfg.get("max_chars_per_field", 1500))
+        self.conversation_memory = ConversationalMemory(
+            max_turns=conv_max_turns,
+            max_chars_per_field=conv_max_chars,
+        )
+
         logger.info("✅ LLM Manager v3 Initialized")
         logger.info(
             "   Chaîne fallback: Ollama (%.0fs) → %s (%.0fs) → OpenAI %s (%.0fs)",
@@ -202,6 +218,10 @@ class LLMManager:
         )
         if INTEGRATEUR_MEMOIRE:
             logger.info("   Mémoire: Activée (RAG + cache erreurs)")
+        logger.info(
+            "   Mémoire conversationnelle: %d derniers tours (max %d chars/champ)",
+            conv_max_turns, conv_max_chars,
+        )
 
     async def _check_ollama(self) -> bool:
         if self._ollama_available is None:
@@ -224,15 +244,18 @@ class LLMManager:
             return prompt
 
     async def generate(self, prompt: str, system: str | None = None, temperature: float = 0.2, 
-                      domaine: str = "general") -> str:
+                      domaine: str = "general", include_conversation: bool = False) -> str:
         """
         Génère avec mémoire intégrée
         
         1. Augmente prompt avec mémoire (RAG)
-        2. Ollama (10s)
-        3. Claude (60s) ← PRIORITAIRE
-        4. OpenAI (90s)
-        5. Enregistre erreurs si besoin
+        2. (optionnel) Préfixe avec le contexte conversationnel court
+           si `include_conversation=True` (ne concerne QUE la génération
+           de réponse principale ; critic/audit/debat n'activent pas ce flag).
+        3. Ollama (10s)
+        4. Claude (60s) ← PRIORITAIRE
+        5. OpenAI (90s)
+        6. Enregistre erreurs si besoin
         """
         
         # Sanitization UTF-8
@@ -242,6 +265,17 @@ class LLMManager:
         
         # Augmenter le prompt avec mémoire
         prompt_augmente = self._augmenter_prompt_avec_memoire(prompt, domaine)
+
+        # Préfixer avec le contexte conversationnel court (P1)
+        if include_conversation and not self.conversation_memory.is_empty():
+            ctx_block = self.conversation_memory.build_context_block()
+            prompt_augmente = merge_context_into_prompt(
+                prompt_augmente, ctx_block
+            )
+            logger.info(
+                "🧠 Contexte conversationnel injecté : %d tours (%d chars)",
+                len(self.conversation_memory), len(ctx_block),
+            )
         
         # ========== ÉTAPE 1: OLLAMA ==========
         if self.primary == "ollama" and await self._check_ollama():

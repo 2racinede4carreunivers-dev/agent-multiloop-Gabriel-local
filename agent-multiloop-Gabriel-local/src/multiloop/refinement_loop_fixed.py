@@ -80,7 +80,12 @@ class RefinementLoop:
                 )
                 # Temperature un peu plus haute pour diversifier les candidats
                 temp = 0.2 + 0.1 * cand_idx
-                text = await self.llm.generate(prompt, system=GROUNDED_SYSTEM_PROMPT, temperature=temp)
+                text = await self.llm.generate(
+                    prompt,
+                    system=GROUNDED_SYSTEM_PROMPT,
+                    temperature=temp,
+                    include_conversation=True,
+                )
                 cand = CandidateAnswer(
                     iteration=iteration,
                     text=text or "[Vide]",

@@ -88,12 +88,27 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
             "digamma_calc": "digamma_calc n p = SB n - 64 * p",
             "prime_equation": "(SB n - digamma_calc n p) / 64 = p",
             "RsP": "RsP n1 n2 = (SA n1 - SA n2) / (SB n1 - SB n2) = 1/2",
+            # [BQ-Q10] Formes générales alternatives (equivalentes) issues du fichier methode_spectral.thy
+            "SA_general_Q10": "SA(n) = (3.25/2) * 2^n - 2  (equivalent a (13/8)*2^n - 2)",
+            "SB_general_Q10": "SB(n) = (6.5/2) * 2^n - 66  (equivalent a (13/4)*2^n - 66)",
+            # [BQ-Q6] Ratio spectral local entre termes consecutifs
+            "ratio_spectral_local_Q6": "terme_spectral(i) = 1/2^i => terme_spectral(i+1)/terme_spectral(i) = 1/2",
+            # [BQ-Q8] Postulat spectral positif (fondement axiomatique)
+            "spectral_postulate_pos_Q8": "forall n>=1, forall p premier, prime_equation(n, p) = real(p)",
         },
         lemmes_certifies=[
             "reconstruction_p29_n5: (SB(5) - digamma(5,29)) / 64 = 29",
             "reconstruction_p31_n6: factor 64 verifie pour p=31",
             "reconstruction_p47_n15: extension validee pour n=15",
             "RsP_invariance_1_2: ratio EXACT = 1/2 pour 1x1 et nxn sym",
+            # [BQ-Q5] Reconstruction du 12eme premier = 37 (banque Q&R validee Philippe)
+            "[BQ-Q5] p37_n12: SB(12)=13246, SA(12)+digamma(37)=10878, (13246-10878)/64 = 37",
+            # [BQ-Q6] Rapport spectral local entre termes consecutifs
+            "[BQ-Q6] ratio_spectral_local: rapport termes consecutifs = 1/2 (via ratio_puissances_de_deux)",
+            # [BQ-Q8] Axiome de validite positive
+            "[BQ-Q8] spectral_postulate_pos: valide toutes les configurations spectrales du regime positif",
+            # [BQ-Q10] Forme generale demontree
+            "[BQ-Q10] RsP_un_demi_general: SA/SB en forme (a/2)*2^n - c => RsP = 1/2 par annulation des constantes",
         ],
         regles_cognitives=[
             "Facteur de reconstruction TOUJOURS = 64",
@@ -108,6 +123,8 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
         exemples_valides=[
             "prime(26) = 101 via SA(26), SB(26), factor 64",
             "RsP(3, 5) = 1/2 EXACT (cas 1x1)",
+            # [BQ-Q5] Exemple canonique de reconstruction (position 12 -> 37)
+            "[BQ-Q5] p=37 (12e premier) : (13246 - 10878) / 64 = 37 ; SB(12)=13246, SA(12)+digamma(37)=10878",
         ],
         ratio_attendu=Fraction(1, 2),
     ),
@@ -125,6 +142,13 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
             "K6": "K6 = -(37127/256) - SA_mix(6)",
             "SA_mix": "Suite SA etendue aux indices negatifs via powr",
             "SB_mix": "Suite SB etendue aux indices negatifs via powr",
+            # [BQ-Q15] Formalisation Isabelle/HOL de l'ecart mixte
+            "gap_mix_val_Q15": "gap_mix_val = (A_next - (B_high - D_high) - D_low) / 64",
+            # [BQ-Q4/Q15] Valeurs spectrales exactes pour l'exemple canonique (-31, 17)
+            "SA_m29_val_Q15": "SA_m29_val = -40895 / 20480  (suite A pour indice -10, prochain de -31 vers zero)",
+            "SB_p17_val_Q15": "SB_p17_val = 350  (= (6.5/2)*2^7 - 66)",
+            "D_p17_val_Q15": "D_p17_val = -738  (digamma pour 17)",
+            "D_m31_val_Q15": "D_m31_val = 39280705 / 20480  (digamma pour -31)",
         },
         lemmes_certifies=[
             "K6_invariance: K6 = constante asymptotique pour 6 termes negatifs",
@@ -132,6 +156,10 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
             "frontier_crossing: passage par n=0 inclus en mixte",
             "asymptote_validity: K6 valide pour mode 1/2 mixte",
             "mixed_lower_bound: borne inferieure stable sous K6",
+            # [BQ-Q4] Ecart calcule sur exemple manuel Philippe (reference du fix pont ZERO)
+            "[BQ-Q4] ecart_m31_17_calcule: (-22323135/20480 - 39280705/20480) / 64 = -47 nombres entre -31 et 17",
+            # [BQ-Q15] Lemme Isabelle/HOL correspondant
+            "[BQ-Q15] gap_m31_17: unfolding SA_m29_val, SB_p17_val, D_p17_val, D_m31_val + simp => -47",
         ],
         regles_cognitives=[
             "En mixte : zero EST inclus dans le decompte",
@@ -147,6 +175,8 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
         exemples_valides=[
             "6 termes negatifs : SA_mix(-6..-1) convergent vers K6",
             "gap_mixed(-13, 47) = -59 (zero inclus, comptabilite spectrale)",
+            # [BQ-Q4/Q15] Exemple canonique validee par calcul manuel Philippe
+            "[BQ-Q4/Q15] gap_mixed(-31, 17) = -47 (30 negatifs + 0[1] + 16 positifs = 47)",
         ],
         ratio_attendu=Fraction(1, 2),
     ),
@@ -165,10 +195,17 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
             "B_1_4": "B_1_4 n = (964/192) * (4^n) - 12292/3",
             "prime_eq_1_4": "(B_1_4 n - (B_1_4 n - 4096 * p)) / 4096 = p",
             "RsP_1_4": "(A_1_4 n1 - A_1_4 n2) / (B_1_4 n1 - B_1_4 n2) = 1/4",
+            # [BQ-Q14] Valeurs concretes du modele 1/4 (exemple 947)
+            "suite_A_1_4_somme_Q14": "suite_A_1_4_somme = 1316180",
+            "suite_B_1_4_somme_Q14": "suite_B_1_4_somme = 5260628",
+            "digamma_1_4_Q14": "digamma_1_4 = 65536",
+            "digamma_calcule_1_4_Q14": "digamma_calcule_1_4 = suite_A_1_4_somme + digamma_1_4 = 1381716",
         },
         lemmes_certifies=[
             "p947_reconstruction_1_4: factor 4096 valide a haute position",
             "RsP_1_4_exact: ratio EXACT = 1/4 pour blocs symetriques",
+            # [BQ-Q14] Preuve formelle du premier 947 en modele 1/4
+            "[BQ-Q14] preuve_premier_947: (5260628 - 1381716) / 4096 = 947 (3878912 / 4096 = 947)",
         ],
         regles_cognitives=[
             "Facteur de reconstruction = 4096 (= 64^2)",
@@ -182,6 +219,8 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
         exemples_valides=[
             "p=947 reconstruit via A_1_4 et B_1_4",
             "RsP_1_4(3, 5) = 1/4 EXACT en Fraction",
+            # [BQ-Q14] Detail complet de la reconstruction 947
+            "[BQ-Q14] p=947 : suite_B(5260628) - digamma_calcule(1381716) = 3878912 ; 3878912/4096 = 947",
         ],
         ratio_attendu=Fraction(1, 4),
     ),
@@ -200,10 +239,20 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
             "B_1_3": "B_1_3 n = (219/108) * (3^n) - 1461/2",
             "prime_eq_1_3": "(B_1_3 n - (B_1_3 n - 729 * p)) / 729 = p",
             "RsP_1_3": "(A_1_3 n1 - A_1_3 n2) / (B_1_3 n1 - B_1_3 n2) = 1/3",
+            # [BQ-Q2] Simplification par les differences
+            "RsP_1_3_diff_Q2": "diff_A/diff_B = ((73/9)/12 * (3^n1 - 3^n2)) / ((219/9)/12 * (3^n1 - 3^n2)) = 73/219 = 1/3",
+            # [BQ-Q13] Valeurs pour ecart (+,+) modele 1/3
+            "SA_179_val_Q13": "SA_179_val = 96/9  (somme A pour 179, suivant de 173 dans le modele 1/3)",
+            "D_227_val_Q13": "D_227_val = 73263  (digamma pour 227)",
+            "D_173_val_Q13": "D_173_val = -1141518/9  (digamma pour 173)",
         },
         lemmes_certifies=[
             "p227_reconstruction_1_3: factor 729 valide pour primes moyens",
             "RsP_1_3_exact: ratio EXACT = 1/3 pour blocs symetriques",
+            # [BQ-Q2] Theoreme de constance
+            "[BQ-Q2] RsP_un_tiers_constant: RsP_1_3 constant = 1/3 par simplification (73/9)/(219/9)",
+            # [BQ-Q13] Ecart en modele 1/3 (analogue du modele 1/2 mais divise par 729)
+            "[BQ-Q13] ecart_227_173_1_3: ((SA_179 - (SB_227 - D_227) - D_173) / 729) = -53 nombres entre 173 et 227",
         ],
         regles_cognitives=[
             "Facteur de reconstruction = 729 (= 3^6)",
@@ -216,6 +265,8 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
         ],
         exemples_valides=[
             "p=227 reconstruit via A_1_3 et B_1_3",
+            # [BQ-Q13] Exemple d'ecart en modele 1/3
+            "[BQ-Q13] gap(173, 227) en modele 1/3 = -53 (divisor 729 = 3^6, analogue de 64 = 2^6)",
         ],
         ratio_attendu=Fraction(1, 3),
     ),
@@ -232,10 +283,23 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
         definitions_hol={
             "SA_signed": "SA n = (13/8) * powr(2, n) - 2  (pour n < 0)",
             "SB_signed": "SB n = (13/4) * powr(2, n) - 66  (pour n < 0)",
+            # [BQ-Q1] Formes generales du modele 1/2 negatif (equivalentes aux SA/SB signed)
+            "SA_neg_eq_Q1": "SA_neg_eq(n) = 3.25 * 2^n - 2   (pour n <= -1)",
+            "SB_neg_eq_Q1": "SB_neg_eq(n) = 6.5 * 2^n - 66   (pour n <= -1)",
+            "RsP_neg_Q1": "RsP_neg(n1, n2) = (SA_neg_eq n1 - SA_neg_eq n2) / (SB_neg_eq n1 - SB_neg_eq n2)",
+            "spectral_ratio_neg_un_demi_Q1": "axiome: RsP_neg(n1, n2) = 1/2 pour n1<=-1, n2<=-1, n1!=n2",
+            # [BQ-Q12] Extension au modele 1/3 negatif
+            "SA_neg_eq_un_tiers_Q12": "SA_neg_eq_un_tiers(n) = ((73/9)/6) * 3^n - 1.5",
+            "SB_neg_eq_un_tiers_Q12": "SB_neg_eq_un_tiers(n) = ((219/9)/6) * 3^n - (487 * 1.5)",
+            "spectral_ratio_neg_un_tiers_Q12": "axiome: RsP_neg_un_tiers(n1, n2) = 1/3 pour n1<=-1, n2<=-1, n1!=n2",
         },
         lemmes_certifies=[
             "negative_powr_required: pour n<0, utiliser powr (continue)",
             "negative_ratio_invariance: RsP = 1/2 meme en domaine signe",
+            # [BQ-Q1] Constance du rapport spectral 1/2 negatif
+            "[BQ-Q1] RsP_neg_un_demi_general: RsP_neg = 1/2 constante pour indices negatifs distincts",
+            # [BQ-Q12] Extension au regime 1/3 negatif
+            "[BQ-Q12] RsP_neg_un_tiers_general: RsP_neg_un_tiers = 1/3 constante pour n1<=-1, n2<=-1, n1!=n2",
         ],
         regles_cognitives=[
             "OBLIGATION : utiliser powr (puissance continue) pour indices negatifs",
@@ -343,10 +407,14 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
             "HyRi": "Hypothesis Riemann projector",
             "MsP": "Methode spectrale Premier projector",
             "epipolar_validation": "FZg . HyRi . MsP = identity (validation epipolaire)",
+            # [BQ-Q3] Axiome liant les ecarts mixtes a la conjecture de Riemann
+            "mixed_gap_surplus_Q3": "axiome: relative_value(Pn) > relative_value(P) => T_rest = geometric_area(relative_value(Pn) - relative_value(P))",
         },
         lemmes_certifies=[
             "HypR_solution_trifocal: solution geometrique de l'hypothese",
             "epipolar_consistency: projecteurs commutables sur la ligne critique",
+            # [BQ-Q3] Consequence sur Riemann
+            "[BQ-Q3] mixed_gap_riemann_link: aire restante T_rest correspond a la region Re(s) = 1/2 (soutient Riemann)",
         ],
         regles_cognitives=[
             "Le plan trifocal est la cle du lien Methode Spectrale <-> Riemann",
@@ -518,6 +586,11 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
                 "(somme_A_pos_k k n1 - somme_A_pos_k k n2) / "
                 "(somme_B_pos_k k n1 - somme_B_pos_k k n2)"
             ),
+            # [BQ-Q11] Forme parametrique du rapport via k_spectral
+            "rapport_spectral_forme_Q11": "axiome: rapport_spectral(P, Q) = 1 / int(k_spectral(P, Q))  quand k_spectral(P, Q) >= 1",
+            # [BQ-Q7] Parallele entre RsP_1_3 et RsP_1_4
+            "RsP_1_3_via_diff_Q7": "RsP_1_3 = (73/108) / (219/108) = 1/3  (simplification par puissances de 3)",
+            "RsP_1_4_via_diff_Q7": "RsP_1_4 = (241/192) / (964/192) = 1/4  (simplification par puissances de 4)",
         },
         lemmes_certifies=[
             "RsP_k_egale_un_sur_k_pos: RsP_k k n1 n2 = 1/k pour k in {2,3,4}",
@@ -525,6 +598,12 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
             "somme_B_pos_11: somme_B_pos_k 2 5 = 38 (premier 11)",
             "somme_A_neg_m2: somme_A_neg_k 2 1 = -3/8 (premier -2)",
             "somme_A_neg_m5: somme_A_neg_k 2 3 = -51/32 (premier -5)",
+            # [BQ-Q7] Parallele et extension aux sequences negatives
+            "[BQ-Q7] RsP_1_3_et_1_4_paralleles: obtenus par differences de series geometriques ; extension aux SA_neg_eq / SB_neg_eq (=> RsP_neg = 1/2)",
+            # [BQ-Q9] Nature specifique du rapport 1/k
+            "[BQ-Q9] axiome_un_sur_k: rapport 1/k numeriquement valide, algebriquement incoherent (specifique a la Methode Spectrale)",
+            # [BQ-Q11] Calcul explicite via k_spectral
+            "[BQ-Q11] rapport_spectral_via_k: pour k_spectral(P, Q) = 3, rapport_spectral(P, Q) = 1/3",
         ],
         regles_cognitives=[
             "Pour tout k>=2 entier : RsP = 1/k (theoreme prouve pour k=2,3,4)",

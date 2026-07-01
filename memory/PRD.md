@@ -4,7 +4,25 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.13 — 729/729 tests Pytest ✅ — Fix GapSolver « pont ZÉRO » pour écart mixte (-2, +37)**
+**Production-Ready v3.14 — 764/764 tests Pytest ✅ — P1 Mémoire conversationnelle courte livrée**
+
+### Changelog 2026-02 v3.14 (P1 : mémoire conversationnelle courte — fix « plan trifocal oublié »)
+- **Bug** : Gabriel oubliait le contexte du tour précédent (l'utilisateur dit « Le plan trifocal » après une question sur les régimes → Gabriel ne fait pas le lien).
+- **Fix** : ring-buffer des 3 derniers Q&A auto-injecté dans le prompt LLM.
+- **Nouveau module** : `src/core/conversational_memory.py` :
+  - `ConversationalMemory(max_turns=3, max_chars_per_field=1500)` avec troncature défensive, validation d'entrée, snapshot sérialisable.
+  - `build_context_block()` produit un bloc lisible `[Tour -N]…[Fin du contexte]`.
+  - `merge_context_into_prompt(prompt, context_block)` — helper d'assemblage.
+- **`src/core/llm_manager.py`** : `LLMManager` possède maintenant `self.conversation_memory` ; `generate()` accepte un flag `include_conversation=False` (opt-in) qui préfixe le prompt avec le bloc contexte APRÈS le RAG sémantique.
+- **`src/core/orchestrator.py`** : `ask()` enregistre chaque tour automatiquement ; nouvelle propriété `conversation_memory` ; nouvelle méthode `reset_conversation()`.
+- **`src/multiloop/refinement_loop.py`** + **`refinement_loop_fixed.py`** : activent `include_conversation=True` UNIQUEMENT pour la génération de réponse principale.
+- **Isolation garantie** : `critic.py` et `silent_audit.py` NE reçoivent PAS le contexte conversationnel (leur rôle est de juger indépendamment).
+- **Config optionnelle** : section `conversation:` dans `config.yaml` (défauts sensibles si absente).
+- **Nouvelles commandes CLI** : `conversation` (affiche les 3 derniers tours) et `conversation reset` (vide le buffer).
+- **35 nouveaux tests** :
+  - `tests/test_conversational_memory.py` (30) : unit + intégration (ring-buffer, troncature, validation, LLMManager, Orchestrator, RefinementLoop, Critic isolation, SilentAudit isolation).
+  - `tests/test_conversational_memory_e2e.py` (5) : scénario Philippe multi-tour, ring-buffer 5→3, isolation flag off, orchestrateur auto-record, config optionnelle.
+- Testing agent : **100% backend pass, aucun problème critique/mineur** (iteration_10.json).
 
 ### Changelog 2026-02 v3.13 (fix Philippe : GapSolver mixed avec p_min = -2)
 - **Bug** : `_solve_mixed(-2, +37)` retournait `None` → pipeline log « GapSolver échoué pour mixed ».

@@ -4,7 +4,26 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.15 — 772/772 tests Pytest ✅ — Banque Q&R Méthode Spectrale (15 items curés) livrée**
+**Production-Ready v3.16 — 792/792 tests Pytest ✅ — Intégration RAG manuelle des 15 Q&R (option B Philippe)**
+
+### Changelog 2026-02 v3.16 (P2 : Intégration RAG des 15 Q&R validées)
+- **Option B choisie par Philippe** : intégration manuelle plutôt qu'auto-loader.
+- **Fichier modifié** : `memory/dictionnaire_spectral.py` (+ ~40 lignes de nouveaux lemmes, définitions, exemples).
+- **Marqueurs traçabilité** : chaque ajout porte le tag `[BQ-Q<N>]` (dans les lemmes/exemples) ou suffixe `_Q<N>` (dans les clés `definitions_hol`), permettant de remonter à la Q&R source dans `banque_qr_methode_spectrale.md`.
+- **Mapping Q → régime** :
+  - Q1, Q12 → `regime_negatif` (RsP_neg 1/2 et 1/3)
+  - Q2, Q13 → `regime_1_3` (constance et écart 227/173 = -53)
+  - Q3 → `geometrie_critique` (mixed_gap_surplus, Riemann)
+  - Q4, Q15 → `regime_mixte` (écart -31/17 = -47 + formalisation Isabelle)
+  - Q5, Q6, Q8, Q10 → `regime_1_2_positif` (37 = 12ᵉ, ratio_spectral_local, spectral_postulate_pos, SA/SB généraux)
+  - Q7, Q9, Q11 → `regime_parametrique_1_k` (RsP_1_3 vs 1_4, 1/k numérique, k_spectral)
+  - Q14 → `regime_1_4` (preuve_premier_947, 4096)
+- **Total lemmes certifiés** : passe de 41 → **52** (+11 lemmes-BQ nouveaux). Certaines Q&R sont attachées comme définitions HOL taguées `_Q<N>` (12/15) sans compter comme lemmes autonomes.
+- **19 nouveaux tests** (`tests/test_dictionnaire_rag_bq_integration.py`) :
+  - 15 tests paramétrés : chaque Q<N> vérifie sa présence dans le régime attendu.
+  - 4 tests globaux : couverture complète, présence dans `to_prompt_context()`, croissance de `total_lemmes()`, préservation des exemples numériques (13246, 10878, 5260628, 947, -53…).
+- **Effet en production** : dès qu'une question utilisateur touche un régime (via patterns_detection), le RAG injecte automatiquement les Q&R validées Philippe dans le prompt LLM. Les 15 Q&R deviennent des faits canoniques que Gabriel ne peut pas contredire.
+- Testing agent : **100% backend pass, aucun problème critique/mineur** (iteration_11.json).
 
 ### Changelog 2026-02 v3.15 (P2 : Banque Q&R Méthode Spectrale)
 - **Nouveau fichier** : `memory/banque_qr_methode_spectrale.md` (264 lignes, 15 Q&R exactement).

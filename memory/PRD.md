@@ -4,7 +4,27 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.14 — 764/764 tests Pytest ✅ — P1 Mémoire conversationnelle courte livrée**
+**Production-Ready v3.15 — 772/772 tests Pytest ✅ — Banque Q&R Méthode Spectrale (15 items curés) livrée**
+
+### Changelog 2026-02 v3.15 (P2 : Banque Q&R Méthode Spectrale)
+- **Nouveau fichier** : `memory/banque_qr_methode_spectrale.md` (264 lignes, 15 Q&R exactement).
+- **Curation** : à partir du catalogue Philippe de **184 Q&R** → filtrage strict :
+  - ✅ **Inclusion** : contenu mathématique concret (formules, lemmes Isabelle/HOL, exemples numériques exacts).
+  - ❌ **Rejet strict** : questions philosophiques, ontologiques, téléosémantiques, isossophie.
+  - ❌ **Rejet** : questions moyennes / vagues / redondantes.
+  - ❌ **Rejet** : questions sur autres théories (Espace de Philippôt, univers au carré, spirale de Théodore, mécanique discrète) sans lien direct avec la Méthode Spectrale.
+- **Sources conservées** : uniquement `geometry_prime_spectrum.tex` (9 items) et `methode_spectral.thy` (6 items).
+- **Couverture des régimes** : 1/2 positif, 1/2 négatif, 1/3 positif, 1/3 négatif, 1/4, écart mixte, + fondements axiomatiques (`spectral_postulate_pos`, `mixed_gap_surplus`, `k_spectral`).
+- **Format d'attente validation Philippe** : chaque Q&R marquée `[ ] à valider` — Philippe remplace par `[OK]` ou `[KO]`. Les `[OK]` alimenteront ensuite `memory/dictionnaire_spectral.py` (RAG cognitif).
+- **8 nouveaux tests sentinelles** (`tests/test_banque_qr_sentinelle.py`) :
+  - Le fichier doit exister (interdiction de le supprimer).
+  - Exactement 15 Q&R.
+  - Couverture des 5 régimes.
+  - 15 statuts `[ ] à valider` présents.
+  - 11 lemmes/axiomes clés référencés.
+  - 12 exemples numériques exacts (13246, 10878, 947, −47, −53, −738…).
+  - Aucun terme philosophique/ontologique introduit.
+  - Sources restreintes aux fichiers Méthode Spectrale.
 
 ### Changelog 2026-02 v3.14 (P1 : mémoire conversationnelle courte — fix « plan trifocal oublié »)
 - **Bug** : Gabriel oubliait le contexte du tour précédent (l'utilisateur dit « Le plan trifocal » après une question sur les régimes → Gabriel ne fait pas le lien).

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
 import time
 from pathlib import Path
@@ -13,7 +14,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from src.core.config import load_config
-from src.core.logging_setup import setup_logging
+from src.core.logging_setup import _env_verbose, setup_logging
 
 
 def _rich_init_banner() -> "tuple[object, object] | tuple[None, None]":
@@ -102,10 +103,7 @@ def main() -> None:
     logger = setup_logging(log_dir)  # verbose=None -> lit GABRIEL_VERBOSE
 
     # Détermine si on est en mode verbose (recherché aussi par le résumé)
-    import os
-    verbose = os.environ.get("GABRIEL_VERBOSE", "").strip().lower() in (
-        "1", "true", "yes", "on",
-    )
+    verbose = _env_verbose()
 
     logger.info("Starting Multi-Loop Mathematical Agent (Gabriel local)")
 

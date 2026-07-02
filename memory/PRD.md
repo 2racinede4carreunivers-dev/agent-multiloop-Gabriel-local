@@ -4,7 +4,27 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.16 — 792/792 tests Pytest ✅ — Intégration RAG manuelle des 15 Q&R (option B Philippe)**
+**Production-Ready v3.17 — 813/813 tests Pytest ✅ — Fix test sentinelle banque + refonte esthétique logs démarrage**
+
+### Changelog 2026-02 v3.17 (Fix ci + refonte esthétique)
+- **Bug corrigé** : `tests/test_banque_qr_sentinelle.py::test_banque_has_validation_status_markers` échouait chez Philippe (Docker) après ses annotations `[Ok]/[ok]`. Regex rendu tolérant : accepte n'importe quel contenu entre crochets. La ligne compte seulement le nombre de statuts (15 attendu), pas leur valeur.
+- **Refonte esthétique des logs de démarrage** :
+  - `src/core/logging_setup.py` : séparation propre entre `file_handler.level=INFO` (toujours) et `console_handler.level=WARNING` par défaut (silencieux au terminal).
+  - Nouveau helper public `_env_verbose()` : lit `GABRIEL_VERBOSE` (accepte `1/true/yes/on` en insensible casse).
+  - Loggers bavards forcés à WARNING+ même en verbose : `httpx`, `httpcore`, `openai`, `anthropic`, `urllib3`, `matplotlib`, `PIL`.
+- **`main.py` refactorisé** :
+  - Panneau Rich `Initialisation` en tête (avant tous les logs).
+  - Panneau Rich `Initialisation terminée` avec durée, chemin log, mode verbose + astuce `GABRIEL_VERBOSE=1`.
+  - Fallback gracieux si Rich indisponible (banniere = None, aucun crash).
+- **Effet visible** : plus aucun log INFO ne pollue le terminal au démarrage. Seuls les WARNING/ERROR/CRITICAL restent visibles (utiles, non bavards). Les INFO restent capturés dans `logs/agent_cli.log`.
+- **Mode verbose optionnel** : `GABRIEL_VERBOSE=1 docker-compose up` restaure l'ancien comportement bavard.
+- **21 nouveaux tests** (`tests/test_logging_setup_esthetique.py`) :
+  - `TestEnvVerboseFlag` (13) : truthy/falsy values, insensible casse, valeurs vides.
+  - `TestSilentByDefault` (3) : niveaux console/file, GABRIEL_VERBOSE actif.
+  - `TestFileHandlerCapturesInfo` (1) : INFO toujours écrit dans le fichier.
+  - `TestNoisyLoggersSilenced` (1) : loggers réseau/matplotlib silencieux.
+  - `TestMainInitBanner` (3) : banniere Rich + résumé sans crash, fallback console=None.
+- Testing agent : **100% backend pass, aucun problème critique/mineure** (iteration_12.json). Deux notes de style mineures corrigées : `import os` hoisté au top-level + réutilisation de `_env_verbose()` (DRY).
 
 ### Changelog 2026-02 v3.16 (P2 : Intégration RAG des 15 Q&R validées)
 - **Option B choisie par Philippe** : intégration manuelle plutôt qu'auto-loader.

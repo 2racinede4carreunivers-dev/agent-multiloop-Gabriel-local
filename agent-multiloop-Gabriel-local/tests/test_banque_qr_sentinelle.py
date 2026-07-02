@@ -61,20 +61,26 @@ def test_banque_covers_key_regimes(banque_content: str):
 
 
 def test_banque_has_validation_status_markers(banque_content: str):
-    """Chaque Q doit avoir un statut (soit '[ ] à valider' initialement,
-    soit '[OK]', '[Ok]', '[ok]', ou '[KO]', '[Ko]', '[ko]' après validation
-    par Philippe)."""
+    """Chaque Q doit avoir une ligne de statut, peu importe le contenu entre
+    crochets ([ ], [OK], [Ok], [ok], [KO], [Ko], [ko], [X], etc.).
+
+    Ce test est volontairement TOLERANT : il vérifie juste qu'il y a 15
+    lignes de statut, sans imposer une casse ou une syntaxe précise. La
+    validation sémantique fine est faite par test_banque_validation_progress.
+    """
     import re
-    # Toutes les variantes acceptées
+    # Matche n'importe quel contenu (non-vide OU vide) entre crochets après "**Statut** : "
     pattern = re.compile(
-        r"^\*\*Statut\*\* : \[(?: |OK|Ok|ok|KO|Ko|ko)\]",
+        r"^\*\*Statut\*\*\s*:\s*\[[^\]]*\]",
         re.MULTILINE,
     )
     matches = pattern.findall(banque_content)
     assert len(matches) == 15, (
-        f"La banque doit avoir 15 marqueurs de statut Q&R (chaque Q "
-        f"marquée [ ] / [OK] / [KO] avec variations de casse), "
-        f"trouvé {len(matches)}"
+        f"La banque doit avoir 15 lignes de statut (une par Q&R), "
+        f"trouvé {len(matches)}. Vérifier que le fichier "
+        f"memory/banque_qr_methode_spectrale.md contient exactement 15 "
+        f"lignes commençant par '**Statut** : [...]' (peu importe le "
+        f"contenu entre crochets)."
     )
 
 

@@ -9,6 +9,10 @@ import uuid
 from typing import Any, Optional
 
 from ..core.types import FinalAnswer, QuestionContext
+from ..spectral.composite_absurdity_prover import (
+    build_composite_rejection,
+    detect_composite_in_gap_request,
+)
 from ..spectral.gap_solver_corrected import GapSolver, GapResult
 from ..spectral.prime_table import prime_position, nth_prime
 
@@ -119,6 +123,25 @@ class PipelineWithGapDetection:
             logger.info(f"Q[{qid}] ÉCART DÉTECTÉ : {gap_type}")
 
             p1, p2 = numbers[0], numbers[1]
+
+            # --- Preuve par l'absurde : composés interceptés en amont ---
+            # Idée Philippe Thomas Savard (2026-07-02) : si l'un des deux
+            # nombres n'est pas premier, on ne cherche PAS à résoudre l'écart
+            # (échec silencieux) ; on retourne un message pédagogique qui
+            # explique pourquoi la Méthode Spectrale exclut strictement les
+            # composés (cf. theories/methode_spectral.thy, theorem
+            # composite_not_prime_i).
+            rejections = detect_composite_in_gap_request([p1, p2])
+            if rejections:
+                logger.info(
+                    f"Q[{qid}] Composé(s) détecté(s) : "
+                    f"{[r.value for r in rejections]} — preuve par l'absurde"
+                )
+                answer = self._build_composite_rejection_answer(
+                    qid, question, rejections, p1, p2
+                )
+                return answer
+
             gap_result = self.gap_solver.solve_gap(p1, p2)
 
             if gap_result is not None:
@@ -438,6 +461,93 @@ class PipelineWithGapDetection:
             candidates=[candidate],
             explanation=result.explanation,
         )
+
+    def _build_composite_rejection_answer(
+        self,
+        qid: str,
+        question: str,
+        rejections: list,
+        p1: int,
+        p2: int,
+    ) -> FinalAnswer:
+        """Construit un FinalAnswer pédagogique quand l'un des nombres
+        d'une requête d'écart est un entier composé.
+
+        La réponse explique la preuve par l'absurde (aucune position
+        spectrale possible pour un composé) et référence les théorèmes
+        Isabelle/HOL correspondants (composite_not_prime_i, etc.).
+        """
+        from ..core.types import CandidateAnswer
+
+        lines: list[str] = []
+        lines.append("### Requete rejetee : entier compose detecte")
+        lines.append("")
+        lines.append(
+            f"La Methode Spectrale ne s'applique qu'aux nombres premiers. "
+            f"L'un ou les deux nombres de votre requete (`{p1}`, `{p2}`) "
+            f"n'est pas premier."
+        )
+        lines.append("")
+        for rej in rejections:
+            lines.append(rej.to_pedagogical_text())
+            lines.append("")
+
+        lines.append("### Reference formelle (Isabelle/HOL)")
+        lines.append(
+            "Ce rejet est la contraposition effective du theoreme "
+            "`composite_not_prime_i` demontre dans "
+            "`theories/methode_spectral.thy`. La Methode Spectrale "
+            "caracterise EXACTEMENT ℙ (l'ensemble des premiers) — ni plus, "
+            "ni moins."
+        )
+
+        answer_text = "\n".join(lines)
+
+        candidate = CandidateAnswer(
+            iteration=1,
+            text=answer_text,
+            structured_data={
+                "rejection_type": "composite_detected",
+                "p1": p1,
+                "p2": p2,
+                "composites": [
+                    {
+                        "value": r.value,
+                        "factors": r.factors,
+                        "decomposition": r.decomposition_str,
+                        "nearest_below": r.nearest_prime_below,
+                        "nearest_above": r.nearest_prime_above,
+                        "thy_reference": r.thy_reference,
+                    }
+                    for r in rejections
+                ],
+                "thy_theorem": "composite_not_prime_i",
+                "thy_corollary": "spectral_method_exclusively_for_primes",
+            },
+            score=10.0,
+            critique=(
+                "Rejet certifie (preuve par l'absurde ancree sur "
+                "composite_not_prime_i, theories/methode_spectral.thy)"
+            ),
+            grounded=True,
+            used_engines=["composite_absurdity_prover", "isabelle_reference"],
+        )
+
+        return FinalAnswer(
+            question_id=qid,
+            answer_text=answer_text,
+            structured_data=candidate.structured_data,
+            confidence=1.0,
+            iterations_used=1,
+            best_score=10.0,
+            candidates=[candidate],
+            explanation=(
+                f"Rejet pedagogique : {len(rejections)} entier(s) compose(s) "
+                f"detecte(s) dans la requete d'ecart. Preuve par l'absurde "
+                f"via composite_not_prime_i."
+            ),
+        )
+
     
     def _render_gap_result(self, result: GapResult) -> str:
         """Affiche le résultat d'écart."""

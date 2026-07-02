@@ -4,7 +4,33 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.17 — 813/813 tests Pytest ✅ — Fix test sentinelle banque + refonte esthétique logs démarrage**
+**Production-Ready v3.18 — 903/903 tests Pytest ✅ — Preuve par l'absurde : la Méthode Spectrale exclut strictement les composés**
+
+### Changelog 2026-07 v3.18 (Idée originale Philippe : preuve machine par l'absurde)
+- **Insight mathématique de Philippe (2026-07-02)** : le log `Cannot find positions for C` pour un composé C constitue une preuve empirique par l'absurde de la validité stricte de la Méthode Spectrale sur ℙ. Cette v3.18 transforme cette intuition en preuve machine Isabelle/HOL + comportement pédagogique dans Gabriel.
+- **Choix Philippe** : 1B (preuve formelle par contradiction), 2A (message pédagogique quand composé détecté), corpus canonique {4, 9, 15, 51, 91, 121}, insertion .thy avant les exemples d'écarts mixtes.
+- **Fichier `theories/methode_spectral.thy` enrichi** (2511 → 2656 lignes, +144) :
+  - Nouvelle section « Preuve par l'absurde : la Methode Spectrale exclut strictement les composes » (lignes ~1465-1615).
+  - **Théorème central** `composite_not_prime_i` : `¬ prime C ⟹ ∀ i. C ≠ prime_i i` (preuve par contradiction via `prime_i_is_prime`).
+  - **Corollaire** `spectral_method_exclusively_for_primes` : intègre l'équation `prime_equation`.
+  - **6 lemmes** `composite_{4,9,15,51,91,121}_not_prime` (via `prime_nat_iff`).
+  - **6 théorèmes numériques** `no_spectral_position_for_{4,9,15,51,91,121}`.
+  - Sous-section « Interpretation - Le log Gabriel comme preuve par l'absurde » (contraposition effective, caractérisation axiomatique stricte de ℙ).
+- **Nouveau module Python** : `src/spectral/composite_absurdity_prover.py` (~220 lignes) :
+  - `is_prime(n)`, `factorize(n)`, `nearest_primes(n)`.
+  - `CompositeRejection` dataclass avec `to_pedagogical_text()`.
+  - `build_composite_rejection(n)`, `detect_composite_in_gap_request([n1, n2])`.
+- **Intégration dans `src/core/pipeline_with_gap_detection.py`** :
+  - Détection composé AVANT `gap_solver.solve_gap()` (interception amont).
+  - Nouvelle méthode `_build_composite_rejection_answer()` produit un `FinalAnswer` pédagogique.
+  - NE fallback PAS sur multiloop : rejet certifié via le théorème `composite_not_prime_i`.
+- **90 nouveaux tests** (`tests/test_composite_absurdity.py`) :
+  - Unit : `TestIsPrime`, `TestFactorize`, `TestNearestPrimes` (avec paramétrages étendus).
+  - Unit : `TestBuildCompositeRejection`, `TestPedagogicalText`, `TestDetectCompositeInGapRequest`.
+  - Intégration : `TestPipelineInterceptsComposites` (bug Philippe -7/-51 + cas nominal + refs .thy).
+  - Structure Isabelle : `TestIsabelleHOLSection` (section header, théorème principal, corollaire, 12 lemmes/théorèmes numériques, attribution Philippe, texte interprétation).
+  - E2E : `test_e2e_philippe_original_query` reproduit la requête exacte de Philippe.
+- Testing agent : **100% backend pass, aucun problème critique/mineur** (iteration_13.json). 3 remarques cosmétiques notées (pipeline 594 lignes, .thy monolithique, path hardcodé) — non-bloquantes.
 
 ### Changelog 2026-02 v3.17 (Fix ci + refonte esthétique)
 - **Bug corrigé** : `tests/test_banque_qr_sentinelle.py::test_banque_has_validation_status_markers` échouait chez Philippe (Docker) après ses annotations `[Ok]/[ok]`. Regex rendu tolérant : accepte n'importe quel contenu entre crochets. La ligne compte seulement le nombre de statuts (15 attendu), pas leur valeur.

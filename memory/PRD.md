@@ -4,7 +4,25 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.19 — 920/920 tests Pytest ✅ — Fix faux positif critic "incoherent" + suppression warning parasite `gestionnaire_erreurs`**
+**Production-Ready v3.20 — 944/944 tests Pytest ✅ — Les 3 piliers de la Méthode Spectrale bornés formellement à ℙ**
+
+### Changelog 2026-07 v3.20 (Timeout Claude 90s + PNG auto pour configs RsP + Extension preuve 3 piliers)
+- **Timeout Claude** : passé de 45s → **90s** dans `config.yaml` et `.env` (demande Philippe suite aux timeouts sur requêtes longues type kit métrique + audit signé). Le fallback OpenAI reste actif à 45s si Claude ne répond pas dans les 90s.
+- **PNG auto pour configs RsP** : dans `src/visualization/auto_trigger.py::detect_visualization_intent()`, quand une config RsP spécifique est détectée (`chaos-savard`, `ord`, `sym`, `1x1`), `want_png` est forcé à `True` par défaut. Les graphiques emblématiques Savard sont maintenant générés en PNG automatiquement sans que l'utilisateur ait à écrire « png » ou « exporter ».
+- **Extension preuve par l'absurde aux 3 piliers** (`theories/methode_spectral.thy`, +166 lignes, 2656 → 2822) :
+  - **Pilier 1 (déjà v3.18)** : `composite_not_prime_i` + 6 corollaires numériques → borne les **écarts entre premiers** à ℙ.
+  - **Pilier 2 (NOUVEAU)** : `composite_no_reconstruction_position` + 6 corollaires `no_reconstruction_for_{4,9,15,51,91,121}` → borne la **reconstruction du n-ième premier** à ℙ.
+  - **Pilier 3 (NOUVEAU)** : `composite_pair_no_rsp_positions` (deux composés) + `composite_single_no_rsp_position` (un seul composé suffit) → borne le **rapport spectral RsP** à ℙ.
+  - **Synthèse finale** : sous-section « Synthese - Les 3 piliers de la Methode Spectrale bornes a P » avec CONSEQUENCE DEFINITIVE : « la Methode Spectrale caracterise EXACTEMENT ℙ dans ses TROIS domaines d'application. »
+- **Texte pédagogique enrichi** (`src/spectral/composite_absurdity_prover.py::to_pedagogical_text()`) : mentionne désormais les 3 théorèmes (composite_not_prime_i, composite_no_reconstruction_position, composite_pair_no_rsp_positions) au lieu du seul théorème central.
+- **24 nouveaux tests** (`tests/test_timeout_and_extensions_v320.py`) :
+  - `TestClaudeTimeout90s` (2) : validation config + env.
+  - `TestRspConfigForcesPng` (7) : 4 configs paramétrées + cas opt-in + cas PNG explicite.
+  - `TestExtensionReconstructionInThyFile` (8) : théorème central + 6 numériques + subsection header.
+  - `TestExtensionRspInThyFile` (3) : pair + single + subsection.
+  - `TestSyntheseThreePillars` (3) : subsection + 3 noms de piliers + CONSEQUENCE DEFINITIVE.
+  - `TestPedagogicalTextMentionsThreePillars` (2) : reconstruction + RsP mentionnés dans le texte utilisateur.
+- Testing agent : **100% backend pass, aucun problème critique/mineur** (iteration_15.json).
 
 ### Changelog 2026-07 v3.19 (Fix 2 bugs signales par Philippe)
 - **Bug 1** : Le critic pénalisait -1.5 le mot `incoherent` (isolé ou dans `algebriquement incoherent`), MAIS ce terme est un descripteur LÉGITIME du corpus Savard (axiome `asymetrique_ordonnee_nat` : « numeriquement valide mais algebriquement incoherent »). Résultat : quand le LLM citait fidèlement l'axiome, son score chutait de 4.5 → 0.20 et le Slow-Motion Debugger se déclenchait inutilement.

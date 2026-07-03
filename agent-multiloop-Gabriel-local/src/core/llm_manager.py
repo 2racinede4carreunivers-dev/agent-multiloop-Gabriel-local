@@ -313,24 +313,13 @@ class LLMManager:
             result = await self.openai.generate(prompt_augmente, system=system, temperature=temperature)
             if result and len(result.strip()) > 0:
                 logger.info("✅ OpenAI a répondu (fallback)")
-                
-                # Enregistrer cette utilisation de fallback
-                if INTEGRATEUR_MEMOIRE:
-                    try:
-                        from gestionnaire_erreurs import TypeErreur
-                        INTEGRATEUR_MEMOIRE.enregistrer_erreur(
-                            lemme_name="claude_indisponible",
-                            domaine=domaine,
-                            tactique_tentee="claude_fallback_to_openai",
-                            type_erreur=TypeErreur.INCOMPLETE,
-                            message_erreur="Claude indisponible, utilisation OpenAI",
-                            code_hol="",
-                            hypotheses=[],
-                            suggestions=["Vérifier CLAUDE_API_KEY"]
-                        )
-                    except Exception as e:
-                        logger.warning(f"⚠️ Erreur enregistrement fallback: {e}")
-                
+
+                # Note : ancien bloc d'enregistrement via `gestionnaire_erreurs`
+                # supprime (module inexistant provoquait un warning parasite a
+                # chaque fallback). Si un jour on veut tracer les fallbacks
+                # dans la memoire cognitive, ajouter une methode dediee dans
+                # IntegrateurMemoireGabriel plutot qu'un import externe.
+
                 return result
             logger.error("❌ OpenAI timeout ou erreur")
         else:

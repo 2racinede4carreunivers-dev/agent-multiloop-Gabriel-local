@@ -75,18 +75,36 @@ class Critic:
         for key, val in ground_truth.items():
             if isinstance(val, (int, float)) and str(int(val) if float(val).is_integer() else val) in text:
                 score += 0.5
-        # Penalite pour vocabulaire problematique (l'agent ne doit JAMAIS dire ca)
-        forbidden = [
-            "incoherente", "incohérente", "incoherent", "incohérent",
-            "algebriquement incoherent", "algébriquement incohérent",
-            "sans fondement", "absurde", "contradictoire",
-            "n'a pas de sens", "n a pas de sens", "fausse methode",
+        # Penalite pour vocabulaire problematique (l'agent ne doit JAMAIS
+        # dire que LA METHODE est incoherente/absurde/sans fondement).
+        #
+        # Regle importante (Philippe, 2026-07-03) : "algebriquement incoherent"
+        # est un descripteur LEGITIME du corpus Savard (axiome
+        # asymetrique_ordonnee_nat). On ne penalise donc que les tournures
+        # qui condamnent explicitement la methode elle-meme, pas le mot
+        # "incoherent" isole (utilise par le LLM pour decrire le fait
+        # que le rapport 1/k est algebriquement incoherent mais
+        # numeriquement valide).
+        import re
+        forbidden_patterns = [
+            # Condamnations directes de la methode
+            # (tolere des mots intermediaires : "methode spectrale est incoherente")
+            r"\bm[eé]thode(?:\s+\w+){0,3}\s+(?:est\s+|semble\s+)?(?:incoh[ée]rent|absurde|fausse|contradictoire|sans\s+fondement)",
+            r"\bcette\s+m[eé]thode(?:\s+\w+){0,3}\s+(?:n['a]\s*(?:pas\s+de\s+sens|est\s+pas\s+valide))",
+            r"\bth[eé]orie(?:\s+\w+){0,3}\s+(?:est\s+|semble\s+)?(?:incoh[ée]rent|absurde|fausse|sans\s+fondement)",
+            r"\bfausse\s+m[eé]thode\b",
+            # Rejet global du corpus
+            r"\bn'?\s*a\s+pas\s+de\s+sens\b",
+            r"\brapport\s+spectral(?:\s+\w+){0,3}\s+(?:est\s+|semble\s+)?(?:absurde|invalide|fausse)",
         ]
         text_low = text.lower()
-        for word in forbidden:
-            if word in text_low:
+        for pattern in forbidden_patterns:
+            m = re.search(pattern, text_low)
+            if m:
                 score -= 1.5
-                logger.warning("Vocabulaire interdit detecte : '%s' (-1.5)", word)
+                logger.warning(
+                    "Vocabulaire interdit detecte : '%s' (-1.5)", m.group(0)
+                )
                 break
         return min(max(score, 0.0), 3.0)
 

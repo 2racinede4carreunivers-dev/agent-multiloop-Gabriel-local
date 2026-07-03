@@ -28,9 +28,10 @@ llm:
     max_tokens: 4096
     # Plafond max d'attente Claude (lit CLAUDE_TIMEOUT_SECONDS du .env si defini).
     # Claude prend typiquement 15-25s pour une question HOL/maths.
-    # 45s = choix Philippe 2026-02 (Sonnet 4.5 stable, evite l'attente excessive).
-    # Si timeouts frequents : monter a 60s. Si ennuye d'attendre : essayer 30s.
-    timeout_seconds: 45
+    # 2026-07 : passe de 45s a 90s (demande Philippe apres timeouts recurrents
+    # sur requetes longues type kit metrique + audit signe).
+    # Si toujours des timeouts : monter a 120s. Si ennuye d'attendre : redescendre a 60s.
+    timeout_seconds: 90
   openai:
     model: "gpt-5.4"          # gpt-5.4 / gpt-5.5 / gpt-4o / o3-pro
     temperature: 0.2

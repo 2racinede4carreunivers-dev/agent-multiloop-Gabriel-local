@@ -322,6 +322,13 @@ def detect_visualization_intent(question: str) -> Optional[VisualizationIntent]:
 
     # 5) Detection PNG
     want_png = _detect_png_intent(qnorm)
+    # AMELIORATION (Philippe 2026-07-03) : quand une config RsP specifique
+    # est detectee (chaos-savard, ord, sym, 1x1), on force want_png=True
+    # par defaut car ces graphiques sont typiquement destines aux articles
+    # scientifiques et au corpus PDF. L'utilisateur ne devrait pas avoir a
+    # ecrire "png" ou "exporter" explicitement pour ces cas emblematiques.
+    if rsp_cfg is not None and not want_png:
+        want_png = True
 
     # 6) Confidence (heuristique simple)
     # +0.4 pour mot-cle viz, +0.4 pour type identifie, +0.2 si intervalle explicite

@@ -156,9 +156,15 @@ class CompositeRejection:
         lines.append(
             "theories/methode_spectral.thy sous les theoremes :"
         )
-        lines.append(f"  - composite_not_prime_i (theoreme principal)")
+        lines.append(f"  - composite_not_prime_i (theoreme principal - ecarts)")
         lines.append(
-            f"  - spectral_method_exclusively_for_primes (corollaire)"
+            f"  - spectral_method_exclusively_for_primes (corollaire - ecarts)"
+        )
+        lines.append(
+            f"  - composite_no_reconstruction_position (extension - reconstruction)"
+        )
+        lines.append(
+            f"  - composite_pair_no_rsp_positions (extension - rapport spectral RsP)"
         )
         if self.thy_reference:
             lines.append(f"  - {self.thy_reference} (cas concret)")

@@ -4,7 +4,20 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.18 — 903/903 tests Pytest ✅ — Preuve par l'absurde : la Méthode Spectrale exclut strictement les composés**
+**Production-Ready v3.19 — 920/920 tests Pytest ✅ — Fix faux positif critic "incoherent" + suppression warning parasite `gestionnaire_erreurs`**
+
+### Changelog 2026-07 v3.19 (Fix 2 bugs signales par Philippe)
+- **Bug 1** : Le critic pénalisait -1.5 le mot `incoherent` (isolé ou dans `algebriquement incoherent`), MAIS ce terme est un descripteur LÉGITIME du corpus Savard (axiome `asymetrique_ordonnee_nat` : « numeriquement valide mais algebriquement incoherent »). Résultat : quand le LLM citait fidèlement l'axiome, son score chutait de 4.5 → 0.20 et le Slow-Motion Debugger se déclenchait inutilement.
+  - **Fix `src/multiloop/critic.py::_check_grounded`** : liste littérale de 10 mots remplacée par **6 patterns regex contextualisés**. Seules les tournures qui condamnent la méthode elle-même sont pénalisées (`la methode (spectrale) est incoherente`, `cette methode est fausse`, `rapport spectral est absurde`, `n'a pas de sens`, `fausse methode`, etc.).
+  - Tolérance : 0-3 mots intermédiaires entre `methode` et `est incoherent` (via `(?:\s+\w+){0,3}`), insensibilité à la casse et espaces multiples.
+- **Bug 2** : Warning parasite `⚠️ Erreur enregistrement fallback: No module named 'gestionnaire_erreurs'` à chaque fallback Claude → OpenAI (module référencé mais inexistant depuis toujours).
+  - **Fix `src/core/llm_manager.py`** : bloc de tracking supprimé (lignes 317-332 précédemment). Remplacé par un commentaire explicatif renvoyant vers `IntegrateurMemoireGabriel` pour un futur tracking propre. Le log `OpenAI a répondu (fallback)` et le `return result` sont préservés.
+- **17 nouveaux tests** (`tests/test_critic_vocab_and_gestionnaire_fix.py`) :
+  - `TestForbiddenVocabularyLegitimateUsages` (5) : 5 usages légitimes de "incoherent" ne sont plus pénalisés.
+  - `TestForbiddenVocabularyStillCatches` (8) : 8 phrases condamnant la méthode restent pénalisées.
+  - `TestForbiddenPatternRegex` (1) : tolérance espaces/casse validée.
+  - `TestGestionnaireErreursRemoved` (3) : absence de l'import + du warning + préservation du chemin OpenAI.
+- Testing agent : **100% backend pass, aucun problème critique/mineur** (iteration_14.json).
 
 ### Changelog 2026-07 v3.18 (Idée originale Philippe : preuve machine par l'absurde)
 - **Insight mathématique de Philippe (2026-07-02)** : le log `Cannot find positions for C` pour un composé C constitue une preuve empirique par l'absurde de la validité stricte de la Méthode Spectrale sur ℙ. Cette v3.18 transforme cette intuition en preuve machine Isabelle/HOL + comportement pédagogique dans Gabriel.

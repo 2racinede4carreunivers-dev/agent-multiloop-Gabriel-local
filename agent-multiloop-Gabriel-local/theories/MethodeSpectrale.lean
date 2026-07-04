@@ -28,6 +28,8 @@
 import Mathlib.Data.Real.Basic
 import Mathlib.Data.Nat.Prime.Basic
 import Mathlib.Algebra.BigOperators.Basic
+import Mathlib.Analysis.SpecialFunctions.Pow.Real
+import Mathlib.Data.List.Basic
 import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.FieldSimp
@@ -465,5 +467,937 @@ lemma rapport_spectral_tend_vers_demi (n : ℕ) (r : ℝ)
   have hnum_rw : (3.25 : ℝ) / 2 * r ^ n - 2 = (3.25 * r ^ n - 4) / 2 := by ring
   have hden_rw : (6.5 : ℝ) / 2 * r ^ n - 66 = (6.5 * r ^ n - 132) / 2 := by ring
   rw [hnum_rw, hden_rw, div_div_div_cancel_right _ h2]
+
+-- ============================================================================
+-- SECTION XII : Rapport spectral n x n (generalisation symetrique par listes)
+-- Correspond a la section Isabelle "Rapport spectral n x n" (lignes 167-190)
+-- ============================================================================
+
+/-- Rapport spectral n x n : rapport des sommes de SA et SB
+    sur des listes d'indices A et B (pas necessairement de meme longueur). -/
+noncomputable def RsP_nn (A_indices B_indices : List ℕ) : ℝ :=
+  (A_indices.map SA).sum / (B_indices.map SB).sum
+
+/-- Predicat : le rapport spectral n x n vaut exactement 1/2. -/
+noncomputable def rapport_spectral_un_demi_nn
+    (A_indices B_indices : List ℕ) : Prop :=
+  RsP_nn A_indices B_indices = 1 / 2
+
+/-- Exemple 3x3 : A3 = [2, 9, 10]. -/
+def A3 : List ℕ := [2, 9, 10]
+
+/-- Exemple 3x3 : B3 = [3, 11, 15]. -/
+def B3 : List ℕ := [3, 11, 15]
+
+-- ============================================================================
+-- SECTION XIII : Validation epipolaire du plan trifocal (lien avec Riemann)
+-- Correspond a la section Isabelle lignes 588-727.
+-- Approche axiomatique reproduisant fidelement les typedecl/consts d'Isabelle.
+-- ============================================================================
+
+/-- Type abstrait pour une position spectrale de premier. -/
+axiom position_t : Type
+/-- Type abstrait pour un indice de premier. -/
+axiom prime_index_t : Type
+
+/-- Position via fonction zeta. -/
+axiom FZg_posP : prime_index_t → position_t
+/-- Position via methode spectrale. -/
+axiom Ms_posP : prime_index_t → position_t
+/-- Partie reelle 1/2 (Riemann Hypothesis). -/
+axiom HypR_demi : ℝ
+/-- Rapport spectral 1/2 (methode Savard). -/
+axiom Ms_demi : ℝ
+
+/-- Aire totale du rectangle des zeros critiques. -/
+axiom T_area : ℝ
+/-- Aire tronquee correspondant a un intervalle de premiers. -/
+axiom T_tr_area : ℝ
+/-- Aire restante hors de l'intervalle considere. -/
+axiom T_restant_area : ℝ
+/-- Aire sous la courbe courbee. -/
+axiom Courb_droitcri_init_aire_parabol : ℝ
+/-- Aire de la parabole (modele de courbure). -/
+axiom Aire_parab : ℝ
+
+/-- Valeur reelle associee a l'intervalle 0..P-ieme premier. -/
+axiom P_reel : ℝ
+/-- Nombre relatif de comparaisons simples dans l'intervalle. -/
+axiom Com_Pinit_Re : ℝ
+/-- Nombre relatif de comparaisons mixtes (-,+). -/
+axiom Com_mixt_Sup : ℝ
+/-- Contribution des comparaisons entre premiers identiques (-p, p). -/
+axiom Com_ident : ℝ
+
+/-- Variable logique de solution de l'hypothese. -/
+axiom HypR_demi_solFinal : Prop
+
+/-- Postulat 1 : FZg_posP et Ms_posP donnent la meme position. -/
+axiom postulate_positions : ∀ p : prime_index_t, FZg_posP p = Ms_posP p
+
+/-- Postulat 2 : HypR_demi = Ms_demi. -/
+axiom postulate_demi : HypR_demi = Ms_demi
+
+/-- Postulat 3 : decomposition de l'aire totale. -/
+axiom postulate_aire_rectangle : T_area = T_tr_area + T_restant_area
+
+/-- Postulat 4a : Com_Pinit_Re < Com_ident. -/
+axiom postulate_combinatoire_1 : Com_Pinit_Re < Com_ident
+
+/-- Postulat 4b : Com_mixt_Sup > Com_Pinit_Re. -/
+axiom postulate_combinatoire_2 : Com_mixt_Sup > Com_Pinit_Re
+
+/-- Postulat 5 : la sur-combinatoire induit une courbure. -/
+axiom postulate_courbure :
+    Com_Pinit_Re < Com_ident →
+    Courb_droitcri_init_aire_parabol = Aire_parab
+
+/-- Postulat 6 : si Aire_parab = T_restant_area, alors la perspective
+    geometrique est compatible avec Re(s) = 1/2. -/
+axiom postulate_solution :
+    Aire_parab = T_restant_area → HypR_demi_solFinal
+
+theorem positions_coincident_trifocal (p : prime_index_t) :
+    FZg_posP p = Ms_posP p := postulate_positions p
+
+theorem demi_coincident_trifocal : HypR_demi = Ms_demi := postulate_demi
+
+theorem aire_rectangle_decompose : T_area = T_tr_area + T_restant_area :=
+  postulate_aire_rectangle
+
+theorem combinatoire_mixte_stricte :
+    Com_Pinit_Re < Com_ident ∧ Com_mixt_Sup > Com_Pinit_Re :=
+  ⟨postulate_combinatoire_1, postulate_combinatoire_2⟩
+
+theorem courbure_induite_par_surcombinatoire (h : Com_Pinit_Re < Com_ident) :
+    Courb_droitcri_init_aire_parabol = Aire_parab :=
+  postulate_courbure h
+
+theorem solution_epipolaire_Riemann
+    (h1 : Com_Pinit_Re < Com_ident)
+    (h2 : Aire_parab = T_restant_area) :
+    HypR_demi_solFinal := postulate_solution h2
+
+-- ============================================================================
+-- SECTION XIV : Modele spectral 1/4 (A_1_4, B_1_4, premier 947)
+-- Correspond a la section Isabelle lignes 732-812.
+-- ============================================================================
+
+/-- Suite A pour rapport 1/4 : A_1_4(n) = ((241/16)/12) * 4^n - 4/3. -/
+noncomputable def A_1_4 (n : ℕ) : ℝ := ((241 / 16) / 12) * (4 : ℝ) ^ n - (4 / 3)
+
+/-- Suite B pour rapport 1/4 : B_1_4(n) = ((964/16)/12) * 4^n - 3073*(4/3). -/
+noncomputable def B_1_4 (n : ℕ) : ℝ :=
+  ((964 / 16) / 12) * (4 : ℝ) ^ n - (3073 * (4 / 3))
+
+/-- Equation generale du modele 1/4 : identite algebrique triviale. -/
+noncomputable def prime_equation_1_4 (n p : ℕ) : ℝ :=
+  (B_1_4 n - (B_1_4 n - 4096 * (p : ℝ))) / 4096
+
+lemma prime_equation_1_4_identity (n p : ℕ) :
+    prime_equation_1_4 n p = (p : ℝ) := by
+  unfold prime_equation_1_4; ring
+
+/-- Postulat spectral 1/4 (axiome Savard). -/
+axiom spectral_postulate_1_4 :
+    ∀ (n p : ℕ), 0 < n → Nat.Prime p → prime_equation_1_4 n p = (p : ℝ)
+
+lemma prime_equation_1_4_for_primes (n p : ℕ)
+    (hn : 0 < n) (hp : Nat.Prime p) : prime_equation_1_4 n p = (p : ℝ) :=
+  spectral_postulate_1_4 n p hn hp
+
+/-- Somme numerique de la suite A pour l'exemple 947. -/
+noncomputable def suite_A_1_4_somme : ℝ := 1316180
+/-- Somme numerique de la suite B pour l'exemple 947. -/
+noncomputable def suite_B_1_4_somme : ℝ := 5260628
+noncomputable def digamma_1_4 : ℝ := 65536
+noncomputable def digamma_calcule_1_4 : ℝ := suite_A_1_4_somme + digamma_1_4
+
+/-- Preuve numerique : le premier 947 est reconstruit exactement. -/
+lemma preuve_premier_947 :
+    (suite_B_1_4_somme - digamma_calcule_1_4) / 4096 = 947 := by
+  unfold suite_A_1_4_somme suite_B_1_4_somme digamma_1_4 digamma_calcule_1_4
+  norm_num
+
+-- ============================================================================
+-- SECTION XV : Modele spectral 1/3 (A_1_3, B_1_3, premier 227)
+-- Correspond a la section Isabelle lignes 818-889.
+-- ============================================================================
+
+noncomputable def A_1_3 (n : ℕ) : ℝ := ((73 / 9) / 12) * (3 : ℝ) ^ n - 1.5
+noncomputable def B_1_3 (n : ℕ) : ℝ :=
+  ((219 / 9) / 12) * (3 : ℝ) ^ n - (487 * 1.5)
+
+noncomputable def prime_equation_1_3 (n p : ℕ) : ℝ :=
+  (B_1_3 n - (B_1_3 n - 729 * (p : ℝ))) / 729
+
+lemma prime_equation_1_3_identity (n p : ℕ) :
+    prime_equation_1_3 n p = (p : ℝ) := by
+  unfold prime_equation_1_3; ring
+
+/-- Postulat spectral 1/3 (axiome Savard). -/
+axiom spectral_postulate_1_3 :
+    ∀ (n p : ℕ), 0 < n → Nat.Prime p → prime_equation_1_3 n p = (p : ℝ)
+
+lemma prime_equation_1_3_for_primes (n p : ℕ)
+    (hn : 0 < n) (hp : Nat.Prime p) : prime_equation_1_3 n p = (p : ℝ) :=
+  spectral_postulate_1_3 n p hn hp
+
+noncomputable def suite_A_1_3_somme : ℝ := 79824
+noncomputable def suite_B_1_3_somme : ℝ := 238746
+noncomputable def digamma_1_3 : ℝ := 6561
+noncomputable def digamma_calcule_1_3 : ℝ := suite_A_1_3_somme - digamma_1_3
+
+lemma preuve_premier_227 :
+    (suite_B_1_3_somme - digamma_calcule_1_3) / 729 = 227 := by
+  unfold suite_A_1_3_somme suite_B_1_3_somme digamma_1_3 digamma_calcule_1_3
+  norm_num
+
+-- ============================================================================
+-- SECTION XVI : Rapports spectraux 1/3 et 1/4 (theoremes)
+-- Correspond a la section Isabelle lignes 899-975.
+-- ============================================================================
+
+noncomputable def RsP_1_3 (n1 n2 : ℕ) : ℝ :=
+  (A_1_3 n1 - A_1_3 n2) / (B_1_3 n1 - B_1_3 n2)
+
+theorem RsP_un_tiers_constant (n1 n2 : ℕ)
+    (h1 : 0 < n1) (h2 : 0 < n2) (hne : n1 ≠ n2) :
+    RsP_1_3 n1 n2 = 1 / 3 := by
+  have hpow_ne : ((3 : ℝ) ^ n1 - (3 : ℝ) ^ n2) ≠ 0 := by
+    intro hz
+    have heq : (3 : ℝ) ^ n1 = (3 : ℝ) ^ n2 := by linarith
+    exact hne (pow_right_injective (by norm_num : (3 : ℝ) ≠ 1) heq)
+  unfold RsP_1_3 A_1_3 B_1_3
+  have num : ((73 / 9) / 12) * (3 : ℝ) ^ n1 - 1.5
+             - (((73 / 9) / 12) * (3 : ℝ) ^ n2 - 1.5)
+             = ((73 / 9) / 12) * ((3 : ℝ) ^ n1 - (3 : ℝ) ^ n2) := by ring
+  have den : ((219 / 9) / 12) * (3 : ℝ) ^ n1 - (487 * 1.5)
+             - (((219 / 9) / 12) * (3 : ℝ) ^ n2 - (487 * 1.5))
+             = ((219 / 9) / 12) * ((3 : ℝ) ^ n1 - (3 : ℝ) ^ n2) := by ring
+  rw [num, den, mul_div_mul_right _ _ hpow_ne]
+  norm_num
+
+noncomputable def RsP_1_4 (n1 n2 : ℕ) : ℝ :=
+  (A_1_4 n1 - A_1_4 n2) / (B_1_4 n1 - B_1_4 n2)
+
+theorem RsP_un_quart_constant (n1 n2 : ℕ)
+    (h1 : 0 < n1) (h2 : 0 < n2) (hne : n1 ≠ n2) :
+    RsP_1_4 n1 n2 = 1 / 4 := by
+  have hpow_ne : ((4 : ℝ) ^ n1 - (4 : ℝ) ^ n2) ≠ 0 := by
+    intro hz
+    have heq : (4 : ℝ) ^ n1 = (4 : ℝ) ^ n2 := by linarith
+    exact hne (pow_right_injective (by norm_num : (4 : ℝ) ≠ 1) heq)
+  unfold RsP_1_4 A_1_4 B_1_4
+  have num : ((241 / 16) / 12) * (4 : ℝ) ^ n1 - (4 / 3)
+             - (((241 / 16) / 12) * (4 : ℝ) ^ n2 - (4 / 3))
+             = ((241 / 16) / 12) * ((4 : ℝ) ^ n1 - (4 : ℝ) ^ n2) := by ring
+  have den : ((964 / 16) / 12) * (4 : ℝ) ^ n1 - (3073 * (4 / 3))
+             - (((964 / 16) / 12) * (4 : ℝ) ^ n2 - (3073 * (4 / 3)))
+             = ((964 / 16) / 12) * ((4 : ℝ) ^ n1 - (4 : ℝ) ^ n2) := by ring
+  rw [num, den, mul_div_mul_right _ _ hpow_ne]
+  norm_num
+
+-- ============================================================================
+-- SECTION XVII : Suites mixtes SA_mix, SB_mix
+-- Correspond a la section Isabelle lignes 980-1048.
+-- ============================================================================
+
+noncomputable def SA_mix (n : ℕ) : ℝ := 48 + 13 / ((2 : ℝ) ^ (n + 2))
+noncomputable def SB_mix (n : ℕ) : ℝ := -28 + 13 / ((2 : ℝ) ^ (n + 1))
+
+lemma SA_mix_closed_form (n : ℕ) : SA_mix n = 48 + 13 / ((2 : ℝ) ^ (n + 2)) := rfl
+lemma SB_mix_closed_form (n : ℕ) : SB_mix n = -28 + 13 / ((2 : ℝ) ^ (n + 1)) := rfl
+
+lemma SA_mix_step (n : ℕ) :
+    SA_mix (n + 1) = SA_mix n - 13 / ((2 : ℝ) ^ (n + 3)) := by
+  unfold SA_mix
+  have h1 : ((2 : ℝ) ^ ((n + 1) + 2)) = 2 * (2 : ℝ) ^ (n + 2) := by
+    rw [show (n + 1) + 2 = (n + 2) + 1 from rfl, pow_succ]; ring
+  have h2 : ((2 : ℝ) ^ (n + 3)) = 2 * (2 : ℝ) ^ (n + 2) := by
+    rw [show n + 3 = (n + 2) + 1 from rfl, pow_succ]; ring
+  have hpos : ((2 : ℝ) ^ (n + 2)) ≠ 0 := pow_ne_zero _ (by norm_num)
+  rw [h1, h2]; field_simp; ring
+
+lemma SB_mix_step (n : ℕ) :
+    SB_mix (n + 1) = SB_mix n - 13 / ((2 : ℝ) ^ (n + 2)) := by
+  unfold SB_mix
+  have h1 : ((2 : ℝ) ^ ((n + 1) + 1)) = 2 * (2 : ℝ) ^ (n + 1) := by
+    rw [show (n + 1) + 1 = (n + 1) + 1 from rfl, pow_succ]; ring
+  have h2 : ((2 : ℝ) ^ (n + 2)) = 2 * (2 : ℝ) ^ (n + 1) := by
+    rw [show n + 2 = (n + 1) + 1 from rfl, pow_succ]; ring
+  have hpos : ((2 : ℝ) ^ (n + 1)) ≠ 0 := pow_ne_zero _ (by norm_num)
+  rw [h1, h2]; field_simp; ring
+
+lemma SA_mix_limit_shape (n : ℕ) : SA_mix n - 48 = 13 / ((2 : ℝ) ^ (n + 2)) := by
+  unfold SA_mix; ring
+
+lemma SB_mix_limit_shape (n : ℕ) : SB_mix n + 28 = 13 / ((2 : ℝ) ^ (n + 1)) := by
+  unfold SB_mix; ring
+
+/-- Digamma mix parametre par la fonction K. -/
+noncomputable def digamma_mix (K : ℕ → ℝ) (n : ℕ) : ℝ := SA_mix n + K n
+
+/-- Reconstruction du premier via suite mixte. -/
+noncomputable def premier_mix (K : ℕ → ℝ) (n : ℕ) : ℝ :=
+  (SB_mix n - digamma_mix K n) / (1 / 64)
+
+lemma premier_mix_rewrite (K : ℕ → ℝ) (n : ℕ) :
+    premier_mix K n = 64 * (SB_mix n - digamma_mix K n) := by
+  unfold premier_mix; ring
+
+/-- Exemple instancie : six termes negatifs. -/
+noncomputable def K6 : ℝ := -(37127 / 256) - SA_mix 6
+
+noncomputable def digamma_mix_6 : ℝ := SA_mix 6 + K6
+noncomputable def premier_mix_6 : ℝ := (SB_mix 6 - digamma_mix_6) / (1 / 64)
+
+lemma digamma_mix_6_value : digamma_mix_6 = -(37127 / 256) := by
+  unfold digamma_mix_6 K6; ring
+
+lemma premier_mix_6_value : premier_mix_6 = 29985 / 4 := by
+  unfold premier_mix_6 digamma_mix_6 K6 SA_mix SB_mix
+  norm_num
+
+-- ============================================================================
+-- SECTION XVIII : Suites negatives (equations spectrales)
+-- Correspond a la section Isabelle lignes 1054-1090.
+-- Note : Isabelle utilise `powr` (puissance reelle). En Lean/Mathlib, on
+-- utilise `Real.rpow`. On introduit une notation `r ^ n` pour n reel.
+-- ============================================================================
+
+noncomputable def SA_neg_eq (n : ℝ) : ℝ := 3.25 * Real.rpow 2 n - 2
+noncomputable def SB_neg_eq (n : ℝ) : ℝ := 6.5 * Real.rpow 2 n - 66
+
+noncomputable def digamma_neg_calc (n p : ℝ) : ℝ := SB_neg_eq n - 64 * p
+
+lemma digamma_neg_calc_equation_alt (n p : ℝ) :
+    digamma_neg_calc n p = (SB_neg_eq n / 64 - p) * 64 := by
+  unfold digamma_neg_calc SB_neg_eq; ring
+
+/-- Rapport spectral 1/2 negatif. -/
+noncomputable def RsP_neg (n1 n2 : ℝ) : ℝ :=
+  (SA_neg_eq n1 - SA_neg_eq n2) / (SB_neg_eq n1 - SB_neg_eq n2)
+
+/-- Axiome Savard : le rapport spectral negatif vaut 1/2 pour n1, n2 <= -1. -/
+axiom spectral_ratio_neg_un_demi :
+    ∀ (n1 n2 : ℝ), n1 ≤ -1 → n2 ≤ -1 → n1 ≠ n2 → RsP_neg n1 n2 = 1 / 2
+
+lemma RsP_neg_un_demi_general (n1 n2 : ℝ)
+    (h1 : n1 ≤ -1) (h2 : n2 ≤ -1) (hne : n1 ≠ n2) :
+    RsP_neg n1 n2 = 1 / 2 := spectral_ratio_neg_un_demi n1 n2 h1 h2 hne
+
+-- ============================================================================
+-- SECTION XIX : Geometrie spectrale - asymetries ordonnee et chaotique
+-- Correspond a la section Isabelle lignes 1096-1211.
+-- Note : Lean utilise `Int` pour `int` et `Nat` pour `nat`. Les predicats
+-- `strictement_croissante` sont ecrits avec List.get / List.length.
+-- ============================================================================
+
+/-- Indice valide (version entiere) : n >= 1 ou n <= -1. -/
+def indice_valide (n : ℤ) : Prop := n ≥ 1 ∨ n ≤ -1
+
+/-- Liste strictement croissante sur les entiers. -/
+def liste_strictement_croissante (xs : List ℤ) : Prop :=
+  ∀ (i j : ℕ), i < j → j < xs.length →
+    xs.get ⟨i, by omega⟩ < xs.get ⟨j, by omega⟩
+
+/-- Configuration asymetrique ORDONNEE (int). -/
+def asymetrique_ordonnee (A B : List ℤ) : Prop :=
+  (∀ n ∈ A, indice_valide n) ∧
+  (∀ n ∈ B, indice_valide n) ∧
+  liste_strictement_croissante A ∧
+  liste_strictement_croissante B ∧
+  A ≠ [] ∧ B ≠ [] ∧
+  (∀ (hA : A ≠ []) (hB : B ≠ []),
+    A.getLast hA < B.head hB) ∧
+  B.length = A.length + 1
+
+/-- Configuration asymetrique CHAOTIQUE (int). -/
+def asymetrique_chaotique (A B : List ℤ) : Prop :=
+  (∀ n ∈ A, indice_valide n) ∧
+  (∀ n ∈ B, indice_valide n) ∧
+  A.length ≠ B.length ∧
+  ¬ asymetrique_ordonnee A B
+
+theorem asymetrie_implique_indices_valides (A B : List ℤ)
+    (h : asymetrique_ordonnee A B ∨ asymetrique_chaotique A B) :
+    (∀ n ∈ A, indice_valide n) ∧ (∀ n ∈ B, indice_valide n) := by
+  rcases h with h1 | h2
+  · exact ⟨h1.1, h1.2.1⟩
+  · exact ⟨h2.1, h2.2.1⟩
+
+/-- Version nat : indice_valide_nat n = (n > 0). -/
+def indice_valide_nat (n : ℕ) : Prop := 0 < n
+
+/-- Liste strictement croissante (version nat). -/
+def liste_strictement_croissante_nat (xs : List ℕ) : Prop :=
+  ∀ (i j : ℕ), i < j → j < xs.length →
+    xs.get ⟨i, by omega⟩ < xs.get ⟨j, by omega⟩
+
+def asymetrique_ordonnee_nat (A B : List ℕ) : Prop :=
+  (∀ n ∈ A, indice_valide_nat n) ∧
+  (∀ n ∈ B, indice_valide_nat n) ∧
+  liste_strictement_croissante_nat A ∧
+  liste_strictement_croissante_nat B ∧
+  A ≠ [] ∧ B ≠ [] ∧
+  (∀ (hA : A ≠ []) (hB : B ≠ []),
+    A.getLast hA < B.head hB) ∧
+  B.length = A.length + 1
+
+def asymetrique_chaotique_nat (A B : List ℕ) : Prop :=
+  (∀ n ∈ A, indice_valide_nat n) ∧
+  (∀ n ∈ B, indice_valide_nat n) ∧
+  A.length ≠ B.length ∧
+  ¬ asymetrique_ordonnee_nat A B
+
+theorem asymetrie_nat_implique_indices_valides (A B : List ℕ)
+    (h : asymetrique_ordonnee_nat A B ∨ asymetrique_chaotique_nat A B) :
+    (∀ n ∈ A, indice_valide_nat n) ∧ (∀ n ∈ B, indice_valide_nat n) := by
+  rcases h with h1 | h2
+  · exact ⟨h1.1, h1.2.1⟩
+  · exact ⟨h2.1, h2.2.1⟩
+
+-- ============================================================================
+-- SECTION XX : Methode de comparaison asymetrique pour 1/2 et 1/4
+-- Correspond a la section Isabelle lignes 1214-1324.
+-- ============================================================================
+
+/-- Somme SA sur un bloc d'indices. -/
+noncomputable def somme_SA_bloc (A_indices : List ℕ) : ℝ :=
+  (A_indices.map SA).sum
+
+/-- Somme SB sur un bloc d'indices. -/
+noncomputable def somme_SB_bloc (B_indices : List ℕ) : ℝ :=
+  (B_indices.map SB).sum
+
+/-- Rapport spectral de blocs pour le modele 1/2. -/
+noncomputable def RsP_bloc_1_2 (A_indices B_indices : List ℕ) : ℝ :=
+  (somme_SA_bloc A_indices - somme_SA_bloc B_indices) /
+  (somme_SB_bloc A_indices - somme_SB_bloc B_indices)
+
+def comparaison_asym_ordonnee_1_2 (A B : List ℕ) : Prop :=
+  asymetrique_ordonnee_nat A B
+def comparaison_asym_chaotique_1_2 (A B : List ℕ) : Prop :=
+  asymetrique_chaotique_nat A B
+
+/-- Somme A_1_4 sur un bloc d'indices. -/
+noncomputable def somme_A_1_4_bloc (A_indices : List ℕ) : ℝ :=
+  (A_indices.map A_1_4).sum
+
+/-- Somme B_1_4 sur un bloc d'indices. -/
+noncomputable def somme_B_1_4_bloc (B_indices : List ℕ) : ℝ :=
+  (B_indices.map B_1_4).sum
+
+noncomputable def RsP_bloc_1_4 (A_indices B_indices : List ℕ) : ℝ :=
+  (somme_A_1_4_bloc A_indices - somme_A_1_4_bloc B_indices) /
+  (somme_B_1_4_bloc A_indices - somme_B_1_4_bloc B_indices)
+
+def comparaison_asym_ordonnee_1_4 (A B : List ℕ) : Prop :=
+  asymetrique_ordonnee_nat A B
+def comparaison_asym_chaotique_1_4 (A B : List ℕ) : Prop :=
+  asymetrique_chaotique_nat A B
+
+-- ============================================================================
+-- SECTION XXI : Rapports spectraux negatifs 1/3 et 1/4 (axiomatises)
+-- Correspond a la section Isabelle lignes 1337-1402.
+-- ============================================================================
+
+noncomputable def SA_neg_eq_un_tiers (n : ℝ) : ℝ :=
+  ((73 / 9) / 6) * Real.rpow 3 n - 1.5
+noncomputable def SB_neg_eq_un_tiers (n : ℝ) : ℝ :=
+  ((219 / 9) / 6) * Real.rpow 3 n - (487 * 1.5)
+
+noncomputable def RsP_neg_un_tiers (n1 n2 : ℝ) : ℝ :=
+  (SA_neg_eq_un_tiers n1 - SA_neg_eq_un_tiers n2) /
+  (SB_neg_eq_un_tiers n1 - SB_neg_eq_un_tiers n2)
+
+/-- Axiome Savard : rapport spectral negatif = 1/3 pour n1, n2 <= -1. -/
+axiom spectral_ratio_neg_un_tiers :
+    ∀ (n1 n2 : ℝ), n1 ≤ -1 → n2 ≤ -1 → n1 ≠ n2 →
+    RsP_neg_un_tiers n1 n2 = 1 / 3
+
+lemma RsP_neg_un_tiers_general (n1 n2 : ℝ)
+    (h1 : n1 ≤ -1) (h2 : n2 ≤ -1) (hne : n1 ≠ n2) :
+    RsP_neg_un_tiers n1 n2 = 1 / 3 :=
+  spectral_ratio_neg_un_tiers n1 n2 h1 h2 hne
+
+noncomputable def SA_neg_eq_un_quart (n : ℝ) : ℝ :=
+  ((241 / 16) / 12) * Real.rpow 4 n - (4 / 3)
+noncomputable def SB_neg_eq_un_quart (n : ℝ) : ℝ :=
+  ((964 / 16) / 12) * Real.rpow 4 n - (3073 * (4 / 3))
+
+noncomputable def RsP_neg_un_quart (n1 n2 : ℝ) : ℝ :=
+  (SA_neg_eq_un_quart n1 - SA_neg_eq_un_quart n2) /
+  (SB_neg_eq_un_quart n1 - SB_neg_eq_un_quart n2)
+
+/-- Axiome Savard : rapport spectral negatif = 1/4 pour n1, n2 <= -1. -/
+axiom spectral_ratio_neg_un_quart :
+    ∀ (n1 n2 : ℝ), n1 ≤ -1 → n2 ≤ -1 → n1 ≠ n2 →
+    RsP_neg_un_quart n1 n2 = 1 / 4
+
+lemma RsP_neg_un_quart_general (n1 n2 : ℝ)
+    (h1 : n1 ≤ -1) (h2 : n2 ≤ -1) (hne : n1 ≠ n2) :
+    RsP_neg_un_quart n1 n2 = 1 / 4 :=
+  spectral_ratio_neg_un_quart n1 n2 h1 h2 hne
+
+-- ============================================================================
+-- SECTION XXII : Ecarts spectraux (exemples -19/-5, -31/17, 227/173, 947/881)
+-- Correspond a la section Isabelle lignes 1408-2115.
+-- ============================================================================
+
+/-- Forme generale de l'ecart negatif (dummy parametre pour compat Isabelle). -/
+noncomputable def gap_neg_val (A_next B_high D_high D_low _dummy : ℝ) : ℝ :=
+  (A_next - (B_high - D_high) - D_low) / 64
+
+noncomputable def n_m7  : ℝ := -7
+noncomputable def n_m3  : ℝ := -3
+noncomputable def n_m19 : ℝ := -8
+
+noncomputable def SA_m7_val  : ℝ := -10110 / 5120
+noncomputable def SB_m5_val  : ℝ := -20860 / 320
+noncomputable def D_m5_val   : ℝ := 81540 / 320
+noncomputable def SB_m19_val : ℝ := -337790 / 5120
+noncomputable def D_m19_val  : ℝ := 5888130 / 5120
+
+lemma gap_m19_m5 :
+    gap_neg_val SA_m7_val SB_m5_val D_m5_val D_m19_val 0 = -13 := by
+  unfold gap_neg_val SA_m7_val SB_m5_val D_m5_val D_m19_val
+  norm_num
+
+/-- Exemple -31 / 17 (ecart mixte). -/
+noncomputable def n_m29 : ℝ := -10
+noncomputable def n_p17 : ℝ := 8
+noncomputable def n_m31 : ℝ := -11
+
+noncomputable def SA_m29_val : ℝ := -40895 / 20480
+noncomputable def SB_p17_val : ℝ := 350
+noncomputable def D_p17_val  : ℝ := -738
+noncomputable def SB_m31_val : ℝ := -1351615 / 20480
+noncomputable def D_m31_val  : ℝ := 39280705 / 20480
+
+/-- Forme generale de l'ecart mixte. -/
+noncomputable def gap_mix_val (A_next B_high D_high D_low _dummy : ℝ) : ℝ :=
+  (A_next - (B_high - D_high) - D_low) / 64
+
+lemma gap_m31_17 :
+    gap_mix_val SA_m29_val SB_p17_val D_p17_val D_m31_val 0 = -47 := by
+  unfold gap_mix_val SA_m29_val SB_p17_val D_p17_val D_m31_val
+  norm_num
+
+/-- Valeurs spectrales pour 23 et 7. -/
+noncomputable def SA_11_val : ℝ := 50
+noncomputable def SB_23_val : ℝ := 1598
+noncomputable def D_23_val  : ℝ := 126
+noncomputable def SB_7_val  : ℝ := -14
+noncomputable def D_7_val   : ℝ := -464
+
+/-- Exemple 227 / 173 (rapport 1/3). -/
+noncomputable def SA_227_val : ℝ := 79824
+noncomputable def SB_227_val : ℝ := 238746
+noncomputable def D_227_val  : ℝ := 73263
+noncomputable def SA_179_val : ℝ := 96 / 9
+noncomputable def SB_173_val : ℝ := -2155 / 3
+noncomputable def D_173_val  : ℝ := -1141518 / 9
+
+lemma ecart_227_173_1_3 :
+    ((SA_179_val - (SB_227_val - D_227_val) - D_173_val) / 729) = -53 := by
+  unfold SA_179_val SB_227_val D_227_val D_173_val
+  norm_num
+
+/-- Equation generale d'ecart (rapport 1/3). -/
+noncomputable def gap_equation_1_3 (A_next B_high D_high D_low : ℝ) : ℝ :=
+  (A_next - (B_high - D_high) - D_low) / 729
+
+lemma gap_equation_1_3_simplifiee (A_next B_high D_high D_low : ℝ) :
+    gap_equation_1_3 A_next B_high D_high D_low =
+    (A_next - B_high + D_high - D_low) / 729 := by
+  unfold gap_equation_1_3; ring
+
+/-- Postulat Savard : l'ecart spectral 1/3 donne p_low - p_high. -/
+axiom spectral_gap_postulate_1_3 :
+    ∀ (p_high p_low : ℕ) (A_next B_high D_high D_low : ℝ),
+    Nat.Prime p_high → Nat.Prime p_low →
+    gap_equation_1_3 A_next B_high D_high D_low =
+      ((p_low : ℝ) - (p_high : ℝ))
+
+lemma gap_equation_1_3_for_primes (p_high p_low : ℕ)
+    (A_next B_high D_high D_low : ℝ)
+    (h1 : Nat.Prime p_high) (h2 : Nat.Prime p_low) :
+    gap_equation_1_3 A_next B_high D_high D_low =
+      ((p_low : ℝ) - (p_high : ℝ)) :=
+  spectral_gap_postulate_1_3 p_high p_low A_next B_high D_high D_low h1 h2
+
+lemma ecart_227_173_1_3_via_gap_equation :
+    gap_equation_1_3 SA_179_val SB_227_val D_227_val D_173_val = -53 := by
+  unfold gap_equation_1_3 SA_179_val SB_227_val D_227_val D_173_val
+  norm_num
+
+/-- Exemple 947 / 881 (rapport 1/4). -/
+noncomputable def SA_883_val : ℝ := 75 / 4
+noncomputable def SB_947_val : ℝ := 5260628
+noncomputable def D_947_val  : ℝ := 1381716
+noncomputable def D_881_val  : ℝ := -(14450613 / 4)
+
+/-- Equation generale d'ecart (rapport 1/4). -/
+noncomputable def gap_equation_1_4 (A_next B_high D_high D_low : ℝ) : ℝ :=
+  (A_next - (B_high - D_high) - D_low) / 4096
+
+lemma gap_equation_1_4_simplifiee (A_next B_high D_high D_low : ℝ) :
+    gap_equation_1_4 A_next B_high D_high D_low =
+    (A_next - B_high + D_high - D_low) / 4096 := by
+  unfold gap_equation_1_4; ring
+
+/-- Postulat Savard : l'ecart spectral 1/4 donne p_low - p_high. -/
+axiom spectral_gap_postulate_1_4 :
+    ∀ (p_high p_low : ℕ) (A_next B_high D_high D_low : ℝ),
+    Nat.Prime p_high → Nat.Prime p_low →
+    gap_equation_1_4 A_next B_high D_high D_low =
+      ((p_low : ℝ) - (p_high : ℝ))
+
+lemma gap_equation_1_4_for_primes (p_high p_low : ℕ)
+    (A_next B_high D_high D_low : ℝ)
+    (h1 : Nat.Prime p_high) (h2 : Nat.Prime p_low) :
+    gap_equation_1_4 A_next B_high D_high D_low =
+      ((p_low : ℝ) - (p_high : ℝ)) :=
+  spectral_gap_postulate_1_4 p_high p_low A_next B_high D_high D_low h1 h2
+
+lemma ecart_947_881_1_4_via_gap_equation :
+    gap_equation_1_4 SA_883_val SB_947_val D_947_val D_881_val = -65 := by
+  unfold gap_equation_1_4 SA_883_val SB_947_val D_947_val D_881_val
+  norm_num
+
+-- ============================================================================
+-- SECTION XXIII : Axiomatisation analytique (zeros de zeta et geometrie)
+-- Correspond a la section Isabelle lignes 2166-2303.
+-- MISE EN GARDE : cette section est fournie a titre CONCEPTUEL uniquement
+-- (voir texte d'introduction Isabelle). Elle N'EST PAS une contribution
+-- originale de Philippe Thomas Savard et n'engage pas la Methode Spectrale.
+-- ============================================================================
+
+/-- Type abstrait pour un zero non-trivial de zeta. -/
+axiom zero_zeta : Type
+
+/-- Partie reelle d'un zero. -/
+axiom Re_zero_zeta : zero_zeta → ℝ
+/-- Partie imaginaire d'un zero. -/
+axiom Im_zero_zeta : zero_zeta → ℝ
+
+/-- Predicat : un zero de zeta determine la position du n-ieme premier. -/
+axiom prime_position_from_zero : zero_zeta → ℕ → Prop
+
+/-- Formule explicite abstraite (Riemann/von Mangoldt). -/
+axiom explicit_formula_axiom :
+    ∀ n : ℕ, ∃ r : zero_zeta, prime_position_from_zero r n
+
+/-- Types abstraits pour la structure spectrale Savard. -/
+axiom indice_spectral : Type
+axiom premier_spectral : Type
+
+axiom A_suite : indice_spectral → ℕ
+axiom B_suite : indice_spectral → ℕ
+axiom P_spectral : indice_spectral → premier_spectral
+axiom rapport_spectral : premier_spectral → premier_spectral → ℚ
+
+axiom spectral_index_to_prime :
+    ∀ n : indice_spectral, ∃ P : premier_spectral, P_spectral n = P
+axiom spectral_index_from_suites :
+    ∀ n : indice_spectral, 1 ≤ A_suite n + B_suite n
+
+axiom k_spectral : premier_spectral → premier_spectral → ℕ
+
+axiom rapport_spectral_forme :
+    ∀ P Q : premier_spectral, 1 ≤ k_spectral P Q →
+    rapport_spectral P Q = 1 / (k_spectral P Q : ℚ)
+
+/-- Concordance spectrale : lien Savard <-> zeros de zeta. -/
+axiom zero_associe : indice_spectral → zero_zeta
+axiom concordance_spectrale :
+    ∀ n : indice_spectral,
+    prime_position_from_zero (zero_associe n) (A_suite n + B_suite n)
+
+-- ============================================================================
+-- SECTION XXIV : Chapitre deuxieme - Hypothese de Riemann axiomatique
+-- Correspond a la section Isabelle lignes 2306-2392.
+-- Note : ceci est une MISE EN FORME AXIOMATIQUE (non demonstration).
+-- ============================================================================
+
+/-- Type abstrait pour un zero non-trivial complexe de zeta. -/
+axiom complex_zero_zeta : Type
+axiom Re_cz : complex_zero_zeta → ℝ
+axiom Im_cz : complex_zero_zeta → ℝ
+
+/-- Conjecture de Riemann sous forme axiomatique. -/
+axiom Riemann_Hypothesis : ∀ r : complex_zero_zeta, Re_cz r = 1 / 2
+
+/-- Type abstrait de nombre premier. -/
+axiom prime_number : Type
+axiom P_of : prime_index_t → prime_number
+
+/-- Modele geometrique des aires sur la droite critique. -/
+axiom area : Type
+axiom interval : Type
+
+axiom T : area
+axiom Tn : area
+axiom T_rest : area
+axiom P_area : interval
+axiom Pn_area : interval
+
+axiom relative_value : interval → ℝ
+axiom geometric_area : ℝ → area
+
+axiom mixed_gap_surplus : relative_value Pn_area > relative_value P_area
+axiom complementary_areas :
+    T_rest = geometric_area (relative_value Pn_area - relative_value P_area)
+
+axiom Re_zero : zero_zeta → ℝ
+axiom all_zeros_on_critical_line :
+    (T_rest = geometric_area (relative_value Pn_area - relative_value P_area))
+    → ∀ r : zero_zeta, Re_zero r = 1 / 2
+
+-- ============================================================================
+-- SECTION XII (Isabelle) / XXV (Lean) : Construction generalisee 1/k_i
+-- Correspond a la section Isabelle lignes 2584-2880.
+-- Constantes parametriques alpha, offset + 25 lemmes de validation numerique.
+-- ============================================================================
+
+/-- Constante Savard alpha_A(k) : coefficient de r^n dans somme_A. -/
+noncomputable def alpha_A_k (k : ℕ) : ℝ :=
+  if k = 2 then 3.25
+  else if k = 3 then 73 / 9
+  else if k = 4 then 241 / 16
+  else 0
+
+/-- Constante Savard alpha_B(k) : coefficient de r^n dans somme_B. -/
+noncomputable def alpha_B_k (k : ℕ) : ℝ :=
+  if k = 2 then 6.5
+  else if k = 3 then 219 / 9
+  else if k = 4 then 964 / 16
+  else 0
+
+/-- Constante Savard offset_A(k). -/
+noncomputable def offset_A_k (k : ℕ) : ℝ :=
+  if k = 2 then 2
+  else if k = 3 then 1.5
+  else if k = 4 then 4 / 3
+  else 0
+
+/-- Constante Savard offset_B(k). -/
+noncomputable def offset_B_k (k : ℕ) : ℝ :=
+  if k = 2 then 66
+  else if k = 3 then 487 * 1.5
+  else if k = 4 then 3073 * (4 / 3)
+  else 0
+
+/-- Somme fermee positive pour rapport 1/k. -/
+noncomputable def somme_A_pos_k (k n : ℕ) : ℝ :=
+  (alpha_A_k k / 2) * (k : ℝ) ^ n - offset_A_k k
+
+/-- Somme fermee positive pour rapport 1/k (suite B). -/
+noncomputable def somme_B_pos_k (k n : ℕ) : ℝ :=
+  (alpha_B_k k / 2) * (k : ℝ) ^ n - offset_B_k k
+
+/-- Somme fermee negative pour rapport 1/k. -/
+noncomputable def somme_A_neg_k (k n : ℕ) : ℝ :=
+  alpha_A_k k / ((k : ℝ) ^ n) - offset_A_k k
+
+/-- Somme fermee negative pour rapport 1/k (suite B). -/
+noncomputable def somme_B_neg_k (k n : ℕ) : ℝ :=
+  alpha_B_k k / ((k : ℝ) ^ n) - offset_B_k k
+
+/-- Compatibilite : somme_A_pos_k 2 n = SA n. -/
+lemma somme_A_pos_k_eq_SA (n : ℕ) : somme_A_pos_k 2 n = SA n := by
+  unfold somme_A_pos_k alpha_A_k offset_A_k SA
+  simp; norm_num
+
+/-- Compatibilite : somme_B_pos_k 2 n = SB n. -/
+lemma somme_B_pos_k_eq_SB (n : ℕ) : somme_B_pos_k 2 n = SB n := by
+  unfold somme_B_pos_k alpha_B_k offset_B_k SB
+  simp; norm_num
+
+/-- Construction terme-a-terme suite A (positive, k=2). -/
+noncomputable def terme_A_pos (a1 r : ℝ) (n i : ℕ) : ℝ :=
+  if i = 1 then a1
+  else if n = 2 ∧ i = 2 then a1 * (r - 1 / r)
+  else if n ≥ 3 ∧ i ≤ n - 2 then a1 * r ^ (i - 1)
+  else if n ≥ 3 ∧ i = n - 1 then a1 * r ^ (n - 3) * (r - 1 / r)
+  else if n ≥ 3 ∧ i = n then a1 * r ^ (n - 3) * (r - 1 / r) * r
+  else 0
+
+/-- Construction terme-a-terme suite B (positive, avec substitution pos.6). -/
+noncomputable def terme_B_pos (a1 r : ℝ) (n i : ℕ) : ℝ :=
+  if n < 8 then terme_A_pos a1 r n i
+  else if i = 1 then a1
+  else if i ≤ 5 then a1 * r ^ (i - 1)
+  else if i = 6 then a1 * r ^ 6
+  else if i ≤ n - 2 then a1 * r ^ i
+  else if i = n - 1 then a1 * r ^ (n - 2) * (r - 1 / r)
+  else if i = n then a1 * r ^ (n - 2) * (r - 1 / r) * r
+  else 0
+
+/- Validations numeriques cle (k=2, a1=2, r=2) — 20 lemmes -/
+
+lemma suite_A_1_terme : terme_A_pos 2 2 1 1 = 2 := by
+  unfold terme_A_pos; norm_num
+
+lemma suite_A_2_termes_pos1 : terme_A_pos 2 2 2 1 = 2 := by
+  unfold terme_A_pos; norm_num
+
+lemma suite_A_2_termes_pos2 : terme_A_pos 2 2 2 2 = 3 := by
+  unfold terme_A_pos; norm_num
+
+lemma suite_A_3_termes_pos3 : terme_A_pos 2 2 3 3 = 6 := by
+  unfold terme_A_pos; norm_num
+
+lemma suite_A_4_termes_pos3 : terme_A_pos 2 2 4 3 = 6 := by
+  unfold terme_A_pos; norm_num
+
+lemma suite_A_4_termes_pos4 : terme_A_pos 2 2 4 4 = 12 := by
+  unfold terme_A_pos; norm_num
+
+lemma suite_A_5_termes_pos4 : terme_A_pos 2 2 5 4 = 12 := by
+  unfold terme_A_pos; norm_num
+
+lemma suite_A_5_termes_pos5 : terme_A_pos 2 2 5 5 = 24 := by
+  unfold terme_A_pos; norm_num
+
+lemma suite_A_7_termes_pos6 : terme_A_pos 2 2 7 6 = 48 := by
+  unfold terme_A_pos; norm_num
+
+lemma suite_A_7_termes_pos7 : terme_A_pos 2 2 7 7 = 96 := by
+  unfold terme_A_pos; norm_num
+
+lemma suite_A_8_termes_pos6 : terme_A_pos 2 2 8 6 = 64 := by
+  unfold terme_A_pos; norm_num
+
+lemma suite_A_8_termes_pos7 : terme_A_pos 2 2 8 7 = 96 := by
+  unfold terme_A_pos; norm_num
+
+lemma suite_A_8_termes_pos8 : terme_A_pos 2 2 8 8 = 192 := by
+  unfold terme_A_pos; norm_num
+
+lemma suite_B_8_termes_pos6 : terme_B_pos 2 2 8 6 = 128 := by
+  unfold terme_B_pos; norm_num
+
+lemma suite_B_8_termes_pos7 : terme_B_pos 2 2 8 7 = 192 := by
+  unfold terme_B_pos; norm_num
+
+lemma suite_B_8_termes_pos8 : terme_B_pos 2 2 8 8 = 384 := by
+  unfold terme_B_pos; norm_num
+
+lemma suite_B_9_termes_pos6 : terme_B_pos 2 2 9 6 = 128 := by
+  unfold terme_B_pos; norm_num
+
+lemma suite_B_9_termes_pos7 : terme_B_pos 2 2 9 7 = 256 := by
+  unfold terme_B_pos; norm_num
+
+lemma suite_B_9_termes_pos9 : terme_B_pos 2 2 9 9 = 768 := by
+  unfold terme_B_pos; norm_num
+
+lemma suite_B_10_termes_pos8 : terme_B_pos 2 2 10 8 = 512 := by
+  unfold terme_B_pos; norm_num
+
+lemma suite_B_10_termes_pos10 : terme_B_pos 2 2 10 10 = 1536 := by
+  unfold terme_B_pos; norm_num
+
+/- Validations formules fermees positives (k=2) -/
+
+lemma somme_A_pos_11 : somme_A_pos_k 2 5 = 50 := by
+  unfold somme_A_pos_k alpha_A_k offset_A_k; norm_num
+
+lemma somme_B_pos_11 : somme_B_pos_k 2 5 = 38 := by
+  unfold somme_B_pos_k alpha_B_k offset_B_k; norm_num
+
+/- Validations formules fermees negatives (k=2) -/
+
+lemma somme_A_neg_k_value (n : ℕ) :
+    somme_A_neg_k 2 n = 3.25 / ((2 : ℝ) ^ n) - 2 := by
+  unfold somme_A_neg_k alpha_A_k offset_A_k; norm_num
+
+lemma somme_A_neg_m2 : somme_A_neg_k 2 1 = -3 / 8 := by
+  unfold somme_A_neg_k alpha_A_k offset_A_k; norm_num
+
+lemma somme_A_neg_m5 : somme_A_neg_k 2 3 = -51 / 32 := by
+  unfold somme_A_neg_k alpha_A_k offset_A_k; norm_num
+
+lemma somme_B_neg_m5 : somme_B_neg_k 2 3 = -1043 / 16 := by
+  unfold somme_B_neg_k alpha_B_k offset_B_k; norm_num
+
+lemma somme_B_neg_m5_decimal : (-1043 : ℝ) / 16 = -65.1875 := by norm_num
+
+/-- Rapport spectral 1/k universel (positif). -/
+noncomputable def RsP_k (k n1 n2 : ℕ) : ℝ :=
+  (somme_A_pos_k k n1 - somme_A_pos_k k n2) /
+  (somme_B_pos_k k n1 - somme_B_pos_k k n2)
+
+/-- Rapport spectral 1/k universel (negatif). -/
+noncomputable def RsP_neg_k (k n1 n2 : ℕ) : ℝ :=
+  (somme_A_neg_k k n1 - somme_A_neg_k k n2) /
+  (somme_B_neg_k k n1 - somme_B_neg_k k n2)
+
+/-- Theoreme central Section XII : pour k in {2,3,4}, RsP_k = 1/k. -/
+theorem RsP_k_egale_un_sur_k_pos (k n1 n2 : ℕ)
+    (hk : k = 2 ∨ k = 3 ∨ k = 4)
+    (h1 : 0 < n1) (h2 : 0 < n2) (hne : n1 ≠ n2) :
+    RsP_k k n1 n2 = 1 / (k : ℝ) := by
+  rcases hk with hk2 | hk3 | hk4
+  · -- Cas k = 2
+    subst hk2
+    have hpow_ne : ((2 : ℝ) ^ n1 - (2 : ℝ) ^ n2) ≠ 0 := by
+      intro hz
+      have heq : (2 : ℝ) ^ n1 = (2 : ℝ) ^ n2 := by linarith
+      exact hne (pow_right_injective (by norm_num : (2 : ℝ) ≠ 1) heq)
+    unfold RsP_k somme_A_pos_k somme_B_pos_k
+    have num_eq :
+        (alpha_A_k 2 / 2) * ((2 : ℝ) : ℝ) ^ n1 - offset_A_k 2
+          - ((alpha_A_k 2 / 2) * ((2 : ℝ) : ℝ) ^ n2 - offset_A_k 2)
+        = (alpha_A_k 2 / 2) * ((2 : ℝ) ^ n1 - (2 : ℝ) ^ n2) := by ring
+    have den_eq :
+        (alpha_B_k 2 / 2) * ((2 : ℝ) : ℝ) ^ n1 - offset_B_k 2
+          - ((alpha_B_k 2 / 2) * ((2 : ℝ) : ℝ) ^ n2 - offset_B_k 2)
+        = (alpha_B_k 2 / 2) * ((2 : ℝ) ^ n1 - (2 : ℝ) ^ n2) := by ring
+    rw [show ((2 : ℕ) : ℝ) = (2 : ℝ) from by norm_num] at *
+    rw [num_eq, den_eq, mul_div_mul_right _ _ hpow_ne]
+    unfold alpha_A_k alpha_B_k
+    norm_num
+  · -- Cas k = 3
+    subst hk3
+    have hpow_ne : ((3 : ℝ) ^ n1 - (3 : ℝ) ^ n2) ≠ 0 := by
+      intro hz
+      have heq : (3 : ℝ) ^ n1 = (3 : ℝ) ^ n2 := by linarith
+      exact hne (pow_right_injective (by norm_num : (3 : ℝ) ≠ 1) heq)
+    unfold RsP_k somme_A_pos_k somme_B_pos_k
+    have num_eq :
+        (alpha_A_k 3 / 2) * ((3 : ℕ) : ℝ) ^ n1 - offset_A_k 3
+          - ((alpha_A_k 3 / 2) * ((3 : ℕ) : ℝ) ^ n2 - offset_A_k 3)
+        = (alpha_A_k 3 / 2) * (((3 : ℕ) : ℝ) ^ n1 - ((3 : ℕ) : ℝ) ^ n2) := by ring
+    have den_eq :
+        (alpha_B_k 3 / 2) * ((3 : ℕ) : ℝ) ^ n1 - offset_B_k 3
+          - ((alpha_B_k 3 / 2) * ((3 : ℕ) : ℝ) ^ n2 - offset_B_k 3)
+        = (alpha_B_k 3 / 2) * (((3 : ℕ) : ℝ) ^ n1 - ((3 : ℕ) : ℝ) ^ n2) := by ring
+    rw [show ((3 : ℕ) : ℝ) = (3 : ℝ) from by norm_num] at *
+    rw [num_eq, den_eq, mul_div_mul_right _ _ hpow_ne]
+    unfold alpha_A_k alpha_B_k
+    norm_num
+  · -- Cas k = 4
+    subst hk4
+    have hpow_ne : ((4 : ℝ) ^ n1 - (4 : ℝ) ^ n2) ≠ 0 := by
+      intro hz
+      have heq : (4 : ℝ) ^ n1 = (4 : ℝ) ^ n2 := by linarith
+      exact hne (pow_right_injective (by norm_num : (4 : ℝ) ≠ 1) heq)
+    unfold RsP_k somme_A_pos_k somme_B_pos_k
+    have num_eq :
+        (alpha_A_k 4 / 2) * ((4 : ℕ) : ℝ) ^ n1 - offset_A_k 4
+          - ((alpha_A_k 4 / 2) * ((4 : ℕ) : ℝ) ^ n2 - offset_A_k 4)
+        = (alpha_A_k 4 / 2) * (((4 : ℕ) : ℝ) ^ n1 - ((4 : ℕ) : ℝ) ^ n2) := by ring
+    have den_eq :
+        (alpha_B_k 4 / 2) * ((4 : ℕ) : ℝ) ^ n1 - offset_B_k 4
+          - ((alpha_B_k 4 / 2) * ((4 : ℕ) : ℝ) ^ n2 - offset_B_k 4)
+        = (alpha_B_k 4 / 2) * (((4 : ℕ) : ℝ) ^ n1 - ((4 : ℕ) : ℝ) ^ n2) := by ring
+    rw [show ((4 : ℕ) : ℝ) = (4 : ℝ) from by norm_num] at *
+    rw [num_eq, den_eq, mul_div_mul_right _ _ hpow_ne]
+    unfold alpha_A_k alpha_B_k
+    norm_num
 
 end MethodeSpectrale

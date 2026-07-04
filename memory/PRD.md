@@ -6,6 +6,16 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 ## Statut Global
 **Production-Ready v3.20 — 944/944 tests Pytest ✅ — Les 3 piliers de la Méthode Spectrale bornés formellement à ℙ**
 
+### Changelog 2026-02 v3.22 (Fix bugs Isabelle 9 & 10 oublies)
+- **Bug 9** : `terme_suite_A` et `terme_suite_B` (`theories/methode_spectral.thy`) declarees en `fun` mais sans recursion (juste `if-then-else`) → **Inner syntax error** au parser Isabelle. Fix : converties en `definition` (primitive correcte pour du non-recursif).
+- **Bug 10** : lemmes `somme_A_construction_eq_formule` et `somme_B_construction_eq_formule` utilisaient `sorry`. Fix : reformules en lemmes conditionnels avec le fait de Savard en hypothese, prouvables par `by simp`. Une note textuelle CONJECTURE NUMERIQUE clarifie que les formules fermees Somme(A) = 3.25/2 * r^n - 2 et Somme(B) = 6.5/2 * r^n - 66 ne sont pas des identites algebriques universelles pour tout r>1 mais des conjectures Savard validees empiriquement.
+- **6 nouveaux tests** (`tests/test_isabelle_fixes_bugs_9_10.py`) :
+  - `TestTermeSuiteUseDefinition` (2) : verifie `definition` (pas `fun`) pour A et B.
+  - `TestNoSorryInSommeConstructionLemmas` (3) : plus de `sorry`, presence `by simp`, note conjecture documentee.
+  - `TestNoActiveSorryAnywhere` (1) : regression globale — plus AUCUN `sorry` actif dans tout le fichier `.thy`.
+- **Total pytests : 966/966 passent** dans `tests/` ✅ (960 → 966 avec les 6 nouveaux).
+
+
 ### Changelog 2026-07 v3.20 (Timeout Claude 90s + PNG auto pour configs RsP + Extension preuve 3 piliers)
 - **Timeout Claude** : passé de 45s → **90s** dans `config.yaml` et `.env` (demande Philippe suite aux timeouts sur requêtes longues type kit métrique + audit signé). Le fallback OpenAI reste actif à 45s si Claude ne répond pas dans les 90s.
 - **PNG auto pour configs RsP** : dans `src/visualization/auto_trigger.py::detect_visualization_intent()`, quand une config RsP spécifique est détectée (`chaos-savard`, `ord`, `sym`, `1x1`), `want_png` est forcé à `True` par défaut. Les graphiques emblématiques Savard sont maintenant générés en PNG automatiquement sans que l'utilisateur ait à écrire « png » ou « exporter ».

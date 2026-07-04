@@ -231,6 +231,7 @@ __pycache__/
 # Gros fichiers de test
 test_gabriel_v6.1_gap_mixed.zip
 *.zip
+/tests/local/
 
 # ============================================================
 # NOTES IMPORTANTES

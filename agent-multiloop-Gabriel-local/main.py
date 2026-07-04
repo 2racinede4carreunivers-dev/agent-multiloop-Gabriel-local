@@ -110,11 +110,19 @@ def main() -> None:
     # 3) Charger le CLI (import différé pour que la banniere s'affiche avant)
     from src.ui.cli import run_cli
 
-    # 4) Résumé d'init (avant que run_cli() prenne le contrôle)
+    # 4) Afficher le badge scientifique (certifications academiques)
+    try:
+        from src.core.scientific_badge import print_badge_to_console
+        if console is not None:
+            print_badge_to_console(console)
+    except Exception as exc:
+        logger.warning("Badge scientifique non disponible: %s", exc)
+
+    # 5) Résumé d'init (avant que run_cli() prenne le contrôle)
     log_path = Path(log_dir).resolve() / "agent_cli.log"
     _rich_init_summary(console, started_at, log_path, verbose)
 
-    # 5) Lancer le CLI (boucle interactive Rich)
+    # 6) Lancer le CLI (boucle interactive Rich)
     run_cli()
 
 

@@ -2589,10 +2589,41 @@ lemma somme_B_construction_eq_formule:
   using savard_B by simp
 
 lemma rapport_spectral_tend_vers_demi:
-  "\<lbrakk> n \<ge> 8; r > 1 \<rbrakk>
-   \<Longrightarrow> rapport_spectral_AB 1 r n = (3.25 * r ^ n - 4) / (6.5 * r ^ n - 132)"
-  unfolding rapport_spectral_AB_def somme_A_close_def somme_B_close_def
-  by (simp add: field_simps)
+  assumes "n \<ge> 8" and "r > 1"
+  shows "rapport_spectral_AB 1 r n = (3.25 * r ^ n - 4) / (6.5 * r ^ n - 132)"
+proof -
+  have hA: "somme_A_close r n = (3.25 / 2) * r ^ n - 2"
+    unfolding somme_A_close_def by simp
+  have hB: "somme_B_close r n = (6.5 / 2) * r ^ n - 66"
+    unfolding somme_B_close_def by simp
+  have hmain:
+    "((3.25 / 2) * r ^ n - 2) / ((6.5 / 2) * r ^ n - 66) =
+     (3.25 * r ^ n - 4) / (6.5 * r ^ n - 132)"
+  proof (cases "((6.5 / 2) * r ^ n - 66) = 0")
+    case True
+    then have "(6.5 * r ^ n - 132) = 0"
+      by simp
+    then show ?thesis by simp
+  next
+    case False
+    have hden1: "((6.5 / 2) * r ^ n - 66) \<noteq> 0"
+      using False by simp
+    have hden2: "(6.5 * r ^ n - 132) \<noteq> 0"
+    proof
+      assume hzero: "6.5 * r ^ n - 132 = 0"
+      then have "((6.5 / 2) * r ^ n - 66) = 0"
+        by simp
+      with hden1 show False by simp
+    qed
+    show ?thesis
+      by (field_simp [hden1 hden2]; ring)
+  qed
+  have "rapport_spectral_AB 1 r n = ((3.25 / 2) * r ^ n - 2) / ((6.5 / 2) * r ^ n - 66)"
+    unfolding rapport_spectral_AB_def hA hB by simp
+  also have "... = (3.25 * r ^ n - 4) / (6.5 * r ^ n - 132)"
+    using hmain by simp
+  finally show ?thesis .
+qed
 
 subsection "XI.11. Cas particuliers : suites 1 a 7 termes (voir Section XII)"
 
@@ -2911,8 +2942,12 @@ proof -
             ((alpha_B_k 2 / 2) * (2 ^ n1 - 2 ^ n2))"
       unfolding RsP_k_def somme_A_pos_k_def somme_B_pos_k_def
       by (simp add: algebra_simps)
+    also have "... = ((alpha_A_k 2 / 2) / (alpha_B_k 2 / 2)) * ((2 ^ n1 - 2 ^ n2) / (2 ^ n1 - 2 ^ n2))"
+      by (simp add: hne_pow_2)
+    also have "... = ((alpha_A_k 2 / 2) / (alpha_B_k 2 / 2)) * 1"
+      using hne_pow_2 by simp
     also have "... = (alpha_A_k 2 / 2) / (alpha_B_k 2 / 2)"
-      using hne_pow_2 by (simp add: field_simps)
+      by simp
     also have "... = 1 / real 2"
       unfolding alpha_A_k_def alpha_B_k_def by simp
     finally show ?thesis using 1 by simp
@@ -2936,8 +2971,12 @@ proof -
             ((alpha_B_k 3 / 2) * (3 ^ n1 - 3 ^ n2))"
       unfolding RsP_k_def somme_A_pos_k_def somme_B_pos_k_def
       by (simp add: algebra_simps)
+    also have "... = ((alpha_A_k 3 / 2) / (alpha_B_k 3 / 2)) * ((3 ^ n1 - 3 ^ n2) / (3 ^ n1 - 3 ^ n2))"
+      by (simp add: hne_pow_3)
+    also have "... = ((alpha_A_k 3 / 2) / (alpha_B_k 3 / 2)) * 1"
+      using hne_pow_3 by simp
     also have "... = (alpha_A_k 3 / 2) / (alpha_B_k 3 / 2)"
-      using hne_pow_3 by (simp add: field_simps)
+      by simp
     also have "... = 1 / real 3"
       unfolding alpha_A_k_def alpha_B_k_def by simp
     finally show ?thesis using 2 by simp
@@ -2961,8 +3000,12 @@ proof -
             ((alpha_B_k 4 / 2) * (4 ^ n1 - 4 ^ n2))"
       unfolding RsP_k_def somme_A_pos_k_def somme_B_pos_k_def
       by (simp add: algebra_simps)
+    also have "... = ((alpha_A_k 4 / 2) / (alpha_B_k 4 / 2)) * ((4 ^ n1 - 4 ^ n2) / (4 ^ n1 - 4 ^ n2))"
+      by (simp add: hne_pow_4)
+    also have "... = ((alpha_A_k 4 / 2) / (alpha_B_k 4 / 2)) * 1"
+      using hne_pow_4 by simp
     also have "... = (alpha_A_k 4 / 2) / (alpha_B_k 4 / 2)"
-      using hne_pow_4 by (simp add: field_simps)
+      by simp
     also have "... = 1 / real 4"
       unfolding alpha_A_k_def alpha_B_k_def by simp
     finally show ?thesis using 3 by simp

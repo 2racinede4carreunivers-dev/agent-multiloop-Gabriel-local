@@ -134,6 +134,21 @@ lemma RsP_un_demi_general:
   assumes "n1 >= 1" "n2 >= 1" "n1 ~= n2"
   shows "RsP n1 n2 = 1/2"
 proof -
+  (* Correction 2026-02 : temoin explicite de non-nullite pour 2^n1 - 2^n2. *)
+  have hne_pow_2: "(2::real)^n1 - 2^n2 \<noteq> 0"
+  proof (cases "n1 < n2")
+    case True
+    hence "(2::real)^n1 < 2^n2"
+      using power_strict_increasing[of n1 n2 "2::real"] by simp
+    thus ?thesis by simp
+  next
+    case False
+    with assms(3) have "n2 < n1" by simp
+    hence "(2::real)^n2 < 2^n1"
+      using power_strict_increasing[of n2 n1 "2::real"] by simp
+    thus ?thesis by simp
+  qed
+
   have SA1: "SA n1 = (3.25 / 2) * (2 ^ n1) - 2"
     by (simp add: SA_def)
   have SA2: "SA n2 = (3.25 / 2) * (2 ^ n2) - 2"
@@ -153,7 +168,7 @@ proof -
         ((6.5 / 2) * (2 ^ n1 - 2 ^ n2))"
     by (simp add: RsP_def num den)
   also have "... = (3.25 / 2) / (6.5 / 2)"
-    using assms by (simp add: field_simps)
+    using hne_pow_2 by (simp add: field_simps)
   also have "... = 1/2"
     by simp
   finally show ?thesis .
@@ -909,6 +924,21 @@ theorem RsP_un_tiers_constant:
   assumes "n1 > 0" and "n2 > 0" and "n1 ~= n2"
   shows "RsP_1_3 n1 n2 = 1/3"
 proof -
+  (* Correction 2026-02 : temoin de non-nullite pour 3^n1 - 3^n2. *)
+  have hne_pow_3: "(3::real)^n1 - 3^n2 \<noteq> 0"
+  proof (cases "n1 < n2")
+    case True
+    hence "(3::real)^n1 < 3^n2"
+      using power_strict_increasing[of n1 n2 "3::real"] by simp
+    thus ?thesis by simp
+  next
+    case False
+    with assms(3) have "n2 < n1" by simp
+    hence "(3::real)^n2 < 3^n1"
+      using power_strict_increasing[of n2 n1 "3::real"] by simp
+    thus ?thesis by simp
+  qed
+
   have diff_A:
     "A_1_3 n1 - A_1_3 n2 =
       ((73/9)/12) * (3^n1 - 3^n2)"
@@ -925,7 +955,7 @@ proof -
     unfolding RsP_1_3_def by (simp add: diff_A diff_B)
 
   also have "... = ((73/9)/12) / ((219/9)/12)"
-    using assms by (simp add: field_simps)
+    using hne_pow_3 by (simp add: field_simps)
 
   also have "... = 1/3"
     by simp
@@ -949,6 +979,21 @@ theorem RsP_un_quart_constant:
   assumes "n1 > 0" and "n2 > 0" and "n1 ~= n2"
   shows "RsP_1_4 n1 n2 = 1/4"
 proof -
+  (* Correction 2026-02 : temoin de non-nullite pour 4^n1 - 4^n2. *)
+  have hne_pow_4: "(4::real)^n1 - 4^n2 \<noteq> 0"
+  proof (cases "n1 < n2")
+    case True
+    hence "(4::real)^n1 < 4^n2"
+      using power_strict_increasing[of n1 n2 "4::real"] by simp
+    thus ?thesis by simp
+  next
+    case False
+    with assms(3) have "n2 < n1" by simp
+    hence "(4::real)^n2 < 4^n1"
+      using power_strict_increasing[of n2 n1 "4::real"] by simp
+    thus ?thesis by simp
+  qed
+
   have diff_A:
     "A_1_4 n1 - A_1_4 n2 =
       ((241/16)/12) * (4^n1 - 4^n2)"
@@ -965,7 +1010,7 @@ proof -
     unfolding RsP_1_4_def by (simp add: diff_A diff_B)
 
   also have "... = ((241/16)/12) / ((964/16)/12)"
-    using assms by (simp add: field_simps)
+    using hne_pow_4 by (simp add: field_simps)
 
   also have "... = 1/4"
     by simp
@@ -2833,6 +2878,12 @@ definition RsP_neg_k :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> r
      (somme_B_neg_k k n1 - somme_B_neg_k k n2)"
 
 (*   Theoreme central : pour k = 2, 3, 4, le rapport positif vaut 1/k         *)
+(*                                                                            *)
+(*   Correction 2026-02 (bug reporte par Philippe) : les tactiques            *)
+(*   `by (simp add: field_simps)` echouaient car Isabelle ne pouvait pas      *)
+(*   deduire que `base^n1 - base^n2 \<noteq> 0`. On fournit maintenant         *)
+(*   explicitement le temoin de non-nullite via `power_strict_increasing`     *)
+(*   et une disjonction sur `n1 < n2` vs `n2 < n1`.                           *)
 
 theorem RsP_k_egale_un_sur_k_pos:
   assumes "k \<in> {2, 3, 4}" "n1 > 0" "n2 > 0" "n1 \<noteq> n2"
@@ -2842,37 +2893,76 @@ proof -
   thus ?thesis
   proof cases
     case 1
+    have hne_pow_2: "(2::real)^n1 - 2^n2 \<noteq> 0"
+    proof (cases "n1 < n2")
+      case True
+      hence "(2::real)^n1 < 2^n2"
+        using power_strict_increasing[of n1 n2 "2::real"] by simp
+      thus ?thesis by simp
+    next
+      case False
+      with assms(4) have "n2 < n1" by simp
+      hence "(2::real)^n2 < 2^n1"
+        using power_strict_increasing[of n2 n1 "2::real"] by simp
+      thus ?thesis by simp
+    qed
     have "RsP_k 2 n1 n2 =
             ((alpha_A_k 2 / 2) * (2 ^ n1 - 2 ^ n2)) /
             ((alpha_B_k 2 / 2) * (2 ^ n1 - 2 ^ n2))"
       unfolding RsP_k_def somme_A_pos_k_def somme_B_pos_k_def
       by (simp add: algebra_simps)
     also have "... = (alpha_A_k 2 / 2) / (alpha_B_k 2 / 2)"
-      using assms(2-4) by (simp add: field_simps)
+      using hne_pow_2 by (simp add: field_simps)
     also have "... = 1 / real 2"
       unfolding alpha_A_k_def alpha_B_k_def by simp
     finally show ?thesis using 1 by simp
   next
     case 2
+    have hne_pow_3: "(3::real)^n1 - 3^n2 \<noteq> 0"
+    proof (cases "n1 < n2")
+      case True
+      hence "(3::real)^n1 < 3^n2"
+        using power_strict_increasing[of n1 n2 "3::real"] by simp
+      thus ?thesis by simp
+    next
+      case False
+      with assms(4) have "n2 < n1" by simp
+      hence "(3::real)^n2 < 3^n1"
+        using power_strict_increasing[of n2 n1 "3::real"] by simp
+      thus ?thesis by simp
+    qed
     have "RsP_k 3 n1 n2 =
             ((alpha_A_k 3 / 2) * (3 ^ n1 - 3 ^ n2)) /
             ((alpha_B_k 3 / 2) * (3 ^ n1 - 3 ^ n2))"
       unfolding RsP_k_def somme_A_pos_k_def somme_B_pos_k_def
       by (simp add: algebra_simps)
     also have "... = (alpha_A_k 3 / 2) / (alpha_B_k 3 / 2)"
-      using assms(2-4) by (simp add: field_simps)
+      using hne_pow_3 by (simp add: field_simps)
     also have "... = 1 / real 3"
       unfolding alpha_A_k_def alpha_B_k_def by simp
     finally show ?thesis using 2 by simp
   next
     case 3
+    have hne_pow_4: "(4::real)^n1 - 4^n2 \<noteq> 0"
+    proof (cases "n1 < n2")
+      case True
+      hence "(4::real)^n1 < 4^n2"
+        using power_strict_increasing[of n1 n2 "4::real"] by simp
+      thus ?thesis by simp
+    next
+      case False
+      with assms(4) have "n2 < n1" by simp
+      hence "(4::real)^n2 < 4^n1"
+        using power_strict_increasing[of n2 n1 "4::real"] by simp
+      thus ?thesis by simp
+    qed
     have "RsP_k 4 n1 n2 =
             ((alpha_A_k 4 / 2) * (4 ^ n1 - 4 ^ n2)) /
             ((alpha_B_k 4 / 2) * (4 ^ n1 - 4 ^ n2))"
       unfolding RsP_k_def somme_A_pos_k_def somme_B_pos_k_def
       by (simp add: algebra_simps)
     also have "... = (alpha_A_k 4 / 2) / (alpha_B_k 4 / 2)"
-      using assms(2-4) by (simp add: field_simps)
+      using hne_pow_4 by (simp add: field_simps)
     also have "... = 1 / real 4"
       unfolding alpha_A_k_def alpha_B_k_def by simp
     finally show ?thesis using 3 by simp

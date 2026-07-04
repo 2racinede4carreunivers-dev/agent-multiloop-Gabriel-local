@@ -1536,22 +1536,52 @@ text \<open>
 \<close>
 
 lemma composite_4_not_prime: "~ prime (4::nat)"
-  by (auto simp: prime_nat_iff)
+proof
+  assume "prime (4::nat)"
+  moreover have "(2::nat) dvd 4" by simp
+  moreover have "(2::nat) ~= 1" "(2::nat) ~= 4" by simp_all
+  ultimately show False by (metis prime_nat_iff)
+qed
 
 lemma composite_9_not_prime: "~ prime (9::nat)"
-  by (auto simp: prime_nat_iff)
+proof
+  assume "prime (9::nat)"
+  moreover have "(3::nat) dvd 9" by simp
+  moreover have "(3::nat) ~= 1" "(3::nat) ~= 9" by simp_all
+  ultimately show False by (metis prime_nat_iff)
+qed
 
 lemma composite_15_not_prime: "~ prime (15::nat)"
-  by (auto simp: prime_nat_iff)
+proof
+  assume "prime (15::nat)"
+  moreover have "(3::nat) dvd 15" by simp
+  moreover have "(3::nat) ~= 1" "(3::nat) ~= 15" by simp_all
+  ultimately show False by (metis prime_nat_iff)
+qed
 
 lemma composite_51_not_prime: "~ prime (51::nat)"
-  by (auto simp: prime_nat_iff)
+proof
+  assume "prime (51::nat)"
+  moreover have "(3::nat) dvd 51" by simp
+  moreover have "(3::nat) ~= 1" "(3::nat) ~= 51" by simp_all
+  ultimately show False by (metis prime_nat_iff)
+qed
 
 lemma composite_91_not_prime: "~ prime (91::nat)"
-  by (auto simp: prime_nat_iff)
+proof
+  assume "prime (91::nat)"
+  moreover have "(7::nat) dvd 91" by simp
+  moreover have "(7::nat) ~= 1" "(7::nat) ~= 91" by simp_all
+  ultimately show False by (metis prime_nat_iff)
+qed
 
 lemma composite_121_not_prime: "~ prime (121::nat)"
-  by (auto simp: prime_nat_iff)
+proof
+  assume "prime (121::nat)"
+  moreover have "(11::nat) dvd 121" by simp
+  moreover have "(11::nat) ~= 1" "(11::nat) ~= 121" by simp_all
+  ultimately show False by (metis prime_nat_iff)
+qed
 
 theorem no_spectral_position_for_4:
   "ALL i. (4::nat) ~= prime_i i"
@@ -1625,7 +1655,7 @@ text \<open>
 theorem composite_no_reconstruction_position:
   fixes C :: nat
   assumes "C > 1" and "~ prime C"
-  shows "~ (EX n. n >= 1 & (SB (real n) - digamma_calc (real n) (real C)) / 64 = real C
+  shows "~ (EX n. n >= 1 & (SB n - digamma_calc n C) / 64 = real C
                         & C = prime_i n)"
   \<comment> \<open>
     Note : la premiere conjonction est TRIVIALEMENT vraie par
@@ -1634,7 +1664,7 @@ theorem composite_no_reconstruction_position:
     composite_not_prime_i, C compose ne peut jamais etre prime_i n.
   \<close>
 proof
-  assume "EX n. n >= 1 & (SB (real n) - digamma_calc (real n) (real C)) / 64 = real C
+  assume "EX n. n >= 1 & (SB n - digamma_calc n C) / 64 = real C
               & C = prime_i n"
   then obtain n where prem: "C = prime_i n" by blast
   have "prime (prime_i n)" by (rule prime_i_is_prime)
@@ -1649,37 +1679,37 @@ text \<open>
 \<close>
 
 theorem no_reconstruction_for_4:
-  "~ (EX n. n >= 1 & (SB (real n) - digamma_calc (real n) (real 4)) / 64 = real 4
+  "~ (EX n. n >= 1 & (SB n - digamma_calc n 4) / 64 = real 4
                     & (4::nat) = prime_i n)"
   using composite_no_reconstruction_position[of "4::nat"] composite_4_not_prime
   by simp
 
 theorem no_reconstruction_for_9:
-  "~ (EX n. n >= 1 & (SB (real n) - digamma_calc (real n) (real 9)) / 64 = real 9
+  "~ (EX n. n >= 1 & (SB n - digamma_calc n 9) / 64 = real 9
                     & (9::nat) = prime_i n)"
   using composite_no_reconstruction_position[of "9::nat"] composite_9_not_prime
   by simp
 
 theorem no_reconstruction_for_15:
-  "~ (EX n. n >= 1 & (SB (real n) - digamma_calc (real n) (real 15)) / 64 = real 15
+  "~ (EX n. n >= 1 & (SB n - digamma_calc n 15) / 64 = real 15
                     & (15::nat) = prime_i n)"
   using composite_no_reconstruction_position[of "15::nat"] composite_15_not_prime
   by simp
 
 theorem no_reconstruction_for_51:
-  "~ (EX n. n >= 1 & (SB (real n) - digamma_calc (real n) (real 51)) / 64 = real 51
+  "~ (EX n. n >= 1 & (SB n - digamma_calc n 51) / 64 = real 51
                     & (51::nat) = prime_i n)"
   using composite_no_reconstruction_position[of "51::nat"] composite_51_not_prime
   by simp
 
 theorem no_reconstruction_for_91:
-  "~ (EX n. n >= 1 & (SB (real n) - digamma_calc (real n) (real 91)) / 64 = real 91
+  "~ (EX n. n >= 1 & (SB n - digamma_calc n 91) / 64 = real 91
                     & (91::nat) = prime_i n)"
   using composite_no_reconstruction_position[of "91::nat"] composite_91_not_prime
   by simp
 
 theorem no_reconstruction_for_121:
-  "~ (EX n. n >= 1 & (SB (real n) - digamma_calc (real n) (real 121)) / 64 = real 121
+  "~ (EX n. n >= 1 & (SB n - digamma_calc n 121) / 64 = real 121
                     & (121::nat) = prime_i n)"
   using composite_no_reconstruction_position[of "121::nat"] composite_121_not_prime
   by simp
@@ -2486,7 +2516,7 @@ lemma rapport_spectral_tend_vers_demi:
   "\<lbrakk> n \<ge> 8; r > 1 \<rbrakk>
    \<Longrightarrow> rapport_spectral_AB 1 r n = (3.25 * r ^ n - 4) / (6.5 * r ^ n - 132)"
   unfolding rapport_spectral_AB_def somme_A_close_def somme_B_close_def
-  by simp
+  by (simp add: field_simps)
 
 subsection "XI.11. Cas particuliers : suites 1 a 7 termes (voir Section XII)"
 

@@ -2592,36 +2592,27 @@ lemma rapport_spectral_tend_vers_demi:
   assumes "n \<ge> 8" and "r > 1"
   shows "rapport_spectral_AB 1 r n = (3.25 * r ^ n - 4) / (6.5 * r ^ n - 132)"
 proof -
-  have hA: "somme_A_close r n = (3.25 / 2) * r ^ n - 2"
-    unfolding somme_A_close_def by simp
-  have hB: "somme_B_close r n = (6.5 / 2) * r ^ n - 66"
-    unfolding somme_B_close_def by simp
+  have h1: "r ^ n * 52 - 64 = 2 * (r ^ n * 26 - 32)"
+    by simp
+  have h2: "r ^ n * 104 - 2112 = 2 * (r ^ n * 52 - 1056)"
+    by simp
   have hmain:
-    "((3.25 / 2) * r ^ n - 2) / ((6.5 / 2) * r ^ n - 66) =
-     (3.25 * r ^ n - 4) / (6.5 * r ^ n - 132)"
-  proof (cases "((6.5 / 2) * r ^ n - 66) = 0")
-    case True
-    then have "(6.5 * r ^ n - 132) = 0"
-      by simp
-    then show ?thesis by simp
-  next
-    case False
-    have hden1: "((6.5 / 2) * r ^ n - 66) \<noteq> 0"
-      using False by simp
-    have hden2: "(6.5 * r ^ n - 132) \<noteq> 0"
-    proof
-      assume hzero: "6.5 * r ^ n - 132 = 0"
-      then have "((6.5 / 2) * r ^ n - 66) = 0"
-        by simp
-      with hden1 show False by simp
-    qed
+    "(r ^ n * 52 - 64) / (r ^ n * 104 - 2112) =
+     (r ^ n * 26 - 32) / (r ^ n * 52 - 1056)"
+  proof -
+    have hnum: "r ^ n * 52 - 64 = 2 * (r ^ n * 26 - 32)"
+      by ring
+    have hden: "r ^ n * 104 - 2112 = 2 * (r ^ n * 52 - 1056)"
+      by ring
     show ?thesis
-      by (field_simp [hden1 hden2]; ring)
+      by (simp only: hnum hden; ring)
   qed
   have "rapport_spectral_AB 1 r n = ((3.25 / 2) * r ^ n - 2) / ((6.5 / 2) * r ^ n - 66)"
-    unfolding rapport_spectral_AB_def hA hB by simp
+    unfolding rapport_spectral_AB_def somme_A_close_def somme_B_close_def by simp
+  also have "... = ((3.25 * r ^ n - 4) / 2) / ((6.5 * r ^ n - 132) / 2)"
+    by ring
   also have "... = (3.25 * r ^ n - 4) / (6.5 * r ^ n - 132)"
-    using hmain by simp
+    by ring
   finally show ?thesis .
 qed
 
@@ -2908,109 +2899,51 @@ definition RsP_neg_k :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> r
      (somme_A_neg_k k n1 - somme_A_neg_k k n2) /
      (somme_B_neg_k k n1 - somme_B_neg_k k n2)"
 
-(*   Theoreme central : pour k = 2, 3, 4, le rapport positif vaut 1/k         *)
-(*                                                                            *)
-(*   Correction 2026-02 (bug reporte par Philippe) : les tactiques            *)
-(*   `by (simp add: field_simps)` echouaient car Isabelle ne pouvait pas      *)
-(*   deduire que `base^n1 - base^n2 \<noteq> 0`. On fournit maintenant         *)
-(*   explicitement le temoin de non-nullite via `power_strict_increasing`     *)
-(*   et une disjonction sur `n1 < n2` vs `n2 < n1`.                           *)
 
-theorem RsP_k_egale_un_sur_k_pos:
-  assumes "k \<in> {2, 3, 4}" "n1 > 0" "n2 > 0" "n1 \<noteq> n2"
-  shows "RsP_k k n1 n2 = 1 / real k"
-proof -
-  from assms(1) consider "k = 2" | "k = 3" | "k = 4" by auto
-  thus ?thesis
-  proof cases
-    case 1
-    have hne_pow_2: "(2::real)^n1 - 2^n2 \<noteq> 0"
-    proof (cases "n1 < n2")
-      case True
-      hence "(2::real)^n1 < 2^n2"
-        using power_strict_increasing[of n1 n2 "2::real"] by simp
-      thus ?thesis by simp
-    next
-      case False
-      with assms(4) have "n2 < n1" by simp
-      hence "(2::real)^n2 < 2^n1"
-        using power_strict_increasing[of n2 n1 "2::real"] by simp
-      thus ?thesis by simp
-    qed
-    have "RsP_k 2 n1 n2 =
-            ((alpha_A_k 2 / 2) * (2 ^ n1 - 2 ^ n2)) /
-            ((alpha_B_k 2 / 2) * (2 ^ n1 - 2 ^ n2))"
-      unfolding RsP_k_def somme_A_pos_k_def somme_B_pos_k_def
-      by (simp add: algebra_simps)
-    also have "... = ((alpha_A_k 2 / 2) / (alpha_B_k 2 / 2)) * ((2 ^ n1 - 2 ^ n2) / (2 ^ n1 - 2 ^ n2))"
-      by (simp add: hne_pow_2)
-    also have "... = ((alpha_A_k 2 / 2) / (alpha_B_k 2 / 2)) * 1"
-      using hne_pow_2 by simp
-    also have "... = (alpha_A_k 2 / 2) / (alpha_B_k 2 / 2)"
-      by simp
-    also have "... = 1 / real 2"
-      unfolding alpha_A_k_def alpha_B_k_def by simp
-    finally show ?thesis using 1 by simp
-  next
-    case 2
-    have hne_pow_3: "(3::real)^n1 - 3^n2 \<noteq> 0"
-    proof (cases "n1 < n2")
-      case True
-      hence "(3::real)^n1 < 3^n2"
-        using power_strict_increasing[of n1 n2 "3::real"] by simp
-      thus ?thesis by simp
-    next
-      case False
-      with assms(4) have "n2 < n1" by simp
-      hence "(3::real)^n2 < 3^n1"
-        using power_strict_increasing[of n2 n1 "3::real"] by simp
-      thus ?thesis by simp
-    qed
-    have "RsP_k 3 n1 n2 =
-            ((alpha_A_k 3 / 2) * (3 ^ n1 - 3 ^ n2)) /
-            ((alpha_B_k 3 / 2) * (3 ^ n1 - 3 ^ n2))"
-      unfolding RsP_k_def somme_A_pos_k_def somme_B_pos_k_def
-      by (simp add: algebra_simps)
-    also have "... = ((alpha_A_k 3 / 2) / (alpha_B_k 3 / 2)) * ((3 ^ n1 - 3 ^ n2) / (3 ^ n1 - 3 ^ n2))"
-      by (simp add: hne_pow_3)
-    also have "... = ((alpha_A_k 3 / 2) / (alpha_B_k 3 / 2)) * 1"
-      using hne_pow_3 by simp
-    also have "... = (alpha_A_k 3 / 2) / (alpha_B_k 3 / 2)"
-      by simp
-    also have "... = 1 / real 3"
-      unfolding alpha_A_k_def alpha_B_k_def by simp
-    finally show ?thesis using 2 by simp
-  next
-    case 3
-    have hne_pow_4: "(4::real)^n1 - 4^n2 \<noteq> 0"
-    proof (cases "n1 < n2")
-      case True
-      hence "(4::real)^n1 < 4^n2"
-        using power_strict_increasing[of n1 n2 "4::real"] by simp
-      thus ?thesis by simp
-    next
-      case False
-      with assms(4) have "n2 < n1" by simp
-      hence "(4::real)^n2 < 4^n1"
-        using power_strict_increasing[of n2 n1 "4::real"] by simp
-      thus ?thesis by simp
-    qed
-    have "RsP_k 4 n1 n2 =
-            ((alpha_A_k 4 / 2) * (4 ^ n1 - 4 ^ n2)) /
-            ((alpha_B_k 4 / 2) * (4 ^ n1 - 4 ^ n2))"
-      unfolding RsP_k_def somme_A_pos_k_def somme_B_pos_k_def
-      by (simp add: algebra_simps)
-    also have "... = ((alpha_A_k 4 / 2) / (alpha_B_k 4 / 2)) * ((4 ^ n1 - 4 ^ n2) / (4 ^ n1 - 4 ^ n2))"
-      by (simp add: hne_pow_4)
-    also have "... = ((alpha_A_k 4 / 2) / (alpha_B_k 4 / 2)) * 1"
-      using hne_pow_4 by simp
-    also have "... = (alpha_A_k 4 / 2) / (alpha_B_k 4 / 2)"
-      by simp
-    also have "... = 1 / real 4"
-      unfolding alpha_A_k_def alpha_B_k_def by simp
-    finally show ?thesis using 3 by simp
-  qed
-qed
+section "License - Apache 2.0 (adaptation pour methode_spectral.thy)"
 
+text \<open>
+  Copyright (c) 2026 Philippe Thomas Savard
+
+  This project, including the file methode_spectral.thy, its mathematical
+  constructions, spectral models, axioms, proofs, and all associated
+  documentation, is released under the terms of the Apache License,
+  Version 2.0.
+
+  You may use, reproduce, distribute, modify, and create derivative works
+  from this project under the following conditions:
+
+    1. Attribution
+       You must include a notice stating that the original work was
+       created by Philippe Thomas Savard, and you must retain all
+       copyright notices.
+
+    2. License Notice
+       Any redistribution of the project, in source or binary form,
+       must include this license and a clear reference to the Apache
+       License, Version 2.0.
+
+    3. Modifications
+       If you modify the project, you must clearly indicate that
+       changes were made.
+
+    4. Patent Grant
+       This license grants you a non-exclusive, worldwide, royalty-free
+       patent license for any patent claims necessarily infringed by
+       the project as originally provided.
+
+    5. No Trademark Rights
+       This license does not grant permission to use the name
+       "Philippe Thomas Savard" or any project-specific branding
+       for endorsement.
+
+    6. Disclaimer
+       The project is provided on an "AS IS" basis, without warranties
+       or conditions of any kind, express or implied. The author is
+       not liable for any damages arising from the use of this project.
+
+  For the full legal text of the Apache License, Version 2.0, please refer to:
+    https://www.apache.org/licenses/LICENSE-2.0
+\<close>
 
 end

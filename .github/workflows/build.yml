@@ -24,7 +24,14 @@ jobs:
           sudo apt-get install -y isabelle
           isabelle version
 
+      - name: Show repository layout
+        run: |
+          pwd
+          ls -la
+          find . -maxdepth 3 \( -name ROOT -o -name 'methode_spectral.thy' \) | sort
+
       - name: Build Isabelle session
+        working-directory: agent-multiloop-Gabriel-local
         run: |
           isabelle build -v -D .
 

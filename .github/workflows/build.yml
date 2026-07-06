@@ -1,5 +1,6 @@
 name: Certification de provenance – Méthode Spectrale
 
+# Workflow de validation Isabelle et d’attestation de provenance
 on:
   push:
     branches: [main]

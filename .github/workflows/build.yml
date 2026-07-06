@@ -1,0 +1,64 @@
+name: Certification de provenance – Méthode Spectrale
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  validation-institutionnelle:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Isabelle
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y isabelle
+          isabelle version
+
+      - name: Build Isabelle session
+        run: |
+          isabelle build -v -D .
+
+      - name: Create explicit attestation payload
+        if: success()
+        run: |
+          cat > attestation_payload.json <<'EOF'
+          {
+            "schemaVersion": 1,
+            "subject": "agent-multiloop-Gabriel-local/theories/methode_spectral.thy",
+            "author": "Philippe Thomas Savard",
+            "coAuthors": [
+              "Emergent.sh E1",
+              "Gordon Docker Desktop",
+              "Copilot Microsoft"
+            ],
+            "statement": "These assistants contributed remarkably and their contribution is invaluable for Philippe Thomas Savard."
+          }
+          EOF
+
+      - name: Generate explicit attestation
+        if: success()
+        uses: actions/attest@v2
+        with:
+          subject-path: agent-multiloop-Gabriel-local/theories/methode_spectral.thy
+          predicate-type: 'https://example.com/attestations/methode-spectral/v1'
+          predicate: '{"schemaVersion":1,"subject":"agent-multiloop-Gabriel-local/theories/methode_spectral.thy","author":"Philippe Thomas Savard","coAuthors":["Emergent.sh E1","Gordon Docker Desktop","Copilot Microsoft"],"statement":"These assistants contributed remarkably and their contribution is invaluable for Philippe Thomas Savard."}'
+
+      - name: Upload attestation payload artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: methode-spectral-attestation-payload
+          path: |
+            attestation_payload.json
+            agent-multiloop-Gabriel-local/theories/methode_spectral.thy
+          retention-days: 30

@@ -20,8 +20,14 @@ jobs:
 
       - name: Install Isabelle
         run: |
-          sudo apt-get update
-          sudo apt-get install -y isabelle
+          set -e
+          mkdir -p /tmp/isabelle
+          cd /tmp/isabelle
+          curl -L -o isabelle.tar.gz https://isabelle.in.tum.de/dist/Isabelle2025_linux.tar.gz
+          tar -xzf isabelle.tar.gz
+          ls -1
+          export PATH="/tmp/isabelle/Isabelle2025/bin:$PATH"
+          echo "/tmp/isabelle/Isabelle2025/bin" >> "$GITHUB_PATH"
           isabelle version
 
       - name: Show repository layout

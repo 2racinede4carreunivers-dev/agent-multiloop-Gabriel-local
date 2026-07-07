@@ -1,6 +1,0 @@
-session Methode_Spectral = HOL +
-  options [document = false]
-  sessions
-    "HOL-Computational_Algebra"
-  theories
-    methode_spectral

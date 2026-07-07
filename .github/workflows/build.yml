@@ -1,6 +1,5 @@
 name: Certification de provenance – Méthode Spectrale
 
-# Workflow de validation Isabelle et d'attestation de provenance
 on:
   push:
     branches: [main]
@@ -18,7 +17,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Install Isabelle (lightweight version)
         run: |
           set -e
@@ -26,36 +24,31 @@ jobs:
           sudo apt-get install -y wget tar gzip libgmp-dev curl
           mkdir -p /tmp/isabelle
           cd /tmp/isabelle
-          
+
           echo "=== Downloading Isabelle 2024-1 (lightweight) ==="
-          # URL officielle TUM (plus fiable que GitHub releases)
           ISABELLE_URL="https://isabelle.in.tum.de/dist/Isabelle2024-1_linux.tar.gz"
-          
-          # Télécharger avec curl (plus robuste)
           curl -L --show-error --progress-bar -o isabelle.tar.gz "$ISABELLE_URL"
-          
+
           echo "=== Verifying archive integrity ==="
-          # Vérifier que c'est un gzip valide
           if ! file isabelle.tar.gz | grep -q 'gzip compressed'; then
             echo "ERROR: Archive is not a valid gzip file"
             file isabelle.tar.gz
             exit 1
           fi
-          
+
           echo "=== Extracting Isabelle ==="
           tar -xzf isabelle.tar.gz
-          
-          # Trouver le répertoire Isabelle
+
           ISABELLE_DIR=$(ls -d Isabelle* 2>/dev/null | head -1)
           if [ -z "$ISABELLE_DIR" ]; then
             echo "ERROR: Could not find Isabelle directory"
             ls -la
             exit 1
           fi
-          
+
           echo "Found Isabelle in: $ISABELLE_DIR"
           echo "/tmp/isabelle/$ISABELLE_DIR/bin" >> "$GITHUB_PATH"
-          
+
           echo "=== Isabelle version ==="
           /tmp/isabelle/$ISABELLE_DIR/bin/isabelle version
 
@@ -79,64 +72,51 @@ jobs:
             ls -la
             echo "Creating minimal ROOT file..."
             cat > ROOT <<'ROOTEOF'
-session MethodeSpectrale = HOL +
-  theories
-    methode_spectral
-ROOTEOF
+            session MethodeSpectrale = HOL +
+              theories
+                methode_spectral
+            ROOTEOF
             isabelle build -v -D .
           fi
-
       - name: Generate SHA256 signatures
         if: success()
+        working-directory: agent-multiloop-Gabriel-local/theories
         run: |
           echo "=== Generating cryptographic signatures ==="
-          
-          # Trouver le fichier methode_spectral.thy
-          THY_FILE=$(find . -name "methode_spectral.thy" -type f | head -1)
-          
-          if [ -z "$THY_FILE" ]; then
-            echo "ERROR: methode_spectral.thy not found"
+
+          THY_FILE="methode_spectral.thy"
+
+          if [ ! -f "$THY_FILE" ]; then
+            echo "ERROR: $THY_FILE not found"
             exit 1
           fi
-          
-          echo "File to sign: $THY_FILE"
-          
-          # Générer SHA256
+
           SHA256=$(sha256sum "$THY_FILE" | awk '{print $1}')
-          echo "SHA256: $SHA256"
-          
-          # Sauvegarder les signatures
+          MD5=$(md5sum "$THY_FILE" | awk '{print $1}')
+
           mkdir -p signatures
           echo "$SHA256  $THY_FILE" > signatures/methode_spectral.sha256
-          
-          # Générer aussi MD5 pour validation rapide
-          MD5=$(md5sum "$THY_FILE" | awk '{print $1}')
           echo "$MD5  $THY_FILE" > signatures/methode_spectral.md5
-          
-          # Créer un fichier de métadonnées
-          cat > signatures/METADATA.txt <<METAEOF
-File: methode_spectral.thy
-Author: Philippe Thomas Savard
-Co-Authors:
-  - Emergent.sh E1
-  - Gordon Docker Desktop
-  - Copilot Microsoft
-License: Apache License 2.0
-Repository: agent-multiloop-Gabriel-local
-Branch: main
-Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-METAEOF
-          
-          cat signatures/METADATA.txt
 
+          cat > signatures/METADATA.txt <<METAEOF
+          File: methode_spectral.thy
+          Author: Philippe Thomas Savard
+          Co-Authors:
+            - Emergent.sh E1
+            - Gordon Docker Desktop
+            - Copilot Microsoft
+          License: Apache License 2.0
+          Repository: agent-multiloop-Gabriel-local
+          Branch: main
+          Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          METAEOF
       - name: Create provenance attestation
         if: success()
+        working-directory: agent-multiloop-Gabriel-local/theories
         run: |
-          echo "=== Creating provenance attestation ==="
-          
-          THY_FILE=$(find . -name "methode_spectral.thy" -type f | head -1)
+          THY_FILE="methode_spectral.thy"
           SHA256=$(sha256sum "$THY_FILE" | awk '{print $1}')
-          
+
           cat > attestation_payload.json <<EOF
           {
             "schemaVersion": 1,
@@ -155,59 +135,51 @@ METAEOF
               "branch": "main",
               "license": "Apache License 2.0"
             },
-            "attestation": "This file is authentic and originates from the authorized repository. The author retains all rights and responsibilities for its content."
+            "attestation": "This file is authentic and originates from the authorized repository."
           }
           EOF
-          
-          cat attestation_payload.json
 
       - name: Generate explicit attestation
         if: success()
         uses: actions/attest@v2
         with:
           subject-path: agent-multiloop-Gabriel-local/theories/methode_spectral.thy
-          predicate-type: 'https://example.com/attestations/methode-spectral/v1'
+          predicate-type: https://example.com/attestations/methode-spectral/v1
           predicate: '{"schemaVersion":1,"integrity":{"sha256":"verified"},"provenance":{"author":"Philippe Thomas Savard","license":"Apache 2.0"}}'
-
       - name: Upload signatures and attestation
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: methode-spectral-attestation
           path: |
-            attestation_payload.json
-            signatures/
+            agent-multiloop-Gabriel-local/theories/attestation_payload.json
+            agent-multiloop-Gabriel-local/theories/signatures/
             agent-multiloop-Gabriel-local/theories/methode_spectral.thy
           retention-days: 90
           if-no-files-found: warn
 
       - name: Create signature verification script
         if: success()
+        working-directory: agent-multiloop-Gabriel-local/theories
         run: |
           cat > verify_methode_spectral.sh <<'VERIFYEOF'
           #!/bin/bash
-          # Script to verify methode_spectral.thy authenticity
-          
           set -e
-          
+
           if [ ! -f "methode_spectral.thy" ]; then
             echo "ERROR: methode_spectral.thy not found"
             exit 1
           fi
-          
-          if [ ! -f "methode_spectral.sha256" ]; then
-            echo "ERROR: methode_spectral.sha256 signature not found"
+
+          if [ ! -f "signatures/methode_spectral.sha256" ]; then
+            echo "ERROR: signatures/methode_spectral.sha256 not found"
             exit 1
           fi
-          
-          echo "=== Verifying methode_spectral.thy ==="
-          sha256sum -c methode_spectral.sha256
-          
-          echo "✓ File verified: authentic and unmodified"
-          echo "✓ Author: Philippe Thomas Savard"
-          echo "✓ License: Apache License 2.0"
-          echo "✓ Repository: agent-multiloop-Gabriel-local-final (main branch)"
+
+          sha256sum -c signatures/methode_spectral.sha256
+
+          echo "✓ File verified"
           VERIFYEOF
-          
+
           chmod +x verify_methode_spectral.sh
-          echo "Verification script created: verify_methode_spectral.sh"
+

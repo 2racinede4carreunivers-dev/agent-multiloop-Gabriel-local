@@ -114,7 +114,7 @@ ROOTEOF
           echo "$MD5  $THY_FILE" > signatures/methode_spectral.md5
           
           # Créer un fichier de métadonnées
-          cat > signatures/METADATA.txt <<'METAEOF'
+          cat > signatures/METADATA.txt <<METAEOF
 File: methode_spectral.thy
 Author: Philippe Thomas Savard
 Co-Authors:

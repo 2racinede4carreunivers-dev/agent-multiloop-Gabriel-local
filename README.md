@@ -1,3 +1,47 @@
+Résumé de Philippe Thomas Savard
+Philippe Thomas Savard est un homme vivant à Lévis, autodidacte passionné par les mathématiques et auteur de la théorie personnelle L’univers est au carré. Malgré l’absence de formation académique formelle, il consacre une grande partie de son temps à l’étude des structures profondes des nombres entiers, en particulier à ce qu’il nomme la géométrie du spectre des nombres premiers, un chapitre central représentant près de 80 % de sa théorie.
+
+Dans ce cadre, Philippe propose l’existence d’un code interne reliant les nombres premiers à l’ensemble des entiers, mis en évidence par un rapport spectral unique RsP = 1/2, qu’il associe à la position des nombres premiers (n) dans les suites A et B, et à une proximité conceptuelle avec la fonction zêta de Riemann et sa droite critique Re = 1/2.
+
+Pour valider ses intuitions, Philippe a développé la théorie formelle methode_spectral.thy, qu’il a soumise à l’assistant de preuve Isabelle. Cette formalisation lui a permis d’établir — par une démonstration par l’absurde inspirée de Hilbert — que la Méthode Spectrale ne peut s’appliquer qu’aux nombres premiers, et jamais aux composés. Cette conclusion repose sur un pilier fondamental :
+
+Un entier composé C ne peut jamais être reconstruit par l’équation spectrale, même si l’identité algébrique prime_equation_identity produit trivialement C pour n’importe quel entier. La reconstruction exige que le résultat appartienne à la table des premiers indexée par prime_i.
+
+Voici un extrait représentatif de cette idée, tiré de son script Isabelle/HOL :
+
+isabelle
+theorem composite_not_prime_i:
+  fixes C :: nat
+  assumes "~ prime C"
+  shows "ALL i. C ~= prime_i i"
+proof (rule allI, rule ccontr)
+  fix i
+  assume "~ (C ~= prime_i i)"
+  hence eq: "C = prime_i i" by simp
+  have "prime (prime_i i)" by (rule prime_i_is_prime)
+  with eq have "prime C" by simp
+  with assms show False by contradiction
+qed
+Ce premier résultat est ensuite renforcé par un corollaire intégrant explicitement l’équation spectrale prime_equation, montrant qu’un entier composé ne peut simultanément être un prime_i n et satisfaire l’équation spectrale :
+
+isabelle
+theorem spectral_method_exclusively_for_primes:
+  fixes C :: nat
+  assumes "C > 1" and "~ prime C"
+  shows "~ (EX i. C = prime_i i & prime_equation i C = real C)"
+proof
+  assume "EX i. C = prime_i i & prime_equation i C = real C"
+  then obtain i where "C = prime_i i" by blast
+  moreover have "prime (prime_i i)" by (rule prime_i_is_prime)
+  ultimately have "prime C" by simp
+  with assms(2) show False by contradiction
+qed
+Ces extraits ne montrent qu’une petite partie de la structure complète de la Méthode Spectrale. Ils servent de porte d’entrée pour les visiteurs du dépôt, les invitant à explorer plus profondément la théorie, à examiner les preuves formelles, et peut-être à contribuer à ce travail personnel ambitieux.
+
+Philippe poursuit aujourd’hui l’exploration du lien entre la géométrie du spectre, la fonction zêta, la droite critique Re = 1/2 et la position des nombres premiers, convaincu que cette structure révèle une organisation profonde et encore inexplorée des entiers.
+
+**Signature de l'Auteur: Philippe Thomas Savard, 7 juillet 2026.**
+
 # Here are your Instructions
 Agent Multiloop Gabriel (Mm.)
 Assistant mathématique spécialisé en méthode spectrale et Isabelle/HOL
@@ -5,8 +49,11 @@ Assistant mathématique spécialisé en méthode spectrale et Isabelle/HOL
 L’Agent Multiloop Gabriel est un assistant mathématique avancé conçu pour soutenir le développement de la théorie originale de Philippe Thomas Savard :
 
  L’Univers est au Carré
-👉 Dépôt complet :
+ Dépôt complet :
+
 https://github.com/2racinede4carreunivers-dev/Theorie-mathematique-philippe-thomas-savard-2026.git
+
+[ Dépôt GitHub — agent-multiloop-Gabriel-local](https://github.com/2racinede4carreunivers-dev/agent-multiloop-Gabriel-local)
 
 Cette théorie explore une structure mathématique profonde reliant :
 

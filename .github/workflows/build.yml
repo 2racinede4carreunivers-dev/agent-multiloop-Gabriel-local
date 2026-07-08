@@ -37,10 +37,16 @@ jobs:
           (echo "Echec telechargement Isabelle" && exit 1)
           echo "=== Extraction Isabelle ==="
           tar -xzf Isabelle2024_linux.tar.gz
-          mv Isabelle2024 isabelle
-          echo "$PWD/isabelle/bin" >> $GITHUB_PATH
+          ls -la
+          ISABELLE_DIR=$(ls -d Isabelle* 2>/dev/null | head -1)
+          echo "Isabelle directory: $ISABELLE_DIR"
+          if [ -z "$ISABELLE_DIR" ]; then
+            echo "ERROR: Could not find Isabelle directory"
+            exit 1
+          fi
+          echo "$PWD/$ISABELLE_DIR/bin" >> $GITHUB_PATH
           echo "=== Verification Isabelle ==="
-          isabelle version
+          $PWD/$ISABELLE_DIR/bin/isabelle version
 
       - name: Show repository layout
         run: |
@@ -55,9 +61,14 @@ jobs:
         working-directory: agent-multiloop-Gabriel-local
         run: |
           echo "=== Building Isabelle session ==="
+          ISABELLE_BIN="$(find /home/runner/work/agent-multiloop-Gabriel-local-final -name isabelle -type f 2>/dev/null | grep bin/isabelle | head -1)"
+          if [ -z "$ISABELLE_BIN" ]; then
+            echo "ERROR: isabelle binary not found"
+            exit 1
+          fi
           if [ -f ROOT ]; then
             echo "ROOT file found, building..."
-            isabelle build -v -D .
+            $ISABELLE_BIN build -v -D .
           else
             echo "WARNING: No ROOT file found, creating minimal ROOT file..."
             cat > ROOT << 'EOF'
@@ -66,7 +77,7 @@ jobs:
               methode_spectral
           EOF
             echo "ROOT file created. Building..."
-            isabelle build -v -D .
+            $ISABELLE_BIN build -v -D .
           fi
 
       - name: Generate SHA256 signatures

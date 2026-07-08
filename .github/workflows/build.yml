@@ -2,9 +2,9 @@ name: Certification de provenance – Méthode Spectrale
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -15,7 +15,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -36,12 +35,10 @@ jobs:
           curl -L --retry 5 --retry-delay 10 --max-time 600 -o Isabelle2024_linux.tar.gz \
             "https://isabelle.in.tum.de/dist/Isabelle2024_linux.tar.gz" || \
           (echo "Echec telechargement Isabelle" && exit 1)
-
           echo "=== Extraction Isabelle ==="
           tar -xzf Isabelle2024_linux.tar.gz
           mv Isabelle2024 isabelle
           echo "$PWD/isabelle/bin" >> $GITHUB_PATH
-          
           echo "=== Verification Isabelle ==="
           isabelle version
 
@@ -63,11 +60,11 @@ jobs:
             isabelle build -v -D .
           else
             echo "WARNING: No ROOT file found, creating minimal ROOT file..."
-            cat > ROOT <<'ROOTEOF'
-session MethodeSpectrale = HOL +
-  theories
-    methode_spectral
-ROOTEOF
+            cat > ROOT << 'EOF'
+          session MethodeSpectrale = HOL +
+            theories
+              methode_spectral
+          EOF
             echo "ROOT file created. Building..."
             isabelle build -v -D .
           fi
@@ -77,52 +74,36 @@ ROOTEOF
         working-directory: agent-multiloop-Gabriel-local/theories
         run: |
           echo "=== Generating cryptographic signatures ==="
-          
           THY_FILE="methode_spectral.thy"
-          
           if [ ! -f "$THY_FILE" ]; then
             echo "ERROR: $THY_FILE not found in $(pwd)"
-            echo "Available files:"
             ls -la
             exit 1
           fi
-          
           echo "File to sign: $THY_FILE"
-          echo "Full path: $(realpath $THY_FILE)"
-          
-          # Générer les hashs
           SHA256=$(sha256sum "$THY_FILE" | awk '{print $1}')
           MD5=$(md5sum "$THY_FILE" | awk '{print $1}')
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          
           echo "SHA256: $SHA256"
           echo "MD5: $MD5"
-          echo "Timestamp: $TIMESTAMP"
-          
-          # Créer le répertoire des signatures
           mkdir -p signatures
-          
-          # Sauvegarder les signatures
           echo "$SHA256  $THY_FILE" > signatures/methode_spectral.sha256
           echo "$MD5  $THY_FILE" > signatures/methode_spectral.md5
-          
-          # Créer le fichier de métadonnées
-          cat > signatures/METADATA.txt <<METAEOF
-File: methode_spectral.thy
-Author: Philippe Thomas Savard
-Co-Authors:
-  - Emergent.sh E1
-  - Gordon Docker Desktop
-  - Copilot Microsoft
-License: Apache License 2.0
-Repository: agent-multiloop-Gabriel-local
-Branch: main
-Timestamp: $TIMESTAMP
-SHA256: $SHA256
-MD5: $MD5
-Build Status: success
-METAEOF
-          
+          cat > signatures/METADATA.txt << 'METAEOF'
+          File: methode_spectral.thy
+          Author: Philippe Thomas Savard
+          Co-Authors:
+            - Emergent.sh E1
+            - Gordon Docker Desktop
+            - Copilot Microsoft
+          License: Apache License 2.0
+          Repository: agent-multiloop-Gabriel-local
+          Branch: main
+          METAEOF
+          echo "Timestamp: $TIMESTAMP" >> signatures/METADATA.txt
+          echo "SHA256: $SHA256" >> signatures/METADATA.txt
+          echo "MD5: $MD5" >> signatures/METADATA.txt
+          echo "Build Status: success" >> signatures/METADATA.txt
           echo "=== Signatures créées ==="
           cat signatures/METADATA.txt
 
@@ -131,37 +112,33 @@ METAEOF
         working-directory: agent-multiloop-Gabriel-local/theories
         run: |
           echo "=== Creating provenance attestation ==="
-          
           THY_FILE="methode_spectral.thy"
           SHA256=$(sha256sum "$THY_FILE" | awk '{print $1}')
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          GITHUB_SHA="${{ github.sha }}"
-          GITHUB_REF="${{ github.ref }}"
-          
-          cat > attestation_payload.json <<EOF
-{
-  "schemaVersion": 1,
-  "subject": "$THY_FILE",
-  "timestamp": "$TIMESTAMP",
-  "integrity": {
-    "sha256": "$SHA256"
-  },
-  "provenance": {
-    "author": "Philippe Thomas Savard",
-    "coAuthors": [
-      "Emergent.sh E1",
-      "Gordon Docker Desktop",
-      "Copilot Microsoft"
-    ],
-    "repository": "https://github.com/Philippe-Thomas/agent-multiloop-Gabriel-local-final",
-    "branch": "$GITHUB_REF",
-    "commit": "$GITHUB_SHA",
-    "license": "Apache License 2.0"
-  },
-  "attestation": "This file is authentic and originates from the authorized repository. The author retains all rights and responsibilities for its content. This attestation certifies that methode_spectral.thy is genuine and unmodified."
-}
-EOF
-          
+          cat > attestation_payload.json << 'JSONEOF'
+          {
+            "schemaVersion": 1,
+            "subject": "methode_spectral.thy",
+            "timestamp": "TIMESTAMP_REPLACE",
+            "integrity": {
+              "sha256": "SHA256_REPLACE"
+            },
+            "provenance": {
+              "author": "Philippe Thomas Savard",
+              "coAuthors": [
+                "Emergent.sh E1",
+                "Gordon Docker Desktop",
+                "Copilot Microsoft"
+              ],
+              "repository": "https://github.com/Philippe-Thomas/agent-multiloop-Gabriel-local-final",
+              "branch": "main",
+              "license": "Apache License 2.0"
+            },
+            "attestation": "This file is authentic and originates from the authorized repository."
+          }
+          JSONEOF
+          sed -i "s/TIMESTAMP_REPLACE/$TIMESTAMP/g" attestation_payload.json
+          sed -i "s/SHA256_REPLACE/$SHA256/g" attestation_payload.json
           echo "=== Attestation créée ==="
           cat attestation_payload.json
 
@@ -171,7 +148,7 @@ EOF
         with:
           subject-path: agent-multiloop-Gabriel-local/theories/methode_spectral.thy
           predicate-type: 'https://example.com/attestations/methode-spectral/v1'
-          predicate: '{"schemaVersion":1,"integrity":{"sha256":"verified"},"provenance":{"author":"Philippe Thomas Savard","license":"Apache 2.0","timestamp":"verified"}}'
+          predicate: '{"schemaVersion":1,"integrity":{"sha256":"verified"},"provenance":{"author":"Philippe Thomas Savard","license":"Apache 2.0"}}'
 
       - name: Upload signatures and attestation
         if: success()
@@ -189,59 +166,48 @@ EOF
         if: success()
         working-directory: agent-multiloop-Gabriel-local/theories
         run: |
-          cat > verify_methode_spectral.sh <<'VERIFYEOF'
-#!/bin/bash
-# Script to verify methode_spectral.thy authenticity
-# Usage: ./verify_methode_spectral.sh
-
-set -e
-
-echo "=== Verification Script for methode_spectral.thy ==="
-
-if [ ! -f "methode_spectral.thy" ]; then
-  echo "ERROR: methode_spectral.thy not found"
-  exit 1
-fi
-
-if [ ! -f "signatures/methode_spectral.sha256" ]; then
-  echo "ERROR: signatures/methode_spectral.sha256 not found"
-  exit 1
-fi
-
-echo "=== Verifying SHA256 signature ==="
-if sha256sum -c signatures/methode_spectral.sha256; then
-  echo "✓ SHA256 signature verified: AUTHENTIC"
-else
-  echo "✗ SHA256 verification failed: FILE MODIFIED"
-  exit 1
-fi
-
-if [ -f "signatures/methode_spectral.md5" ]; then
-  echo "=== Verifying MD5 signature ==="
-  if md5sum -c signatures/methode_spectral.md5; then
-    echo "✓ MD5 signature verified: AUTHENTIC"
-  else
-    echo "✗ MD5 verification failed: FILE MODIFIED"
-    exit 1
-  fi
-fi
-
-echo ""
-echo "=== File Provenance Information ==="
-if [ -f "signatures/METADATA.txt" ]; then
-  cat signatures/METADATA.txt
-else
-  echo "METADATA not available"
-fi
-
-echo ""
-echo "✓✓✓ File verification completed successfully ✓✓✓"
-echo "✓ methode_spectral.thy is authentic and unmodified"
-echo "✓ Author: Philippe Thomas Savard"
-echo "✓ License: Apache License 2.0"
-echo "✓ Repository: agent-multiloop-Gabriel-local-final (main branch)"
-VERIFYEOF
-          
+          cat > verify_methode_spectral.sh << 'VERIFYEOF'
+          #!/bin/bash
+          set -e
+          echo "=== Verification Script for methode_spectral.thy ==="
+          if [ ! -f "methode_spectral.thy" ]; then
+            echo "ERROR: methode_spectral.thy not found"
+            exit 1
+          fi
+          if [ ! -f "signatures/methode_spectral.sha256" ]; then
+            echo "ERROR: signatures/methode_spectral.sha256 not found"
+            exit 1
+          fi
+          echo "=== Verifying SHA256 signature ==="
+          if sha256sum -c signatures/methode_spectral.sha256; then
+            echo "✓ SHA256 signature verified: AUTHENTIC"
+          else
+            echo "✗ SHA256 verification failed: FILE MODIFIED"
+            exit 1
+          fi
+          if [ -f "signatures/methode_spectral.md5" ]; then
+            echo "=== Verifying MD5 signature ==="
+            if md5sum -c signatures/methode_spectral.md5; then
+              echo "✓ MD5 signature verified: AUTHENTIC"
+            else
+              echo "✗ MD5 verification failed: FILE MODIFIED"
+              exit 1
+            fi
+          fi
+          echo ""
+          echo "=== File Provenance Information ==="
+          if [ -f "signatures/METADATA.txt" ]; then
+            cat signatures/METADATA.txt
+          else
+            echo "METADATA not available"
+          fi
+          echo ""
+          echo "✓✓✓ File verification completed successfully ✓✓✓"
+          echo "✓ methode_spectral.thy is authentic and unmodified"
+          echo "✓ Author: Philippe Thomas Savard"
+          echo "✓ License: Apache License 2.0"
+          echo "✓ Repository: agent-multiloop-Gabriel-local-final (main branch)"
+          VERIFYEOF
           chmod +x verify_methode_spectral.sh
           echo "✓ Verification script created: verify_methode_spectral.sh"
 
@@ -250,15 +216,11 @@ VERIFYEOF
         working-directory: agent-multiloop-Gabriel-local/theories
         run: |
           echo "=== Cryptographic Certification Results ==="
-          echo ""
           echo "SHA256 Signature:"
           cat signatures/methode_spectral.sha256
-          echo ""
           echo "MD5 Signature:"
           cat signatures/methode_spectral.md5
-          echo ""
           echo "Metadata:"
           cat signatures/METADATA.txt
-          echo ""
           echo "Provenance Attestation:"
           cat attestation_payload.json | jq . 2>/dev/null || cat attestation_payload.json

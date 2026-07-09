@@ -1,16 +1,19 @@
 """
-Tests v3.22 : verifie les corrections Isabelle/HOL bugs 9 & 10
-(oublies dans la session precedente sur les 11 erreurs signalees).
+Tests v3.23 : verifie les corrections Isabelle bugs 9 & 10 dans le contexte
+de la restructuration Savard validation#16 (2026-06-29).
 
-Bug 9 : `terme_suite_B` (et `terme_suite_A` pour coherence) declarees en
-        `fun` -> erreur de syntaxe interne au parser Isabelle car il n'y a
-        pas de recursion (juste un `if-then-else`). Correction : utiliser
-        `definition` a la place.
+Bugs originaux (session precedente) :
+  9. Isabelle Inner syntax error sur les fonctions `fun` non recursives.
+  10. `sorry` a remplacer dans les lemmes de sommes fermees.
 
-Bug 10 : `somme_A_construction_eq_formule` et `somme_B_construction_eq_formule`
-         utilisaient `sorry`. Correction : reformulees en lemmes conditionnels
-         (avec le fait de Savard en hypothese) prouvables par `by simp`.
-         La conjecture numerique brute est documentee comme telle.
+Statut apres validation#16 :
+  - Les anciennes definitions terme_suite_A/B, somme_A/B_construction_eq_formule,
+    rapport_spectral_tend_vers_demi ont ete SUPPRIMEES par Philippe.
+  - Elles sont remplacees par les nouvelles definitions Savard :
+    suite_A/B_savard_construction, somme_A/B_compacte_savard,
+    preuve_rapport_spectral_limite_savard.
+  - Les bugs 9 & 10 ne peuvent plus se reproduire par construction (les nouvelles
+    definitions utilisent `definition` et pas `fun`, et n'utilisent pas `sorry`).
 """
 from __future__ import annotations
 
@@ -31,101 +34,75 @@ def thy_content() -> str:
 
 
 # ============================================================================
-# Bug 9 : terme_suite_A et terme_suite_B doivent utiliser `definition`
+# Bug 9 (nouvelle structure) : les 2 constructions Savard utilisent `definition`
 # ============================================================================
 
 
-class TestTermeSuiteUseDefinition:
-    """Les deux constructions de suite ne sont pas recursives : `definition`
-    est la primitive correcte en Isabelle. Utiliser `fun` sur un simple
-    if-then-else provoque une erreur de syntaxe interne (Inner syntax error).
-    """
+class TestSavardConstructionUseDefinition:
+    """Les 2 nouvelles constructions Savard (validation#16) utilisent
+    `definition`, jamais `fun` avec conditionnels non recursifs."""
 
-    def test_terme_suite_A_is_definition_not_fun(self, thy_content):
-        # `definition terme_suite_A` doit apparaitre
-        assert "definition terme_suite_A" in thy_content, (
-            "Bug 9 : terme_suite_A doit etre declare avec `definition` "
-            "(pas `fun`) pour eviter l'erreur de syntaxe interne."
-        )
-        # `fun terme_suite_A` NE doit PLUS apparaitre
-        assert "fun terme_suite_A" not in thy_content, (
-            "Bug 9 : `fun terme_suite_A` doit avoir disparu."
-        )
+    def test_suite_A_uses_definition(self, thy_content):
+        assert "definition suite_A_savard_construction" in thy_content
+        assert "fun suite_A_savard_construction" not in thy_content
 
-    def test_terme_suite_B_is_definition_not_fun(self, thy_content):
-        assert "definition terme_suite_B" in thy_content, (
-            "Bug 9 : terme_suite_B doit etre declare avec `definition` "
-            "(pas `fun`) pour eviter l'erreur de syntaxe interne."
-        )
-        assert "fun terme_suite_B" not in thy_content, (
-            "Bug 9 : `fun terme_suite_B` doit avoir disparu."
-        )
+    def test_suite_B_uses_definition(self, thy_content):
+        assert "definition suite_B_savard_construction" in thy_content
+        assert "fun suite_B_savard_construction" not in thy_content
 
 
 # ============================================================================
-# Bug 10 : plus aucun `sorry` dans les 2 lemmes cibles
-# ============================================================================
-
-
-class TestNoSorryInSommeConstructionLemmas:
-    """Les lemmes `somme_A_construction_eq_formule` et
-    `somme_B_construction_eq_formule` ne doivent plus contenir `sorry`.
-    Ils sont maintenant des lemmes conditionnels (avec hypothese de Savard)
-    prouvables trivialement par `by simp`.
-    """
-
-    def test_no_sorry_in_somme_A_lemma(self, thy_content):
-        m = re.search(
-            r"lemma somme_A_construction_eq_formule:(.*?)(?=^lemma|^theorem|^section|^subsection)",
-            thy_content, re.DOTALL | re.MULTILINE,
-        )
-        assert m is not None, "Le lemme somme_A_construction_eq_formule doit exister"
-        block = m.group(1)
-        assert "sorry" not in block, (
-            "Bug 10 : `sorry` doit avoir disparu de somme_A_construction_eq_formule"
-        )
-        assert "by simp" in block, (
-            "Bug 10 : la preuve doit utiliser `by simp` sur l'hypothese Savard"
-        )
-
-    def test_no_sorry_in_somme_B_lemma(self, thy_content):
-        m = re.search(
-            r"lemma somme_B_construction_eq_formule:(.*?)(?=^lemma|^theorem|^section|^subsection)",
-            thy_content, re.DOTALL | re.MULTILINE,
-        )
-        assert m is not None, "Le lemme somme_B_construction_eq_formule doit exister"
-        block = m.group(1)
-        assert "sorry" not in block, (
-            "Bug 10 : `sorry` doit avoir disparu de somme_B_construction_eq_formule"
-        )
-        assert "by simp" in block, (
-            "Bug 10 : la preuve doit utiliser `by simp` sur l'hypothese Savard"
-        )
-
-    def test_conjecture_documented(self, thy_content):
-        """La nature de CONJECTURE NUMERIQUE (non identite algebrique) doit
-        etre documentee explicitement dans une note textuelle."""
-        assert "CONJECTURE" in thy_content.upper(), (
-            "Une note textuelle doit clarifier que les formules fermees "
-            "sont des conjectures numeriques, pas des identites universelles."
-        )
-
-
-# ============================================================================
-# Regression globale : aucun `sorry` restant dans une preuve active
+# Bug 10 (nouvelle structure) : plus aucun `sorry` dans le fichier
 # ============================================================================
 
 
 class TestNoActiveSorryAnywhere:
-    """Verifie qu'aucun `sorry` ne subsiste comme tactique de preuve
-    active dans le fichier (les mentions dans les commentaires sont ok)."""
+    """Regression globale : aucun `sorry` actif nulle part."""
 
     def test_no_bare_sorry_at_line_start(self, thy_content):
-        # Cherche une ligne dont le contenu (apres strip) est exactement `sorry`
         active_sorries = []
         for i, line in enumerate(thy_content.splitlines(), start=1):
             if line.strip() == "sorry":
                 active_sorries.append(i)
         assert not active_sorries, (
-            f"Il reste des `sorry` actifs aux lignes : {active_sorries}"
+            f"`sorry` actifs aux lignes : {active_sorries}"
+        )
+
+
+# ============================================================================
+# Rapport spectral limite : la nouvelle preuve Savard (validation#16)
+# ============================================================================
+
+
+class TestPreuveRapportSpectralLimite:
+    """La preuve `preuve_rapport_spectral_limite_savard` (validation#16)
+    remplace `rapport_spectral_tend_vers_demi`. Elle doit compiler sans
+    utiliser la tactique `ring` (choix explicite de Philippe)."""
+
+    def test_lemma_exists(self, thy_content):
+        assert "lemma preuve_rapport_spectral_limite_savard" in thy_content
+
+    def test_uses_field_simps(self, thy_content):
+        """La preuve doit utiliser `field_simps` (equivalent Isabelle de
+        field_simp Lean) pour manipuler les fractions."""
+        m = re.search(
+            r"lemma preuve_rapport_spectral_limite_savard:(.*?)qed",
+            thy_content, re.DOTALL,
+        )
+        assert m is not None
+        block = m.group(1)
+        assert "field_simps" in block or "algebra_simps" in block, (
+            "La preuve doit utiliser `field_simps` ou `algebra_simps`"
+        )
+
+    def test_no_ring_tactic(self, thy_content):
+        """La preuve doit eviter la tactique `ring` (choix Philippe)."""
+        m = re.search(
+            r"lemma preuve_rapport_spectral_limite_savard:(.*?)qed",
+            thy_content, re.DOTALL,
+        )
+        assert m is not None
+        block = m.group(1)
+        assert " ring\n" not in block and " ring " not in block, (
+            "La tactique `ring` doit etre evitee (choix explicite Philippe)"
         )

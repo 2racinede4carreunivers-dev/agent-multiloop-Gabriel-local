@@ -58,23 +58,22 @@ class TestRsPTheoremsHaveNonZeroWitness:
         )
 
     def test_RsP_k_egale_un_sur_k_pos_has_all_3_witnesses(self, thy_content):
-        """Le theoreme parametrique doit contenir 3 temoins (k=2, k=3, k=4)."""
-        m = re.search(
-            r"theorem RsP_k_egale_un_sur_k_pos:(.*?)qed\nqed",
-            thy_content, re.DOTALL,
+        """Validation#16 : `RsP_k_egale_un_sur_k_pos` a ete SUPPRIME par
+        Philippe. Ce test devient une regression protegeant les 3 lemmes
+        RsP restants (RsP_un_demi, RsP_un_tiers, RsP_un_quart) — 2 temoins
+        chacun = 6 usages minimum de power_strict_increasing dans TOUT le fichier.
+        """
+        # Le theoreme n'existe plus (choix Philippe validation#16)
+        assert "theorem RsP_k_egale_un_sur_k_pos" not in thy_content, (
+            "Le theoreme `RsP_k_egale_un_sur_k_pos` a ete supprime en "
+            "validation#16 — il ne doit pas reapparaitre."
         )
-        assert m is not None
-        block = m.group(1)
-        for base in ("2", "3", "4"):
-            assert f"hne_pow_{base}" in block, (
-                f"RsP_k_egale_un_sur_k_pos doit avoir un temoin hne_pow_{base}"
-            )
-        # power_strict_increasing doit apparaitre au moins 6 fois
-        # (2 fois par cas x 3 cas)
-        n_uses = block.count("power_strict_increasing")
+        # A la place, on verifie que le fichier global contient au moins 6
+        # usages de power_strict_increasing (2 par theoreme RsP restant)
+        n_uses = thy_content.count("power_strict_increasing")
         assert n_uses >= 6, (
-            f"RsP_k_egale_un_sur_k_pos doit invoquer power_strict_increasing "
-            f"au moins 6 fois (2/cas x 3 cas), trouve : {n_uses}"
+            f"Attendu >= 6 usages de power_strict_increasing "
+            f"(2/theoreme x 3 theoremes RsP restants), trouve : {n_uses}"
         )
 
 

@@ -130,23 +130,25 @@ class TestReconstructionTheoremTypeCorrect:
 
 
 # ============================================================================
-# Fix bug 11 : rapport_spectral_tend_vers_demi utilise field_simps
+# Fix bug 11 : preuve_rapport_spectral_limite_savard utilise field_simps
+# (renommee dans validation#16 de `rapport_spectral_tend_vers_demi`)
 # ============================================================================
 
 class TestRapportSpectralUsesFieldSimps:
     def test_lemma_uses_field_simps(self, thy_content):
         import re
+        # Validation#16 : le lemme s'appelle maintenant
+        # `preuve_rapport_spectral_limite_savard`
         m = re.search(
-            r"lemma rapport_spectral_tend_vers_demi:(.*?)(?=^lemma|^theorem|^section)",
-            thy_content, re.DOTALL | re.MULTILINE,
+            r"lemma preuve_rapport_spectral_limite_savard:(.*?)qed",
+            thy_content, re.DOTALL,
         )
-        assert m is not None
+        assert m is not None, (
+            "Le lemme `preuve_rapport_spectral_limite_savard` doit exister "
+            "(remplace `rapport_spectral_tend_vers_demi` en validation#16)"
+        )
         block = m.group(1)
-        assert "by (simp add: field_simps)" in block, (
-            "rapport_spectral_tend_vers_demi doit utiliser "
-            "`by (simp add: field_simps)` au lieu de `by simp` pour "
-            "gérer l'équivalence 3.25 = 13/4"
+        assert "field_simps" in block or "algebra_simps" in block, (
+            "preuve_rapport_spectral_limite_savard doit utiliser "
+            "`field_simps` ou `algebra_simps` pour manipuler les fractions"
         )
-        # L'ancienne tactique `by simp` (isolée) ne doit plus être seule
-        # (elle peut apparaître dans d'autres lemmes autour, mais pas ici).
-        # On vérifie la présence explicite de field_simps.

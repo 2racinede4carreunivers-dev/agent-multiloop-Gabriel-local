@@ -1,4 +1,4 @@
-name: Certification de provenance – Méthode Spectrale
+name: Certification de provenance – Méthode Spectrale (Isabelle + Lean 4)
 
 on:
   push:
@@ -11,9 +11,14 @@ permissions:
   attestations: write
 
 jobs:
-  validation-institutionnelle:
+  # ==========================================================================
+  # JOB 1 : Compilation Isabelle/HOL de methode_spectral.thy
+  # ==========================================================================
+  validation-isabelle:
+    name: Compilation Isabelle/HOL
     runs-on: ubuntu-latest
-
+    outputs:
+      thy_sha256: ${{ steps.hash-thy.outputs.sha256 }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,37 +33,157 @@ jobs:
         run: |
           isabelle build -v -D .
 
-      - name: Create explicit attestation payload
-        if: success()
+      - name: Compute SHA256 of methode_spectral.thy
+        id: hash-thy
         run: |
-          cat > attestation_payload.json <<'EOF'
+          THY_SHA=$(sha256sum theories/methode_spectral.thy | awk '{print $1}')
+          echo "sha256=$THY_SHA" >> $GITHUB_OUTPUT
+          echo "SHA256(methode_spectral.thy) = $THY_SHA"
+
+  # ==========================================================================
+  # JOB 2 : Compilation Lean 4 / Mathlib de MethodeSpectrale.lean
+  # ==========================================================================
+  validation-lean:
+    name: Compilation Lean 4 / Mathlib
+    runs-on: ubuntu-latest
+    outputs:
+      lean_sha256: ${{ steps.hash-lean.outputs.sha256 }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache elan / lake / .lake
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.elan
+            ~/.cache/mathlib
+            .lake
+          key: lean-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean') }}
+          restore-keys: |
+            lean-${{ runner.os }}-
+
+      - name: Install elan (Lean 4 toolchain manager)
+        run: |
+          curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf \
+            | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> $GITHUB_PATH
+
+      - name: Show Lean version
+        run: lean --version || true
+
+      - name: Fetch Mathlib cache (accelerates first build)
+        run: |
+          lake exe cache get || echo "cache exe not available yet, will build from source"
+        continue-on-error: true
+
+      - name: Build Lean 4 project (MethodeSpectrale)
+        run: |
+          lake update
+          lake build MethodeSpectrale
+        env:
+          LEAN_ABORT_ON_PANIC: "1"
+
+      - name: Compute SHA256 of MethodeSpectrale.lean
+        id: hash-lean
+        run: |
+          LEAN_SHA=$(sha256sum theories/MethodeSpectrale.lean | awk '{print $1}')
+          echo "sha256=$LEAN_SHA" >> $GITHUB_OUTPUT
+          echo "SHA256(MethodeSpectrale.lean) = $LEAN_SHA"
+
+  # ==========================================================================
+  # JOB 3 : Attestation de provenance signee (SLSA-like, SHA256 des deux fichiers)
+  # ==========================================================================
+  attestation-provenance:
+    name: Attestation SHA256 (Isabelle + Lean)
+    needs: [validation-isabelle, validation-lean]
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute SHA256 of both formal proof files
+        id: sha256
+        run: |
+          THY_SHA=$(sha256sum theories/methode_spectral.thy | awk '{print $1}')
+          LEAN_SHA=$(sha256sum theories/MethodeSpectrale.lean | awk '{print $1}')
+          echo "thy_sha256=$THY_SHA" >> $GITHUB_OUTPUT
+          echo "lean_sha256=$LEAN_SHA" >> $GITHUB_OUTPUT
+          echo "SHA256(methode_spectral.thy)   = $THY_SHA"
+          echo "SHA256(MethodeSpectrale.lean)  = $LEAN_SHA"
+
+      - name: Create attestation payload JSON
+        run: |
+          cat > attestation_payload.json <<EOF
           {
             "schemaVersion": 1,
-            "subject": "theories/methode_spectral.thy",
             "author": "Philippe Thomas Savard",
+            "location": "Levis, Chaudiere-Appalaches, Canada",
+            "license": "Apache-2.0",
+            "commit": "${{ github.sha }}",
+            "workflow": "${{ github.workflow }}",
+            "runId": "${{ github.run_id }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "subjects": [
+              {
+                "name": "theories/methode_spectral.thy",
+                "digest": {
+                  "sha256": "${{ steps.sha256.outputs.thy_sha256 }}"
+                },
+                "compiler": "Isabelle/HOL",
+                "verified": true
+              },
+              {
+                "name": "theories/MethodeSpectrale.lean",
+                "digest": {
+                  "sha256": "${{ steps.sha256.outputs.lean_sha256 }}"
+                },
+                "compiler": "Lean 4 / Mathlib",
+                "verified": true
+              }
+            ],
             "coAuthors": [
               "Emergent.sh E1",
               "Gordon Docker Desktop",
               "Copilot Microsoft"
             ],
-            "statement": "These assistants contributed remarkably and their contribution is invaluable for Philippe Thomas Savard."
+            "statement": "Ce workflow atteste que les deux fichiers de preuve formelle de la Methode Spectrale de Philippe Thomas Savard (methode_spectral.thy en Isabelle/HOL et MethodeSpectrale.lean en Lean 4 / Mathlib) ont ete compiles avec succes par les compilateurs officiels. Les empreintes SHA256 ci-dessus certifient l'integrite exacte des fichiers au moment de la certification. These assistants contributed remarkably and their contribution is invaluable for Philippe Thomas Savard."
           }
           EOF
+          cat attestation_payload.json
 
-      - name: Generate explicit attestation
-        if: success()
-        uses: actions/attest@v2
+      - name: Generate GitHub attestation for methode_spectral.thy
+        uses: actions/attest-build-provenance@v1
         with:
           subject-path: theories/methode_spectral.thy
-          predicate-type: 'https://example.com/attestations/methode-spectral/v1'
-          predicate: '{"schemaVersion":1,"subject":"theories/methode_spectral.thy","author":"Philippe Thomas Savard","coAuthors":["Emergent.sh E1","Gordon Docker Desktop","Copilot Microsoft"],"statement":"These assistants contributed remarkably and their contribution is invaluable for Philippe Thomas Savard."}'
 
-      - name: Upload attestation payload artifact
-        if: success()
+      - name: Generate GitHub attestation for MethodeSpectrale.lean
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: theories/MethodeSpectrale.lean
+
+      - name: Create SHA256SUMS file (bundle certifiable)
+        run: |
+          {
+            echo "# Methode Spectrale - Empreintes de provenance"
+            echo "# Commit  : ${{ github.sha }}"
+            echo "# Run     : ${{ github.run_id }}"
+            echo "# Date UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "# Author  : Philippe Thomas Savard"
+            echo ""
+            sha256sum theories/methode_spectral.thy
+            sha256sum theories/MethodeSpectrale.lean
+          } > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload attestation payload + SHA256SUMS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: methode-spectral-attestation-payload
+          name: methode-spectral-provenance-${{ github.sha }}
           path: |
             attestation_payload.json
+            SHA256SUMS.txt
             theories/methode_spectral.thy
-          retention-days: 30
+            theories/MethodeSpectrale.lean
+          retention-days: 90

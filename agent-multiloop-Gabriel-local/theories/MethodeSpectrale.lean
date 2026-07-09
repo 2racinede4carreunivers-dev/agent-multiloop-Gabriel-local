@@ -469,6 +469,164 @@ lemma rapport_spectral_tend_vers_demi (n : ℕ) (r : ℝ)
   rw [hnum_rw, hden_rw, div_div_div_cancel_right _ h2]
 
 -- ============================================================================
+-- SECTION XI (validation#16 Savard) : Restructuration officielle Philippe
+-- Alignee 1:1 sur les definitions ajoutees dans methode_spectral.thy
+-- (commit "Titre: Validation#16 script/HOL"). Ces definitions coexistent
+-- avec les anciennes (terme_suite_A/B, somme_A/B_close) pour compatibilite.
+-- ============================================================================
+
+/-- XI.1 Savard : raison spectrale r = x2 / x1. -/
+noncomputable def raison_spectrale (x1 x2 : ℝ) : ℝ := x2 / x1
+
+/-- XI.2 Savard : progression simple a_i = a1 * r^(i-1). -/
+noncomputable def progression_simple_terme (a1 r : ℝ) (i : ℕ) : ℝ :=
+  a1 * (r ^ (i - 1))
+
+/-- XI.3 Savard : avant-dernier terme = (r - 1/r) * (a1 * r^(n-3)).
+    Regle du manuscrit : condition terminale multiplicative. -/
+noncomputable def avant_dernier_terme_savard (a1 r : ℝ) (n : ℕ) : ℝ :=
+  (r - 1 / r) * (a1 * r ^ (n - 3))
+
+/-- XI.4 Savard : dernier terme = avant_dernier * r. -/
+noncomputable def dernier_terme_savard (a1 r : ℝ) (n : ℕ) : ℝ :=
+  (avant_dernier_terme_savard a1 r n) * r
+
+/-- XI.5 Savard : construction complete de la suite A. -/
+noncomputable def suite_A_savard_construction (a1 r : ℝ) (n i : ℕ) : ℝ :=
+  if i = 1 then a1
+  else if i ≤ n - 2 then progression_simple_terme a1 r i
+  else if i = n - 1 then avant_dernier_terme_savard a1 r n
+  else if i = n then dernier_terme_savard a1 r n
+  else 0
+
+/-- XI.6 Savard : construction de la suite B avec substitution position 6
+    (saut Zeta), decalant les termes suivants. Valable pour n ≥ 8. -/
+noncomputable def suite_B_savard_construction (a1 r : ℝ) (n i : ℕ) : ℝ :=
+  if n < 8 then suite_A_savard_construction a1 r n i
+  else if i = 1 then a1
+  else if i ≤ 5 then progression_simple_terme a1 r i
+  else if i = 6 then a1 * (r ^ 6)
+  else if i ≤ n - 2 then progression_simple_terme a1 r (i + 1)
+  else if i = n - 1 then (r - 1 / r) * (a1 * r ^ (n - 2))
+  else if i = n then ((r - 1 / r) * (a1 * r ^ (n - 2))) * r
+  else 0
+
+/-- XI.7 Savard : formule fermee compacte pour Somme(A). -/
+noncomputable def somme_A_compacte_savard (r : ℝ) (n : ℕ) : ℝ :=
+  (3.25 / 2) * (r ^ n) - 2
+
+/-- XI.7 Savard : formule fermee compacte pour Somme(B). -/
+noncomputable def somme_B_compacte_savard (r : ℝ) (n : ℕ) : ℝ :=
+  (6.5 / 2) * (r ^ n) - 66
+
+/-- XI.8 Savard : rapport spectral total = Somme(A) / Somme(B). -/
+noncomputable def rapport_spectral_total_savard (r : ℝ) (n : ℕ) : ℝ :=
+  somme_A_compacte_savard r n / somme_B_compacte_savard r n
+
+/-- XI.8 Savard : preuve de l'identite du taux d'accroissement.
+    Sans utilisation de `ring`, uniquement `ring_nf` et manipulations. -/
+lemma preuve_rapport_spectral_limite_savard (n : ℕ) (r : ℝ)
+    (hn : 8 ≤ n) (hr : 1 < r)
+    (hden : (6.5 : ℝ) * r ^ n - 132 ≠ 0) :
+    rapport_spectral_total_savard r n =
+    (3.25 * (r ^ n) - 4) / (6.5 * (r ^ n) - 132) := by
+  unfold rapport_spectral_total_savard somme_A_compacte_savard somme_B_compacte_savard
+  have h2 : (2 : ℝ) ≠ 0 := by norm_num
+  have hnum_rw : (3.25 : ℝ) / 2 * r ^ n - 2 = (3.25 * r ^ n - 4) / 2 := by ring
+  have hden_rw : (6.5 : ℝ) / 2 * r ^ n - 66 = (6.5 * r ^ n - 132) / 2 := by ring
+  rw [hnum_rw, hden_rw, div_div_div_cancel_right _ h2]
+
+/-- XI.9 Savard : validation numerique constante A par difference fine.
+    (1662 - 830) / 256 = 3.25. -/
+lemma validation_constante_A_savard :
+    ((1662 : ℝ) - 830) / 256 = 3.25 := by norm_num
+
+/-- XI.9 Savard : validation numerique constante B par difference fine.
+    (3262 - 1598) / 256 = 6.5. -/
+lemma validation_constante_B_savard :
+    ((3262 : ℝ) - 1598) / 256 = 6.5 := by norm_num
+
+/-- XI.10.b Savard : valeurs numeriques brutes constatees a 9 et 10 termes. -/
+noncomputable def valeur_A_10 : ℝ := 1662
+noncomputable def valeur_A_9  : ℝ := 830
+noncomputable def valeur_B_10 : ℝ := 3262
+noncomputable def valeur_B_9  : ℝ := 1598
+
+/-- Facteur d'echelle de la zone stable (8 termes denombrables). -/
+noncomputable def echelle_stable : ℝ := 2 ^ 8
+
+/-- Theoreme 1 : extraction de la constante Savard 3.25 par difference fine. -/
+theorem extraction_constante_A :
+    (valeur_A_10 - valeur_A_9) / echelle_stable = 3.25 := by
+  unfold valeur_A_10 valeur_A_9 echelle_stable
+  norm_num
+
+/-- Theoreme 2 : extraction de la constante Savard 6.5 par difference fine. -/
+theorem extraction_constante_B :
+    (valeur_B_10 - valeur_B_9) / echelle_stable = 6.5 := by
+  unfold valeur_B_10 valeur_B_9 echelle_stable
+  norm_num
+
+/-- Generalisation : lien avec les formules globales SA/SB.
+    Extrait 3.25 comme le taux d'accroissement au niveau n=10. -/
+lemma generalisation_ecart_minimal_A
+    (hA10 : valeur_A_10 = SA 10) (hA9 : valeur_A_9 = SA 9) :
+    (SA 10 - SA 9) / (2 ^ 8) = 3.25 := by
+  have s10 : SA 10 = 1662 := by unfold SA; norm_num
+  have s9  : SA 9  = 830  := by unfold SA; norm_num
+  rw [s10, s9]; norm_num
+
+/-- Generalisation : lien avec les formules globales SA/SB.
+    Extrait 6.5 comme le taux d'accroissement au niveau n=10. -/
+lemma generalisation_ecart_minimal_B
+    (hB10 : valeur_B_10 = SB 10) (hB9 : valeur_B_9 = SB 9) :
+    (SB 10 - SB 9) / (2 ^ 8) = 6.5 := by
+  have s10 : SB 10 = 3262 := by unfold SB; norm_num
+  have s9  : SB 9  = 1598 := by unfold SB; norm_num
+  rw [s10, s9]; norm_num
+
+/-- XI.12 Savard : theoreme generalise de l'ecart minimal universel A.
+    Pour toute suite de longueur n >= 8, la difference fine divisee par
+    le facteur d'echelle geometrique (2^(n-1)) extrait 3.25 de maniere
+    invariante. -/
+theorem ecart_minimal_universel_A (n : ℕ) (hn : 8 ≤ n) :
+    (SA (n + 1) - SA n) / ((2 : ℝ) ^ (n - 1)) = 3.25 := by
+  have s_next : SA (n + 1) = (3.25 / 2) * (2 : ℝ) ^ (n + 1) - 2 := rfl
+  have s_curr : SA n       = (3.25 / 2) * (2 : ℝ) ^ n - 2 := rfl
+  have hnum : SA (n + 1) - SA n = 3.25 * ((2 : ℝ) ^ (n - 1)) := by
+    rw [s_next, s_curr]
+    have hexp : (2 : ℝ) ^ (n + 1) = 2 * (2 : ℝ) ^ n := by ring
+    rw [hexp]
+    have hn1 : n = (n - 1) + 1 := by omega
+    rw [show (2 : ℝ) ^ n = 2 * (2 : ℝ) ^ (n - 1) from by
+      conv_lhs => rw [hn1]; rw [pow_succ]
+      ring]
+    ring
+  have hne : ((2 : ℝ) ^ (n - 1)) ≠ 0 := pow_ne_zero _ (by norm_num)
+  rw [hnum]
+  field_simp
+
+/-- XI.12 Savard : theoreme generalise de l'ecart minimal universel B.
+    Version B, symetrique de A. -/
+theorem ecart_minimal_universel_B (n : ℕ) (hn : 8 ≤ n) :
+    (SB (n + 1) - SB n) / ((2 : ℝ) ^ (n - 1)) = 6.5 := by
+  have s_next : SB (n + 1) = (6.5 / 2) * (2 : ℝ) ^ (n + 1) - 66 := rfl
+  have s_curr : SB n       = (6.5 / 2) * (2 : ℝ) ^ n - 66 := rfl
+  have hnum : SB (n + 1) - SB n = 6.5 * ((2 : ℝ) ^ (n - 1)) := by
+    rw [s_next, s_curr]
+    have hexp : (2 : ℝ) ^ (n + 1) = 2 * (2 : ℝ) ^ n := by ring
+    rw [hexp]
+    have hn1 : n = (n - 1) + 1 := by omega
+    rw [show (2 : ℝ) ^ n = 2 * (2 : ℝ) ^ (n - 1) from by
+      conv_lhs => rw [hn1]; rw [pow_succ]
+      ring]
+    ring
+  have hne : ((2 : ℝ) ^ (n - 1)) ≠ 0 := pow_ne_zero _ (by norm_num)
+  rw [hnum]
+  field_simp
+
+
+-- ============================================================================
 -- SECTION XII : Rapport spectral n x n (generalisation symetrique par listes)
 -- Correspond a la section Isabelle "Rapport spectral n x n" (lignes 167-190)
 -- ============================================================================

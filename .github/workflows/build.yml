@@ -34,7 +34,9 @@ jobs:
             "https://isabelle.in.tum.de/website-Isabelle2024/dist/Isabelle2024_linux.tar.gz" || \
           curl -L --retry 5 --retry-delay 10 --max-time 600 -o Isabelle2024_linux.tar.gz \
             "https://isabelle.in.tum.de/dist/Isabelle2024_linux.tar.gz" || \
-          (echo "Echec telechargement" && exit 1)
+          curl -L --retry 5 --retry-delay 10 --max-time 600 -o Isabelle2024_linux.tar.gz \
+            "https://download.isabelle.in.tum.de/Isabelle2024_linux.tar.gz" || \
+          (echo "Echec telechargement Isabelle" && exit 1)
           tar -xzf Isabelle2024_linux.tar.gz
           mv Isabelle2024 isabelle
           echo "$PWD/isabelle/bin" >> $GITHUB_PATH

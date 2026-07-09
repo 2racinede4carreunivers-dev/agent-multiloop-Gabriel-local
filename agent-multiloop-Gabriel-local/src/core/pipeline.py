@@ -181,7 +181,28 @@ class Pipeline:
             )
             logger.info("Q[%s] coherence=%.2f signals=%s",
                         qid, coherence.score, coherence.signals[:3])
-            if coherence.incoherent:
+
+            # v3.24 : Mode conversation libre. Si la requete est
+            # conversationnelle (explication, question ouverte),
+            # on applique un seuil plus tolerant (0.30 au lieu de
+            # threshold=0.55) pour ne pas casser le fil de la discussion.
+            # Le Slow-Motion ne s'active que pour de vraies incoherences.
+            try:
+                decomposition = self.slow_motion.decomposer.decompose(question)
+            except Exception:
+                decomposition = None
+            is_conversational = bool(
+                decomposition and getattr(decomposition, "is_conversational", False)
+            )
+            conversational_bypass = False
+            if is_conversational and coherence.score >= 0.30:
+                logger.info(
+                    "Q[%s] MODE CONVERSATION (coherence=%.2f >= 0.30) - "
+                    "Slow-Motion desactive pour ce tour", qid, coherence.score,
+                )
+                conversational_bypass = True
+
+            if coherence.incoherent and not conversational_bypass:
                 logger.warning("Q[%s] INCOHERENCE => Slow-Motion Debugger active", qid)
                 final = self.slow_motion.debug(
                     question=question,

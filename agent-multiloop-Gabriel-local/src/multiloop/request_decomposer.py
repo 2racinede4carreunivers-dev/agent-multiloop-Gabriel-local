@@ -48,6 +48,12 @@ class DecomposedRequest:
     # -> renvoie a la definition prime_i + theoreme prime_equation_prime_i
     # au lieu de basculer sur kernel_emergency_summary.
     is_generic_prime_i_query: bool = False
+    # NOUVEAU (v3.24) : requete conversationnelle (explication, question
+    # ouverte, discussion generale sur la Methode Spectrale). Le pipeline
+    # applique un seuil de coherence plus tolerant et n'active le
+    # Slow-Motion Debugger que pour les vraies incoherences (< 0.30).
+    # Ainsi Gabriel peut tenir une conversation naturelle sur sa theorie.
+    is_conversational: bool = False
 
     @property
     def coherent_segments(self) -> list[Segment]:
@@ -113,6 +119,29 @@ class RequestDecomposer:
         for pat in generic_prime_patterns:
             if re.search(pat, q_low):
                 result.is_generic_prime_i_query = True
+                break
+
+        # 0.bis Detecter les requetes CONVERSATIONNELLES (explications,
+        # questions ouvertes, discussions sur la theorie).
+        # Ces requetes ne demandent pas de valeur numerique precise mais
+        # une reflexion / explication. Le Slow-Motion Debugger devient
+        # plus tolerant pour ne pas casser le fil de la conversation.
+        # v3.24 - Correctif conversation reporte par Philippe.
+        conversational_patterns = [
+            r"\b(?:qu'est[- ]?ce que|c'est quoi|c'est qui)\b",
+            r"\b(?:explique|expliquer|explication)\b",
+            r"\b(?:pourquoi|comment|quel(?:le)?(?:s)?)\b.{3,}\?",
+            r"\b(?:peux[- ]tu|pouvez[- ]vous|sais[- ]tu|savez[- ]vous)\s+(?:me\s+)?(?:dire|expliquer|decrire|resumer|parler|montrer|donner)",
+            r"\b(?:parle[- ]moi|dis[- ]moi|explique[- ]moi|montre[- ]moi)\b",
+            r"\b(?:definition|definit|signifi[eo]|veut dire)\b",
+            r"\b(?:que penses[- ]tu|qu'en penses[- ]tu|ton avis|ton opinion)\b",
+            r"\b(?:aide[- ]moi|assiste[- ]moi|guide[- ]moi)\b",
+            r"\b(?:difference entre|comparer|comparaison)\b",
+            r"\b(?:resume|resumer|synthese|synthetiser)\b",
+        ]
+        for pat in conversational_patterns:
+            if re.search(pat, q_low):
+                result.is_conversational = True
                 break
 
         # 1. Detecter l'intention

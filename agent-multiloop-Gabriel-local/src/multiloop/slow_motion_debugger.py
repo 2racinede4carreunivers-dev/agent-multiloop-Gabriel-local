@@ -462,6 +462,50 @@ class SlowMotionDebugger:
                 "method": analysis["method"],
             }
 
+        # Cas GENERIQUE : requete sur le "i-ieme/n-ieme premier" sans valeur
+        # numerique concrete (ex: "reconstruis le i-ème premier"). On repond
+        # avec la definition formelle prime_i + theoreme prime_equation_prime_i
+        # + 4 exemples concrets (au lieu de basculer sur emergency_summary).
+        # Correctif v3.23 - Philippe Savard 2026-07-09.
+        if getattr(dec, "is_generic_prime_i_query", False):
+            from sympy import prime as _sym_prime
+            examples = [(i, int(_sym_prime(i))) for i in (1, 5, 10, 100)]
+            examples_txt = ", ".join(f"prime_i({i})={p}" for i, p in examples)
+
+            citations = []
+            for key in [
+                "KERNEL_INVARIANT_RECONSTRUCTION_1_2",
+                "KERNEL_INVARIANT_Z_64",
+                "INVARIANT_1_2",
+            ]:
+                cert = self.kernel.get(key)
+                if cert:
+                    citations.append(cert.cite())
+
+            summary = (
+                "DEFINITION FORMELLE - Le i-ieme nombre premier est defini par "
+                "prime_i(i) = SOME p. prime p AND position p = i, ou position "
+                "est l'indexation canonique 1->2, 2->3, 3->5, 4->7, 5->11, etc. "
+                "Cette definition est demontree dans theories/methode_spectral.thy "
+                "(prime_i, lignes 407-461).\n\n"
+                "THEOREMES CLES :\n"
+                "  - prime_i_is_prime : pour tout i, prime_i(i) est premier.\n"
+                "  - prime_i_position : position(prime_i(i)) = i.\n"
+                "  - prime_equation_prime_i : (SB(i) - digamma_calc(i, prime_i(i))) / 64 = prime_i(i)\n"
+                "    (reconstruction spectrale du i-ieme premier via l'invariant 1/2).\n\n"
+                f"EXEMPLES CONCRETS : {examples_txt}.\n\n"
+                "Pour reconstruire un premier CONCRET, precisez la valeur de i "
+                "(ex: 'reconstruis le 5ieme premier' -> Gabriel calculera 11)."
+            )
+            return {
+                "summary": summary,
+                "value": None,
+                "n": None,
+                "examples": examples,
+                "citations": citations,
+                "method": "kernel_generic_prime_i (v3.23)",
+            }
+
         # Cas principal : reconstruction du N-ieme premier en rapport 1/2
         if dec.detected_intent == "reconstruction" and position is not None:
             ratio = dec.detected_ratio or "1/2"

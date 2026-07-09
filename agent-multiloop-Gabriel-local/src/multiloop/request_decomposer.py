@@ -43,6 +43,11 @@ class DecomposedRequest:
     announced_size: Optional[int] = None
     # NOUVEAU : type de configuration annoncee ("symétrique" / "asymétrique")
     announced_symmetric: Optional[bool] = None
+    # NOUVEAU (v3.23) : requete generique sur le i-ieme/n-ieme premier
+    # (sans valeur numerique concrete). Ex: "reconstruis le i-ieme premier"
+    # -> renvoie a la definition prime_i + theoreme prime_equation_prime_i
+    # au lieu de basculer sur kernel_emergency_summary.
+    is_generic_prime_i_query: bool = False
 
     @property
     def coherent_segments(self) -> list[Segment]:
@@ -90,6 +95,25 @@ class RequestDecomposer:
         """Decompose la requete en segments logiques."""
         result = DecomposedRequest(original=question)
         q_low = question.lower()
+
+        # 0. Detecter les requetes GENERIQUES sur le i-ieme premier
+        # (sans valeur numerique). Ex: "reconstruis le i-ème premier",
+        # "peux-tu construire le n-ième nombre premier?", "prime_i", etc.
+        # Ces patterns utilisent une LETTRE symbolique (i, n, k, N) au lieu
+        # d'un chiffre concret. Sans ce flag, position=None et le pipeline
+        # basculait sur kernel_emergency_summary (perte de contexte).
+        # (?:^|\s) : la lettre doit etre precedee d'un espace ou debut de phrase
+        # [-‐]     : le tiret est OBLIGATOIRE (evite "12-ieme" ou i dans "ieme")
+        generic_prime_patterns = [
+            r"(?:^|\s|\()(?:i|n|k|N)[-‐]\s*(?:eme|ieme|ième|ème)\s+(?:nombre\s+)?(?:premier|prime)",
+            r"(?:^|\s|\()(?:i|n|k)[-‐]\s*(?:eme|ieme|ième|ème)(?![a-zA-Z])",
+            r"\bprime[_\s]?i\b",
+            r"(?:^|\s)p_i(?![a-zA-Z\d])",
+        ]
+        for pat in generic_prime_patterns:
+            if re.search(pat, q_low):
+                result.is_generic_prime_i_query = True
+                break
 
         # 1. Detecter l'intention
         for intent, patterns in self.INTENT_PATTERNS.items():

@@ -45,16 +45,26 @@ jobs:
 
       - name: Vérification et Compilation de methode_spectral.thy
         run: |
-         echo "Compilation ciblée et minimale du fichier de théorie..."
-         isabelle process -T ./theories/methode_spectral.thy
-         
+         echo "Compilation via session Isabelle 'Methode_Spectral' (fichier ROOT)..."
+         cd agent-multiloop-Gabriel-local/theories
+         isabelle build -v -D .
+
       - name: Generate attestation report (SHA-256 de la théorie)
         run: |
           mkdir -p output_report
-          if [ -f "src/hol/methode_spectral.thy" ]; then
-            sha256sum src/hol/methode_spectral.thy > output_report/attestation_report.txt
+          THY_PATH="agent-multiloop-Gabriel-local/theories/methode_spectral.thy"
+          if [ -f "$THY_PATH" ]; then
+            sha256sum "$THY_PATH" > output_report/attestation_report.txt
+            echo "" >> output_report/attestation_report.txt
+            echo "# Attestation de compilation Isabelle" >> output_report/attestation_report.txt
+            echo "# Commit  : ${{ github.sha }}" >> output_report/attestation_report.txt
+            echo "# Run     : ${{ github.run_id }}" >> output_report/attestation_report.txt
+            echo "# Date UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> output_report/attestation_report.txt
+            echo "# Author  : Philippe Thomas Savard" >> output_report/attestation_report.txt
+            echo "# License : Apache-2.0" >> output_report/attestation_report.txt
+            cat output_report/attestation_report.txt
           else
-            echo "Fichier methode_spectral.thy introuvable." > output_report/attestation_report.txt
+            echo "Fichier methode_spectral.thy introuvable a $THY_PATH." > output_report/attestation_report.txt
             exit 1
           fi
 
@@ -72,7 +82,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: methode-spectral-theory
-          path: src/hol/methode_spectral.thy
+          path: agent-multiloop-Gabriel-local/theories/methode_spectral.thy
 
       - name: Upload attestation report
         uses: actions/upload-artifact@v4
@@ -91,5 +101,5 @@ jobs:
         uses: actions/attest-build-provenance@v1
         with:
           subject-path: |
-            src/hol/methode_spectral.thy
+            agent-multiloop-Gabriel-local/theories/methode_spectral.thy
             output_report/attestation_report.txt

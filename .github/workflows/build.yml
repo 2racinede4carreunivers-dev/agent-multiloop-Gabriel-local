@@ -1,20 +1,23 @@
-name: Certification de provenance – Méthode Spectrale
+name: Build Isabelle Minimal + Attestation Spécifique
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
   attestations: write
 
 jobs:
-  build:
+  build_and_verify:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,167 +32,65 @@ jobs:
 
       - name: Install Isabelle 2024
         run: |
-          echo "Telechargement Isabelle 2024..."
-          curl -L --retry 3 --retry-delay 5 --max-time 900 -o Isabelle2024_linux.tar.gz \
-            "https://isabelle.in.tum.de/dist/Isabelle2024_linux.tar.gz" 2>/dev/null || \
-          curl -L --retry 3 --retry-delay 5 --max-time 900 -o Isabelle2024_linux.tar.gz \
-            "https://www.cl.cam.ac.uk/research/hvg/Isabelle/dist/Isabelle2024_linux.tar.gz" 2>/dev/null || \
-          true
-          
-          if [ -f Isabelle2024_linux.tar.gz ] && [ -s Isabelle2024_linux.tar.gz ]; then
-            echo "Archive downloaded, verifying..."
-            file Isabelle2024_linux.tar.gz
-            if file Isabelle2024_linux.tar.gz | grep -q 'gzip'; then
-              echo "Valid gzip file detected"
-              tar -xzf Isabelle2024_linux.tar.gz
-              if [ -d Isabelle2024 ]; then
-                mv Isabelle2024 isabelle
-              elif [ -d Isabelle2024-1 ]; then
-                mv Isabelle2024-1 isabelle
-              fi
-              if [ -d isabelle ]; then
-                echo "Isabelle extracted successfully"
-                echo "$PWD/isabelle/bin" >> $GITHUB_PATH
-              fi
-            else
-              echo "WARNING: File is not gzip format"
-              head -c 200 Isabelle2024_linux.tar.gz
-              echo ""
-              echo "Installing via apt-get instead..."
-              sudo apt-get update > /dev/null 2>&1
-              sudo apt-get install -y isabelle > /dev/null 2>&1 || \
-              sudo apt-get install -y hol polyml > /dev/null 2>&1 || true
-            fi
-          else
-            echo "Download failed - attempting apt-get install"
-            sudo apt-get update > /dev/null 2>&1
-            sudo apt-get install -y isabelle > /dev/null 2>&1 || \
-            sudo apt-get install -y hol polyml > /dev/null 2>&1 || true
-          fi
-          
-          echo "=== Verifying installation ==="
-          if command -v isabelle &> /dev/null; then
-            echo "OK isabelle found"
-            isabelle version 2>&1 | head -3 || true
-          elif command -v polyml &> /dev/null; then
-            echo "OK polyml found"
-          else
-            echo "WARNING No Isabelle/polyml - continuing"
-          fi
+          echo "Téléchargement Isabelle 2024..."
+          curl -L --retry 5 --retry-delay 10 --max-time 600 -o Isabelle2024_linux.tar.gz \
+            "https://isabelle.in.tum.de/website-Isabelle2024/dist/Isabelle2024_linux.tar.gz" || \
+          curl -L --retry 5 --retry-delay 10 --max-time 600 -o Isabelle2024_linux.tar.gz \
+            "https://isabelle.in.tum.de/dist/Isabelle2024_linux.tar.gz" || \
+          (echo "Échec du téléchargement" && exit 1)
 
-      - name: Show repository layout
-        run: |
-          echo "=== Working Directory ==="
-          pwd
-          echo "=== Repository Structure ==="
-          ls -la
-          echo "=== Searching for Isabelle files ==="
-          find . -maxdepth 4 \( -name ROOT -o -name '*.thy' \) -type f | sort
+          tar -xzf Isabelle2024_linux.tar.gz
+          mv Isabelle2024 isabelle
+          echo "$PWD/isabelle/bin" >> $GITHUB_PATH
 
-      - name: Build Isabelle session
-        working-directory: agent-multiloop-Gabriel-local
+      - name: Vérification et Compilation de methode_spectral.thy
         run: |
-          echo "=== Verification Isabelle ==="
-          if command -v isabelle &> /dev/null; then
-            echo "Isabelle found at: $(which isabelle)"
-            echo "Building Isabelle session..."
-            if [ -f ROOT ]; then
-              echo "ROOT file found, building..."
-              isabelle build -v -D .
-            else
-              echo "WARNING: No ROOT file found, creating minimal ROOT file..."
-              printf 'session MethodeSpectrale = HOL +\n  theories\n    methode_spectral\n' > ROOT
-              echo "ROOT file created. Building..."
-              isabelle build -v -D .
-            fi
+          echo "Compilation ciblée et minimale du fichier de théorie..."
+          # Utilisation de l'outil process pour compiler directement sans charger de session lourde non requise
+          isabelle process -e "use_thy \"src/hol/methode_spectral\"" || exit 1
+
+      - name: Generate attestation report (SHA-256 de la théorie)
+        run: |
+          mkdir -p output_report
+          if [ -f "src/hol/methode_spectral.thy" ]; then
+            sha256sum src/hol/methode_spectral.thy > output_report/attestation_report.txt
           else
-            echo "Isabelle NOT found in PATH"
-            echo "Checking for polyml and hol..."
-            if command -v polyml &> /dev/null; then
-              echo "polyml found - using direct compilation"
-              polyml --use methode_spectral.thy
-            else
-              echo "WARNING: Neither isabelle nor polyml found"
-              echo "Attempting minimal HOL check via apt-get"
-              apt-get update && apt-get install -y hol > /dev/null 2>&1 || true
-              echo "Skipping HOL build - will attempt signature generation instead"
-            fi
-          fi
-
-      - name: Generate SHA256 signatures
-        if: success()
-        working-directory: agent-multiloop-Gabriel-local/theories
-        run: |
-          echo "=== Generating cryptographic signatures ==="
-          THY_FILE="methode_spectral.thy"
-          if [ ! -f "$THY_FILE" ]; then
-            echo "ERROR: $THY_FILE not found in $(pwd)"
-            ls -la
+            echo "Fichier methode_spectral.thy introuvable." > output_report/attestation_report.txt
             exit 1
           fi
-          echo "File to sign: $THY_FILE"
-          SHA256=$(sha256sum "$THY_FILE" | awk '{print $1}')
-          MD5=$(md5sum "$THY_FILE" | awk '{print $1}')
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          echo "SHA256: $SHA256"
-          echo "MD5: $MD5"
-          mkdir -p signatures
-          echo "$SHA256  $THY_FILE" > signatures/methode_spectral.sha256
-          echo "$MD5  $THY_FILE" > signatures/methode_spectral.md5
-          printf "File: methode_spectral.thy\nAuthor: Philippe Thomas Savard\nCo-Authors:\n  - Emergent.sh E1\n  - Gordon Docker Desktop\n  - Copilot Microsoft\nLicense: Apache License 2.0\nRepository: agent-multiloop-Gabriel-local\nBranch: main\nTimestamp: %s\nSHA256: %s\nMD5: %s\nBuild Status: success\n" "$TIMESTAMP" "$SHA256" "$MD5" > signatures/METADATA.txt
-          echo "=== Signatures créées ==="
-          cat signatures/METADATA.txt
 
-      - name: Create provenance attestation
-        if: success()
-        working-directory: agent-multiloop-Gabriel-local/theories
+      - name: Generate build metadata
         run: |
-          echo "=== Creating provenance attestation ==="
-          THY_FILE="methode_spectral.thy"
-          SHA256=$(sha256sum "$THY_FILE" | awk '{print $1}')
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          printf '{\n  "schemaVersion": 1,\n  "subject": "methode_spectral.thy",\n  "timestamp": "%s",\n  "integrity": {\n    "sha256": "%s"\n  },\n  "provenance": {\n    "author": "Philippe Thomas Savard",\n    "coAuthors": [\n      "Emergent.sh E1",\n      "Gordon Docker Desktop",\n      "Copilot Microsoft"\n    ],\n    "repository": "https://github.com/Philippe-Thomas/agent-multiloop-Gabriel-local-final",\n    "branch": "main",\n    "license": "Apache License 2.0"\n  },\n  "attestation": "This file is authentic and originates from the authorized repository."\n}\n' "$TIMESTAMP" "$SHA256" > attestation_payload.json
-          echo "=== Attestation créée ==="
-          cat attestation_payload.json
+          echo "Build provenance minimale" > output_report/build_metadata.txt
+          echo "Commit SHA : $(git rev-parse HEAD)" >> output_report/build_metadata.txt
+          echo "Branche : $(git rev-parse --abbrev-ref HEAD)" >> output_report/build_metadata.txt
+          echo "Date : $(date -u)" >> output_report/build_metadata.txt
+          echo "" >> output_report/build_metadata.txt
+          echo "SHA-256 du fichier vérifié :" >> output_report/build_metadata.txt
+          cat output_report/attestation_report.txt >> output_report/build_metadata.txt
 
-      - name: Generate explicit attestation
-        if: success()
-        uses: actions/attest@v2
-        with:
-          subject-path: agent-multiloop-Gabriel-local/theories/methode_spectral.thy
-          predicate-type: 'https://example.com/attestations/methode-spectral/v1'
-          predicate: '{"schemaVersion":1,"integrity":{"sha256":"verified"},"provenance":{"author":"Philippe Thomas Savard","license":"Apache 2.0"}}'
-
-      - name: Upload signatures and attestation
-        if: success()
+      - name: Upload HOL Theory Artifact (methode_spectral.thy)
         uses: actions/upload-artifact@v4
         with:
-          name: methode-spectral-attestation
-          path: |
-            agent-multiloop-Gabriel-local/theories/attestation_payload.json
-            agent-multiloop-Gabriel-local/theories/signatures/
-            agent-multiloop-Gabriel-local/theories/methode_spectral.thy
-          retention-days: 90
-          if-no-files-found: warn
+          name: methode-spectral-theory
+          path: src/hol/methode_spectral.thy
 
-      - name: Create signature verification script
-        if: success()
-        working-directory: agent-multiloop-Gabriel-local/theories
-        run: |
-          printf '#!/bin/bash\nset -e\n\necho "=== Verification Script for methode_spectral.thy ==="\n\nif [ ! -f "methode_spectral.thy" ]; then\n  echo "ERROR: methode_spectral.thy not found"\n  exit 1\nfi\n\nif [ ! -f "signatures/methode_spectral.sha256" ]; then\n  echo "ERROR: signatures/methode_spectral.sha256 not found"\n  exit 1\nfi\n\necho "=== Verifying SHA256 signature ==="\nif sha256sum -c signatures/methode_spectral.sha256; then\n  echo "File verified: AUTHENTIC"\nelse\n  echo "Verification failed: FILE MODIFIED"\n  exit 1\nfi\n\nif [ -f "signatures/methode_spectral.md5" ]; then\n  echo "=== Verifying MD5 signature ==="\n  if md5sum -c signatures/methode_spectral.md5; then\n    echo "MD5 verified: AUTHENTIC"\n  else\n    echo "MD5 verification failed: FILE MODIFIED"\n    exit 1\n  fi\nfi\n\necho ""\necho "=== File Provenance Information ==="\nif [ -f "signatures/METADATA.txt" ]; then\n  cat signatures/METADATA.txt\nelse\n  echo "METADATA not available"\nfi\n\necho ""\necho "File verification completed successfully"\necho "methode_spectral.thy is authentic and unmodified"\necho "Author: Philippe Thomas Savard"\necho "License: Apache License 2.0"\necho "Repository: agent-multiloop-Gabriel-local-final (main branch)"\n' > verify_methode_spectral.sh
-          chmod +x verify_methode_spectral.sh
-          echo "Verification script created: verify_methode_spectral.sh"
+      - name: Upload attestation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: attestation-report-spectral
+          path: output_report/attestation_report.txt
 
-      - name: Display verification results
-        if: success()
-        working-directory: agent-multiloop-Gabriel-local/theories
-        run: |
-          echo "=== Cryptographic Certification Results ==="
-          echo "SHA256 Signature:"
-          cat signatures/methode_spectral.sha256
-          echo "MD5 Signature:"
-          cat signatures/methode_spectral.md5
-          echo "Metadata:"
-          cat signatures/METADATA.txt
-          echo "Provenance Attestation:"
-          cat attestation_payload.json | jq . 2>/dev/null || cat attestation_payload.json
+      - name: Upload build metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-metadata-spectral
+          path: output_report/build_metadata.txt
+
+      - name: Generate build provenance (SLSA v1 - Certification officielle)
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: |
+            src/hol/methode_spectral.thy
+            output_report/attestation_report.txt

@@ -30,7 +30,24 @@ jobs:
           sudo apt-get install -y ca-certificates curl
           sudo update-ca-certificates
 
-      - name: Install Isabelle 2024
+      # ================================================================
+      # Cache Isabelle heap (HOL-Computational_Algebra + dependances).
+      # Cle basee sur le contenu du fichier ROOT + .thy pour invalider
+      # automatiquement le cache si la theorie change.
+      # ================================================================
+      - name: Cache Isabelle heap (HOL-Computational_Algebra + Methode_Spectral)
+        uses: actions/cache@v4
+        id: cache-isabelle-heap
+        with:
+          path: |
+            ~/.isabelle/Isabelle2024/heaps
+            isabelle
+          key: isabelle2024-minimal-${{ hashFiles('agent-multiloop-Gabriel-local/theories/ROOT', 'agent-multiloop-Gabriel-local/theories/methode_spectral.thy') }}
+          restore-keys: |
+            isabelle2024-minimal-
+
+      - name: Install Isabelle 2024 (installation minimale)
+        if: steps.cache-isabelle-heap.outputs.cache-hit != 'true'
         run: |
           echo "Téléchargement Isabelle 2024..."
           curl -L --retry 5 --retry-delay 10 --max-time 600 -o Isabelle2024_linux.tar.gz \
@@ -41,7 +58,50 @@ jobs:
 
           tar -xzf Isabelle2024_linux.tar.gz
           mv Isabelle2024 isabelle
+          rm -f Isabelle2024_linux.tar.gz
+          echo "Taille initiale de l'installation :"
+          du -sh isabelle/
+
+          # ========================================================
+          # SUPPRESSION DES COMPOSANTS NON UTILISES POUR NOTRE BUILD
+          # (installation minimale, gain ~450-500 MB sur ~1.4 GB)
+          # ========================================================
+          echo "Suppression des composants non essentiels..."
+
+          # Documentation PDF (~200 MB)
+          rm -rf isabelle/doc/ 2>/dev/null || true
+
+          # SMT solvers externes (Z3, CVC*) - non requis par Methode_Spectral
+          rm -rf isabelle/contrib/z3-*/ 2>/dev/null || true
+          rm -rf isabelle/contrib/cvc*-*/ 2>/dev/null || true
+          rm -rf isabelle/contrib/e-*/ 2>/dev/null || true
+          rm -rf isabelle/contrib/spass-*/ 2>/dev/null || true
+          rm -rf isabelle/contrib/vampire-*/ 2>/dev/null || true
+
+          # jEdit GUI et orthographe - GitHub Actions est headless
+          rm -rf isabelle/contrib/jedit_build-*/ 2>/dev/null || true
+          rm -rf isabelle/contrib/jortho-*/ 2>/dev/null || true
+          rm -rf isabelle/src/Tools/jEdit/ 2>/dev/null || true
+
+          # Exemples, tutoriels, source docs (non necessaires au build)
+          rm -rf isabelle/src/Doc/ 2>/dev/null || true
+          rm -rf isabelle/src/HOL/Examples/ 2>/dev/null || true
+          rm -rf isabelle/src/HOL/Isar_Examples/ 2>/dev/null || true
+
+          # Composants IsaFoR/ATP secondaires
+          rm -rf isabelle/contrib/isabelle_fonts-*/ 2>/dev/null || true
+
+          echo "Taille apres nettoyage minimal :"
+          du -sh isabelle/
+
           echo "$PWD/isabelle/bin" >> $GITHUB_PATH
+
+      - name: Restore Isabelle PATH (cache hit)
+        if: steps.cache-isabelle-heap.outputs.cache-hit == 'true'
+        run: |
+          echo "Cache heap Isabelle restaure, aucune reinstallation necessaire."
+          echo "$PWD/isabelle/bin" >> $GITHUB_PATH
+          du -sh isabelle/ 2>/dev/null || echo "(taille non disponible)"
 
       - name: Vérification et Compilation de methode_spectral.thy
         run: |

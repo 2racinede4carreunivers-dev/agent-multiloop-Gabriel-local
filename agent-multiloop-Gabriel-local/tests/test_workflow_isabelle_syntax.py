@@ -104,3 +104,69 @@ class TestBuildWorkflowUsesIsabelleBuild:
             "qui n'existe pas. Corriger vers "
             "`agent-multiloop-Gabriel-local/theories/methode_spectral.thy`."
         )
+
+
+class TestMinimalIsabelleInstallation:
+    """v3.25.b : verifie l'installation MINIMALE + CACHE (option Philippe c).
+    Objectifs : reduire taille disque ~450 MB + accelerer builds suivants
+    via cache heap GitHub Actions."""
+
+    @pytest.fixture(scope="class")
+    def build_content(self):
+        build = REPO_ROOT / ".github" / "workflows" / "build.yml"
+        if not build.exists():
+            pytest.skip(f"{build} n'existe pas")
+        return build.read_text(encoding="utf-8")
+
+    def test_cache_action_present(self, build_content):
+        """Un actions/cache@v4 doit etre configure sur ~/.isabelle/heaps."""
+        assert "actions/cache@v4" in build_content, (
+            "Le workflow doit utiliser actions/cache@v4 pour la heap Isabelle"
+        )
+        assert "~/.isabelle/Isabelle2024/heaps" in build_content, (
+            "Le chemin de cache doit inclure ~/.isabelle/Isabelle2024/heaps"
+        )
+
+    def test_cache_key_uses_hashfiles_on_thy(self, build_content):
+        """La cle de cache doit dependre du contenu de methode_spectral.thy
+        pour invalider automatiquement le cache si la theorie change."""
+        assert "hashFiles" in build_content
+        assert "methode_spectral.thy" in build_content
+        assert "ROOT" in build_content
+
+    def test_cache_hit_skips_install(self, build_content):
+        """Si le cache est present, l'installation Isabelle est skippee."""
+        # 'if: steps.cache-isabelle-heap.outputs.cache-hit != true'
+        assert "cache-isabelle-heap.outputs.cache-hit != 'true'" in build_content, (
+            "L'etape d'install Isabelle doit etre conditionnee au cache miss"
+        )
+        # Une etape de restore PATH doit exister pour cache-hit=true
+        assert "cache-isabelle-heap.outputs.cache-hit == 'true'" in build_content, (
+            "Une etape doit restaurer le PATH quand le cache hit"
+        )
+
+    @pytest.mark.parametrize("removed_component", [
+        "isabelle/doc/",                # Documentation PDF ~200 MB
+        "isabelle/contrib/z3-",         # SMT solver Z3
+        "isabelle/contrib/jedit_build-",# jEdit GUI (headless CI)
+        "isabelle/src/Doc/",            # Source docs
+        "isabelle/src/HOL/Examples/",   # Exemples HOL
+    ])
+    def test_minimal_removes_unused_components(self, build_content, removed_component):
+        """L'installation minimale doit supprimer les composants non essentiels."""
+        assert removed_component in build_content, (
+            f"L'installation minimale doit supprimer `{removed_component}` "
+            f"pour reduire la taille disque"
+        )
+
+    def test_polyml_and_jdk_preserved(self, build_content):
+        """CRITIQUE : polyml (moteur ML) et jdk (JVM) NE doivent PAS
+        etre supprimes — Isabelle en depend imperativement."""
+        # On verifie qu'aucune ligne `rm -rf ...polyml*` n'existe
+        import re
+        assert not re.search(r"rm\s+-rf\s+.*polyml-", build_content), (
+            "polyml est requis par Isabelle. Ne JAMAIS le supprimer."
+        )
+        assert not re.search(r"rm\s+-rf\s+.*jdk-", build_content), (
+            "jdk est requis par Isabelle (JVM). Ne JAMAIS le supprimer."
+        )

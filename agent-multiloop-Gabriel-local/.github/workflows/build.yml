@@ -4,6 +4,18 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Le job Lean est declenchable MANUELLEMENT via l'onglet Actions.
+  # Cliquer sur "Run workflow" et cocher "run_lean" pour compiler Lean 4.
+  workflow_dispatch:
+    inputs:
+      run_lean:
+        description: "Compiler aussi le fichier Lean 4 (attention : ~30 min pour Mathlib au 1er build)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 permissions:
   contents: read
@@ -42,9 +54,11 @@ jobs:
 
   # ==========================================================================
   # JOB 2 : Compilation Lean 4 / Mathlib de MethodeSpectrale.lean
+  # DESACTIVE PAR DEFAUT — declenchable via workflow_dispatch avec run_lean=true
   # ==========================================================================
   validation-lean:
-    name: Compilation Lean 4 / Mathlib
+    name: Compilation Lean 4 / Mathlib (manuel)
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_lean == 'true'
     runs-on: ubuntu-latest
     outputs:
       lean_sha256: ${{ steps.hash-lean.outputs.sha256 }}
@@ -92,16 +106,23 @@ jobs:
           echo "SHA256(MethodeSpectrale.lean) = $LEAN_SHA"
 
   # ==========================================================================
-  # JOB 3 : Attestation de provenance signee (SLSA-like, SHA256 des deux fichiers)
+  # JOB 3 : Attestation de provenance SHA256 (Isabelle toujours, Lean si execute)
   # ==========================================================================
   attestation-provenance:
-    name: Attestation SHA256 (Isabelle + Lean)
-    needs: [validation-isabelle, validation-lean]
+    name: Attestation SHA256 (Isabelle + Lean si disponible)
+    needs: [validation-isabelle]
     runs-on: ubuntu-latest
     if: success()
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Check if Lean job ran
+        id: lean-status
+        run: |
+          LEAN_RAN="${{ needs.validation-lean.result || 'skipped' }}"
+          echo "lean_ran=$LEAN_RAN" >> $GITHUB_OUTPUT
+          echo "Lean job status : $LEAN_RAN"
 
       - name: Compute SHA256 of both formal proof files
         id: sha256
@@ -111,7 +132,7 @@ jobs:
           echo "thy_sha256=$THY_SHA" >> $GITHUB_OUTPUT
           echo "lean_sha256=$LEAN_SHA" >> $GITHUB_OUTPUT
           echo "SHA256(methode_spectral.thy)   = $THY_SHA"
-          echo "SHA256(MethodeSpectrale.lean)  = $LEAN_SHA"
+          echo "SHA256(MethodeSpectrale.lean)  = $LEAN_SHA (non compile, hash indicatif)"
 
       - name: Create attestation payload JSON
         run: |
@@ -158,7 +179,8 @@ jobs:
         with:
           subject-path: theories/methode_spectral.thy
 
-      - name: Generate GitHub attestation for MethodeSpectrale.lean
+      - name: Generate GitHub attestation for MethodeSpectrale.lean (si Lean compile)
+        if: steps.lean-status.outputs.lean_ran == 'success'
         uses: actions/attest-build-provenance@v1
         with:
           subject-path: theories/MethodeSpectrale.lean

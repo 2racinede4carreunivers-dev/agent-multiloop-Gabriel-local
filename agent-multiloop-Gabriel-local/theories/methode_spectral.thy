@@ -1,4 +1,4 @@
-﻿theory methode_spectral
+?theory methode_spectral
   imports Complex_Main "HOL-Computational_Algebra.Primes"
 begin
 (****************************************************************)
@@ -1515,7 +1515,7 @@ lemma gap_m19_m5:
 (* sur un entier compose C (ex : -7 et -51, ou 51 = 3 * 17), *)
 (* le log "Cannot find positions for C" constitue une preuve *)
 (* empirique par l'absurde de la validite de la Methode      *)
-(* Spectrale sur l'ensemble â„™ des premiers. Cette section    *)
+(* Spectrale sur l'ensemble ℙ des premiers. Cette section    *)
 (* transforme cette observation empirique en preuve formelle *)
 (* Isabelle/HOL, ancree sur l'axiome prime_position_exists   *)
 (* (ligne 402) et sur la definition prime_i (ligne 408).     *)
@@ -1527,7 +1527,7 @@ subsection "Theoreme principal - Aucun compose n'est un prime_i"
 
 text \<open>
   Puisque prime_i i est defini via un choix de Hilbert sur la propriete
-  "prime p âˆ§ position p = i", et que prime_i_is_prime demontre que
+  "prime p ∧ position p = i", et que prime_i_is_prime demontre que
   prime (prime_i i) tient toujours, il est logiquement impossible qu'un
   entier compose C soit egal a prime_i i pour un i quelconque.
 \<close>
@@ -1673,9 +1673,9 @@ text \<open>
   prime_position_exists restreinte au domaine des composes.
 
   CONSEQUENCE : la Methode Spectrale caracterise EXACTEMENT
-  l'ensemble â„™ des nombres premiers, ni plus, ni moins. Elle n'est
+  l'ensemble ℙ des nombres premiers, ni plus, ni moins. Elle n'est
   ni un artefact numerique fortuit, ni une methode approximative :
-  elle est une CARACTERISATION AXIOMATIQUE stricte de â„™.
+  elle est une CARACTERISATION AXIOMATIQUE stricte de ℙ.
 \<close>
 
 
@@ -2443,7 +2443,7 @@ axiomatization where
  *
  * Auteur      : Philippe Thomas Savard
  * Date        : 29 juin 2026
- * Lieu        : LÃ©vis, ChaudiÃ¨re-Appalaches, Canada
+ * Lieu        : Lévis, Chaudière-Appalaches, Canada
  * Licence     : Apache 2.0 (Attribution et conservation des mentions requises)
  *
  * REGLES FORMALISEES SANS UTILISATION DE LA TACTIQUE 'RING'
@@ -2452,88 +2452,88 @@ axiomatization where
 
 section "Section XI : Regles de construction des suites A_i et B_i (Pas de Ring)"
 
-text â€¹
+text ‹
   Soient :
     - x1, x2 : les indices spectraux (avec r = x2 / x1 comme raison de base).
     - La condition terminale multiplicative s'appliquant sur l'avant-dernier 
       et le dernier terme de la famille.
-    - La substitution de la position 6 de la suite B par l'exposant 7 (Saut ZÃªta).
-â€º
+    - La substitution de la position 6 de la suite B par l'exposant 7 (Saut Zêta).
+›
 
-subsection â€¹XI.1. Definition de la raison et des formes de baseâ€º
+subsection ‹XI.1. Definition de la raison et des formes de base›
 
-definition raison_spectrale :: "real â‡’ real â‡’ real" where
+definition raison_spectrale :: "real ⇒ real ⇒ real" where
   "raison_spectrale x1 x2 = x2 / x1"
 
-subsection â€¹XI.2. Progression simple (Positions 1 a n-2)â€º
+subsection ‹XI.2. Progression simple (Positions 1 a n-2)›
 
-definition progression_simple_terme :: "real â‡’ real â‡’ nat â‡’ real" where
+definition progression_simple_terme :: "real ⇒ real ⇒ nat ⇒ real" where
   "progression_simple_terme a1 r i = a1 * (r ^ (i - 1))"
 
-subsection â€¹XI.3. Condition Terminale : Avant-dernier terme (Position n-1)â€º
+subsection ‹XI.3. Condition Terminale : Avant-dernier terme (Position n-1)›
 
-text â€¹
-  RÃ¨gle du manuscrit : 
+text ‹
+  Règle du manuscrit : 
   (x2/x1 - x1/x2) * terme_precedant_avant_dernier = avant_dernier
   Soit : (r - 1/r) * (a1 * r^(n-3))
-â€º
-definition avant_dernier_terme_savard :: "real â‡’ real â‡’ nat â‡’ real" where
+›
+definition avant_dernier_terme_savard :: "real ⇒ real ⇒ nat ⇒ real" where
   "avant_dernier_terme_savard a1 r n = (r - 1 / r) * (a1 * r ^ (n - 3))"
 
-subsection â€¹XI.4. Condition Terminale : Dernier terme (Position n)â€º
+subsection ‹XI.4. Condition Terminale : Dernier terme (Position n)›
 
-text â€¹
-  RÃ¨gle du manuscrit : dernier = avant_dernier * (x2/x1) = avant_dernier * r
-â€º
-definition dernier_terme_savard :: "real â‡’ real â‡’ nat â‡’ real" where
+text ‹
+  Règle du manuscrit : dernier = avant_dernier * (x2/x1) = avant_dernier * r
+›
+definition dernier_terme_savard :: "real ⇒ real ⇒ nat ⇒ real" where
   "dernier_terme_savard a1 r n = (avant_dernier_terme_savard a1 r n) * r"
 
-subsection â€¹XI.5. Construction Complete de la Suite Aâ€º
+subsection ‹XI.5. Construction Complete de la Suite A›
 
-definition suite_A_savard_construction :: "real â‡’ real â‡’ nat â‡’ nat â‡’ real" where
+definition suite_A_savard_construction :: "real ⇒ real ⇒ nat ⇒ nat ⇒ real" where
   "suite_A_savard_construction a1 r n i =
      (if i = 1 then a1
-      else if i â‰¤ n - 2 then progression_simple_terme a1 r i
+      else if i ≤ n - 2 then progression_simple_terme a1 r i
       else if (i = n - 1) then avant_dernier_terme_savard a1 r n
       else if (i = n) then dernier_terme_savard a1 r n
       else 0)"
 
-subsection â€¹XI.6. Substitution SpÃ©cifique Position 6 de la Suite B (n â‰¥ 8)â€º
+subsection ‹XI.6. Substitution Spécifique Position 6 de la Suite B (n ≥ 8)›
 
-text â€¹
-  RÃ¨gle du manuscrit : La suite B prend la progression classique mais insÃ¨re 
-  le saut structurel "x^7 (ZÃªta)" Ã  la position 6, dÃ©calant les termes suivants.
-â€º
-definition suite_B_savard_construction :: "real â‡’ real â‡’ nat â‡’ nat â‡’ real" where
+text ‹
+  Règle du manuscrit : La suite B prend la progression classique mais insère 
+  le saut structurel "x^7 (Zêta)" à la position 6, décalant les termes suivants.
+›
+definition suite_B_savard_construction :: "real ⇒ real ⇒ nat ⇒ nat ⇒ real" where
   "suite_B_savard_construction a1 r n i =
      (if (n < 8) then suite_A_savard_construction a1 r n i
       else if (i = 1) then a1
-      else if i â‰¤ 5 then progression_simple_terme a1 r i
+      else if i ≤ 5 then progression_simple_terme a1 r i
       else if (i = 6) then a1 * (r ^ 6) 
-      else if i â‰¤ n - 2 then progression_simple_terme a1 r (i + 1)
+      else if i ≤ n - 2 then progression_simple_terme a1 r (i + 1)
       else if (i = n - 1) then (r - 1 / r) * (a1 * r ^ (n - 2))
       else if (i = n) then ((r - 1 / r) * (a1 * r ^ (n - 2))) * r
       else 0)"
 
-subsection â€¹XI.7. Sommation et Formules FermÃ©es Globalesâ€º
+subsection ‹XI.7. Sommation et Formules Fermées Globales›
 
-definition somme_A_compacte_savard :: "real â‡’ nat â‡’ real" where
+definition somme_A_compacte_savard :: "real ⇒ nat ⇒ real" where
   "somme_A_compacte_savard r n = (3.25 / 2) * (r ^ n) - 2"
 
-definition somme_B_compacte_savard :: "real â‡’ nat â‡’ real" where
+definition somme_B_compacte_savard :: "real ⇒ nat ⇒ real" where
   "somme_B_compacte_savard r n = (6.5 / 2) * (r ^ n) - 66"
 
-subsection â€¹XI.8. Calcul du Rapport Spectral sans tactique 'Ring'â€º
+subsection ‹XI.8. Calcul du Rapport Spectral sans tactique 'Ring'›
 
-definition rapport_spectral_total_savard :: "real â‡’ nat â‡’ real" where
+definition rapport_spectral_total_savard :: "real ⇒ nat ⇒ real" where
   "rapport_spectral_total_savard r n = somme_A_compacte_savard r n / somme_B_compacte_savard r n"
 
-text â€¹
-  Preuve de l'identitÃ© du taux d'accroissement constant menant au rapport 1/2.
-  ValidÃ©e sans aucune utilisation de 'ring', via algebra_simps et field_simps.
-â€º
+text ‹
+  Preuve de l'identité du taux d'accroissement constant menant au rapport 1/2.
+  Validée sans aucune utilisation de 'ring', via algebra_simps et field_simps.
+›
 lemma preuve_rapport_spectral_limite_savard:
-  assumes "n â‰¥ 8" and "r > 1"
+  assumes "n ≥ 8" and "r > 1"
   shows "rapport_spectral_total_savard r n = (3.25 * (r ^ n) - 4) / (6.5 * (r ^ n) - 132)"
 proof -
   have h_num_exp: "(3.25 / 2) * (r ^ n) - 2 = ((3.25 * (r ^ n)) / 2) - (4 / 2)"
@@ -2557,20 +2557,20 @@ proof -
   finally show ?thesis .
 qed
 
-subsection â€¹XI.9. Lemmes de validation numÃ©rique par diffÃ©rence fineâ€º
+subsection ‹XI.9. Lemmes de validation numérique par différence fine›
 
-text â€¹
-  VÃ©rification de l'extraction de la constante Savard 3.25 pour la suite A
+text ‹
+  Vérification de l'extraction de la constante Savard 3.25 pour la suite A
   entre les niveaux macroscopiques n=10 et n=9 sur la zone stable (2^8).
-â€º
+›
 lemma validation_constante_A_savard:
   "((1662::real) - 830) / 256 = 3.25"
   by (simp add: field_simps)
 
-text â€¹
-  VÃ©rification de l'extraction de la constante Savard 6.5 pour la suite B
+text ‹
+  Vérification de l'extraction de la constante Savard 6.5 pour la suite B
   entre les niveaux macroscopiques n=10 et n=9 sur la zone stable (2^8).
-â€º
+›
 lemma validation_constante_B_savard:
   "((3262::real) - 1598) / 256 = 6.5"
   by (simp add: field_simps)
@@ -2578,21 +2578,21 @@ lemma validation_constante_B_savard:
 (****************************************************************************
  * FIN DE LA SECTION XI - RECONSTRUITE AVEC SUCCES POUR ISABELLE/HOL
  ****************************************************************************)
-subsection "XI.10.b DÃ©termination formelle des constantes par diffÃ©rence fine"
+subsection "XI.10.b Détermination formelle des constantes par différence fine"
 
 text \<open>
-  Cette section formalise la dÃ©couverte de Philippe Thomas Savard concernant 
-  l'extraction des constantes 3.25 et 6.5 par la diffÃ©rence fine de deux suites 
-  consÃ©cutives (10 et 9 termes), normalisÃ©e par l'Ã©cart minimal gÃ©omÃ©trique (2^8).
+  Cette section formalise la découverte de Philippe Thomas Savard concernant 
+  l'extraction des constantes 3.25 et 6.5 par la différence fine de deux suites 
+  consécutives (10 et 9 termes), normalisée par l'écart minimal géométrique (2^8).
 \<close>
 
-(* DÃ©finition des valeurs numÃ©riques brutes constatÃ©es Ã  9 et 10 termes *)
+(* Définition des valeurs numériques brutes constatées à 9 et 10 termes *)
 definition valeur_A_10 :: real where "valeur_A_10 = 1662"
 definition valeur_A_9  :: real where "valeur_A_9  = 830"
 definition valeur_B_10 :: real where "valeur_B_10 = 3262"
 definition valeur_B_9  :: real where "valeur_B_9  = 1598"
 
-(* Facteur d'Ã©chelle de la zone stable (8 termes dÃ©nombrables) *)
+(* Facteur d'échelle de la zone stable (8 termes dénombrables) *)
 definition echelle_stable :: real where "echelle_stable = 2 ^ 8"
 
 (* THEOREME 1 : Extraction de la constante de la suite A *)
@@ -2607,7 +2607,7 @@ theorem extraction_constante_B:
   unfolding valeur_B_10_def valeur_B_9_def echelle_stable_def
   by simp
 
-(* GENERALISATION : Lien logique avec les formules globales fermÃ©es existantes *)
+(* GENERALISATION : Lien logique avec les formules globales fermées existantes *)
 lemma generalisation_ecart_minimal_A:
   fixes n :: nat
   assumes hA10: "valeur_A_10 = SA 10"
@@ -2652,12 +2652,12 @@ text \<open>
   le rapport spectral 1/k_i pour tout k entier (k = 2, 3, 4, ...).
 \<close>
 
-subsection "XI.12. Preuve analytique gÃ©nÃ©rale de l'Ã©cart minimal stable"
+subsection "XI.12. Preuve analytique générale de l'écart minimal stable"
 
 text \<open>
-  ThÃ©orÃ¨me gÃ©nÃ©ralisÃ© de Philippe Thomas Savard : 
-  DÃ©monstration que pour toute suite de longueur n >= 8, la diffÃ©rence fine 
-  divisÃ©e par le facteur d'Ã©chelle gÃ©omÃ©trique (2^(n-2)) extrait de maniÃ¨re 
+  Théorème généralisé de Philippe Thomas Savard : 
+  Démonstration que pour toute suite de longueur n >= 8, la différence fine 
+  divisée par le facteur d'échelle géométrique (2^(n-2)) extrait de manière 
   invariante les constantes spectrales 3.25 et 6.5.
 \<close>
 
@@ -2667,11 +2667,11 @@ theorem ecart_minimal_universel_A:
   assumes hn: "n \<ge> 8"
   shows "(SA (n + 1) - SA n) / (2 ^ (n - 1)) = 3.25"
 proof -
-  (* Ã‰tape 1 : DÃ©ploiement des dÃ©finitions de la suite A pour n+1 et n *)
+  (* Étape 1 : Déploiement des définitions de la suite A pour n+1 et n *)
   have s_next: "SA (n + 1) = (3.25 / 2) * (2 ^ (n + 1)) - 2" by (simp add: SA_def)
   have s_curr: "SA n       = (3.25 / 2) * (2 ^ n) - 2"       by (simp add: SA_def)
 
-  (* Ã‰tape 2 : Simplification algÃ©brique du numÃ©rateur *)
+  (* Étape 2 : Simplification algébrique du numérateur *)
   have num: "SA (n + 1) - SA n = (3.25 / 2) * (2 ^ (n + 1)) - (3.25 / 2) * (2 ^ n)"
     using s_next s_curr by simp
   also have "... = (3.25 / 2) * (2 * 2 ^ n - 2 ^ n)"
@@ -2682,7 +2682,7 @@ proof -
     using hn by (cases n) (simp_all add: field_simps)
   finally have h_num_final: "SA (n + 1) - SA n = 3.25 * (2 ^ (n - 1))" .
 
-  (* Ã‰tape 3 : Division par le facteur d'Ã©chelle de la zone stable *)
+  (* Étape 3 : Division par le facteur d'échelle de la zone stable *)
   show ?thesis
     unfolding h_num_final by (simp del: SA_def)
 qed
@@ -2693,11 +2693,11 @@ theorem ecart_minimal_universel_B:
   assumes hn: "n \<ge> 8"
   shows "(SB (n + 1) - SB n) / (2 ^ (n - 1)) = 6.5"
 proof -
-  (* Ã‰tape 1 : DÃ©ploiement des dÃ©finitions de la suite B pour n+1 et n *)
+  (* Étape 1 : Déploiement des définitions de la suite B pour n+1 et n *)
   have s_next: "SB (n + 1) = (6.5 / 2) * (2 ^ (n + 1)) - 66" by (simp add: SB_def)
   have s_curr: "SB n       = (6.5 / 2) * (2 ^ n) - 66"       by (simp add: SB_def)
 
-  (* Ã‰tape 2 : Simplification algÃ©brique du numÃ©rateur *)
+  (* Étape 2 : Simplification algébrique du numérateur *)
   have num: "SB (n + 1) - SB n = (6.5 / 2) * (2 ^ (n + 1)) - (6.5 / 2) * (2 ^ n)"
     using s_next s_curr by simp
   also have "... = (6.5 / 2) * (2 * 2 ^ n - 2 ^ n)"
@@ -2708,7 +2708,7 @@ proof -
     using hn by (cases n) (simp_all add: field_simps)
   finally have h_num_final: "SB (n + 1) - SB n = 6.5 * (2 ^ (n - 1))" .
 
-  (* Ã‰tape 3 : Division par le facteur d'Ã©chelle *)
+  (* Étape 3 : Division par le facteur d'échelle *)
   show ?thesis
     unfolding h_num_final by (simp del: SB_def)
 qed

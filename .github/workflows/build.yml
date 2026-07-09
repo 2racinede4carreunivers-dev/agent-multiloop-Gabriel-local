@@ -45,10 +45,9 @@ jobs:
 
       - name: Vérification et Compilation de methode_spectral.thy
         run: |
-          echo "Compilation ciblée et minimale du fichier de théorie..."
-          # Utilisation de l'outil process pour compiler directement sans charger de session lourde non requise
-          isabelle process -e "use_thy \"src/hol/methode_spectral\"" || exit 1
-
+         echo "Compilation ciblée et minimale du fichier de théorie..."
+         isabelle process -T ./theories/methode_spectral.thy
+         
       - name: Generate attestation report (SHA-256 de la théorie)
         run: |
           mkdir -p output_report

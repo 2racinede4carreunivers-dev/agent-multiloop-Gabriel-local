@@ -37,33 +37,44 @@ jobs:
           true
           
           if [ -f Isabelle2024_linux.tar.gz ] && [ -s Isabelle2024_linux.tar.gz ]; then
-            echo "Archive downloaded successfully"
-            tar -xzf Isabelle2024_linux.tar.gz
-            if [ -d Isabelle2024 ]; then
-              mv Isabelle2024 isabelle
-            elif [ -d Isabelle2024-1 ]; then
-              mv Isabelle2024-1 isabelle
-            fi
-            if [ -d isabelle ]; then
-              echo "Isabelle extracted to: $(pwd)/isabelle"
-              echo "$PWD/isabelle/bin" >> $GITHUB_PATH
-              echo "PATH updated with Isabelle"
+            echo "Archive downloaded, verifying..."
+            file Isabelle2024_linux.tar.gz
+            if file Isabelle2024_linux.tar.gz | grep -q 'gzip'; then
+              echo "Valid gzip file detected"
+              tar -xzf Isabelle2024_linux.tar.gz
+              if [ -d Isabelle2024 ]; then
+                mv Isabelle2024 isabelle
+              elif [ -d Isabelle2024-1 ]; then
+                mv Isabelle2024-1 isabelle
+              fi
+              if [ -d isabelle ]; then
+                echo "Isabelle extracted successfully"
+                echo "$PWD/isabelle/bin" >> $GITHUB_PATH
+              fi
+            else
+              echo "WARNING: File is not gzip format"
+              head -c 200 Isabelle2024_linux.tar.gz
+              echo ""
+              echo "Installing via apt-get instead..."
+              sudo apt-get update > /dev/null 2>&1
+              sudo apt-get install -y isabelle > /dev/null 2>&1 || \
+              sudo apt-get install -y hol polyml > /dev/null 2>&1 || true
             fi
           else
-            echo "Download failed or file empty - attempting apt-get install"
+            echo "Download failed - attempting apt-get install"
             sudo apt-get update > /dev/null 2>&1
+            sudo apt-get install -y isabelle > /dev/null 2>&1 || \
             sudo apt-get install -y hol polyml > /dev/null 2>&1 || true
-            echo "HOL/polyml installation attempted"
           fi
           
           echo "=== Verifying installation ==="
           if command -v isabelle &> /dev/null; then
-            echo "✓ isabelle found: $(which isabelle)"
-            isabelle version || true
+            echo "OK isabelle found"
+            isabelle version 2>&1 | head -3 || true
           elif command -v polyml &> /dev/null; then
-            echo "✓ polyml found: $(which polyml)"
+            echo "OK polyml found"
           else
-            echo "⚠ No Isabelle or polyml found - continuing with signature generation only"
+            echo "WARNING No Isabelle/polyml - continuing"
           fi
 
       - name: Show repository layout

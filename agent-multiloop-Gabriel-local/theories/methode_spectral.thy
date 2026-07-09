@@ -2494,8 +2494,8 @@ definition suite_A_savard_construction :: "real â‡’ real â‡’ nat â‡
   "suite_A_savard_construction a1 r n i =
      (if i = 1 then a1
       else if i â‰¤ n - 2 then progression_simple_terme a1 r i
-      else if i = n - 1 then avant_dernier_terme_savard a1 r n
-      else if i = n then dernier_terme_savard a1 r n
+      else if (i = n - 1) then avant_dernier_terme_savard a1 r n
+      else if (i = n) then dernier_terme_savard a1 r n
       else 0)"
 
 subsection â€¹XI.6. Substitution SpÃ©cifique Position 6 de la Suite B (n â‰¥ 8)â€º
@@ -2506,13 +2506,13 @@ text â€¹
 â€º
 definition suite_B_savard_construction :: "real â‡’ real â‡’ nat â‡’ nat â‡’ real" where
   "suite_B_savard_construction a1 r n i =
-     (if n < 8 then suite_A_savard_construction a1 r n i
-      else if i = 1 then a1
+     (if (n < 8) then suite_A_savard_construction a1 r n i
+      else if (i = 1) then a1
       else if i â‰¤ 5 then progression_simple_terme a1 r i
-      else if i = 6 then a1 * (r ^ 6) 
+      else if (i = 6) then a1 * (r ^ 6) 
       else if i â‰¤ n - 2 then progression_simple_terme a1 r (i + 1)
-      else if i = n - 1 then (r - 1 / r) * (a1 * r ^ (n - 2))
-      else if i = n then ((r - 1 / r) * (a1 * r ^ (n - 2))) * r
+      else if (i = n - 1) then (r - 1 / r) * (a1 * r ^ (n - 2))
+      else if (i = n) then ((r - 1 / r) * (a1 * r ^ (n - 2))) * r
       else 0)"
 
 subsection â€¹XI.7. Sommation et Formules FermÃ©es Globalesâ€º
@@ -2827,13 +2827,13 @@ definition terme_A_pos :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarro
 
 definition terme_B_pos :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
   "terme_B_pos a1 r n i =
-     (if n < 8 then terme_A_pos a1 r n i
-      else if i = 1 then a1
+     (if (n < 8) then terme_A_pos a1 r n i
+      else if (i = 1) then a1
       else if i \<le> 5 then a1 * r ^ (i - 1)
-      else if i = 6 then a1 * r ^ 6
+      else if (i = 6) then a1 * r ^ 6
       else if i \<le> n - 2 then a1 * r ^ i
-      else if i = n - 1 then a1 * r ^ (n - 2) * (r - 1/r)
-      else if i = n then a1 * r ^ (n - 2) * (r - 1/r) * r
+      else if (i = n - 1) then a1 * r ^ (n - 2) * (r - 1/r)
+      else if (i = n) then a1 * r ^ (n - 2) * (r - 1/r) * r
       else 0)"
 
 (* === XII.6. Validations numeriques cle (k=2, a1=2, r=2)                     === *)
@@ -3035,4 +3035,6 @@ text \<open>
 \<close>
 
 end
+
+
 

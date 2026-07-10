@@ -2452,43 +2452,43 @@ axiomatization where
 
 section "Section XI : Regles de construction des suites A_i et B_i (Pas de Ring)"
 
-text ‹
+text \<open>
   Soient :
     - x1, x2 : les indices spectraux (avec r = x2 / x1 comme raison de base).
     - La condition terminale multiplicative s'appliquant sur l'avant-dernier 
       et le dernier terme de la famille.
     - La substitution de la position 6 de la suite B par l'exposant 7 (Saut Zêta).
-›
+\<close>
 
-subsection ‹XI.1. Definition de la raison et des formes de base›
+subsection \<open>XI.1. Definition de la raison et des formes de base\<close>
 
 definition raison_spectrale :: "real ⇒ real ⇒ real" where
   "raison_spectrale x1 x2 = x2 / x1"
 
-subsection ‹XI.2. Progression simple (Positions 1 a n-2)›
+subsection \<open>XI.2. Progression simple (Positions 1 a n-2)\<close>
 
 definition progression_simple_terme :: "real ⇒ real ⇒ nat ⇒ real" where
   "progression_simple_terme a1 r i = a1 * (r ^ (i - 1))"
 
-subsection ‹XI.3. Condition Terminale : Avant-dernier terme (Position n-1)›
+subsection \<open>XI.3. Condition Terminale : Avant-dernier terme (Position n-1)\<close>
 
-text ‹
+text \<open>
   Règle du manuscrit : 
   (x2/x1 - x1/x2) * terme_precedant_avant_dernier = avant_dernier
   Soit : (r - 1/r) * (a1 * r^(n-3))
-›
+\<close>
 definition avant_dernier_terme_savard :: "real ⇒ real ⇒ nat ⇒ real" where
   "avant_dernier_terme_savard a1 r n = (r - 1 / r) * (a1 * r ^ (n - 3))"
 
-subsection ‹XI.4. Condition Terminale : Dernier terme (Position n)›
+subsection \<open>XI.4. Condition Terminale : Dernier terme (Position n)\<close>
 
-text ‹
+text \<open>
   Règle du manuscrit : dernier = avant_dernier * (x2/x1) = avant_dernier * r
-›
+\<close>
 definition dernier_terme_savard :: "real ⇒ real ⇒ nat ⇒ real" where
   "dernier_terme_savard a1 r n = (avant_dernier_terme_savard a1 r n) * r"
 
-subsection ‹XI.5. Construction Complete de la Suite A›
+subsection \<open>XI.5. Construction Complete de la Suite A\<close>
 
 definition suite_A_savard_construction :: "real ⇒ real ⇒ nat ⇒ nat ⇒ real" where
   "suite_A_savard_construction a1 r n i =
@@ -2498,12 +2498,12 @@ definition suite_A_savard_construction :: "real ⇒ real ⇒ nat ⇒ nat ⇒ rea
       else if (i = n) then dernier_terme_savard a1 r n
       else 0)"
 
-subsection ‹XI.6. Substitution Spécifique Position 6 de la Suite B (n ≥ 8)›
+subsection \<open>XI.6. Substitution Spécifique Position 6 de la Suite B (n ≥ 8)\<close>
 
-text ‹
+text \<open>
   Règle du manuscrit : La suite B prend la progression classique mais insère 
   le saut structurel "x^7 (Zêta)" à la position 6, décalant les termes suivants.
-›
+\<close>
 definition suite_B_savard_construction :: "real ⇒ real ⇒ nat ⇒ nat ⇒ real" where
   "suite_B_savard_construction a1 r n i =
      (if (n < 8) then suite_A_savard_construction a1 r n i
@@ -2515,7 +2515,7 @@ definition suite_B_savard_construction :: "real ⇒ real ⇒ nat ⇒ nat ⇒ rea
       else if (i = n) then ((r - 1 / r) * (a1 * r ^ (n - 2))) * r
       else 0)"
 
-subsection ‹XI.7. Sommation et Formules Fermées Globales›
+subsection \<open>XI.7. Sommation et Formules Fermées Globales\<close>
 
 definition somme_A_compacte_savard :: "real ⇒ nat ⇒ real" where
   "somme_A_compacte_savard r n = (3.25 / 2) * (r ^ n) - 2"
@@ -2523,15 +2523,15 @@ definition somme_A_compacte_savard :: "real ⇒ nat ⇒ real" where
 definition somme_B_compacte_savard :: "real ⇒ nat ⇒ real" where
   "somme_B_compacte_savard r n = (6.5 / 2) * (r ^ n) - 66"
 
-subsection ‹XI.8. Calcul du Rapport Spectral sans tactique 'Ring'›
+subsection \<open>XI.8. Calcul du Rapport Spectral sans tactique 'Ring'\<close>
 
 definition rapport_spectral_total_savard :: "real ⇒ nat ⇒ real" where
   "rapport_spectral_total_savard r n = somme_A_compacte_savard r n / somme_B_compacte_savard r n"
 
-text ‹
+text \<open>
   Preuve de l'identité du taux d'accroissement constant menant au rapport 1/2.
   Validée sans aucune utilisation de 'ring', via algebra_simps et field_simps.
-›
+\<close>
 lemma preuve_rapport_spectral_limite_savard:
   assumes "n ≥ 8" and "r > 1"
   shows "rapport_spectral_total_savard r n = (3.25 * (r ^ n) - 4) / (6.5 * (r ^ n) - 132)"
@@ -2557,20 +2557,20 @@ proof -
   finally show ?thesis .
 qed
 
-subsection ‹XI.9. Lemmes de validation numérique par différence fine›
+subsection \<open>XI.9. Lemmes de validation numérique par différence fine\<close>
 
-text ‹
+text \<open>
   Vérification de l'extraction de la constante Savard 3.25 pour la suite A
   entre les niveaux macroscopiques n=10 et n=9 sur la zone stable (2^8).
-›
+\<close>
 lemma validation_constante_A_savard:
   "((1662::real) - 830) / 256 = 3.25"
   by (simp add: field_simps)
 
-text ‹
+text \<open>
   Vérification de l'extraction de la constante Savard 6.5 pour la suite B
   entre les niveaux macroscopiques n=10 et n=9 sur la zone stable (2^8).
-›
+\<close>
 lemma validation_constante_B_savard:
   "((3262::real) - 1598) / 256 = 6.5"
   by (simp add: field_simps)
@@ -2653,14 +2653,12 @@ text \<open>
 \<close>
 
 subsection "XI.12. Preuve analytique générale de l'écart minimal stable"
-
 text \<open>
   Théorème généralisé de Philippe Thomas Savard : 
   Démonstration que pour toute suite de longueur n >= 8, la différence fine 
   divisée par le facteur d'échelle géométrique (2^(n-2)) extrait de manière 
   invariante les constantes spectrales 3.25 et 6.5.
 \<close>
-
 (* THEOREME GENERALISE : Suite A *)
 theorem ecart_minimal_universel_A:
   fixes n :: nat
@@ -2670,7 +2668,6 @@ proof -
   (* Étape 1 : Déploiement des définitions de la suite A pour n+1 et n *)
   have s_next: "SA (n + 1) = (3.25 / 2) * (2 ^ (n + 1)) - 2" by (simp add: SA_def)
   have s_curr: "SA n       = (3.25 / 2) * (2 ^ n) - 2"       by (simp add: SA_def)
-
   (* Étape 2 : Simplification algébrique du numérateur *)
   have num: "SA (n + 1) - SA n = (3.25 / 2) * (2 ^ (n + 1)) - (3.25 / 2) * (2 ^ n)"
     using s_next s_curr by simp
@@ -2681,12 +2678,10 @@ proof -
   also have "... = 3.25 * (2 ^ (n - 1))"
     using hn by (cases n) (simp_all add: field_simps)
   finally have h_num_final: "SA (n + 1) - SA n = 3.25 * (2 ^ (n - 1))" .
-
   (* Étape 3 : Division par le facteur d'échelle de la zone stable *)
   show ?thesis
     unfolding h_num_final by (simp del: SA_def)
 qed
-
 (* THEOREME GENERALISE : Suite B *)
 theorem ecart_minimal_universel_B:
   fixes n :: nat
@@ -2696,7 +2691,6 @@ proof -
   (* Étape 1 : Déploiement des définitions de la suite B pour n+1 et n *)
   have s_next: "SB (n + 1) = (6.5 / 2) * (2 ^ (n + 1)) - 66" by (simp add: SB_def)
   have s_curr: "SB n       = (6.5 / 2) * (2 ^ n) - 66"       by (simp add: SB_def)
-
   (* Étape 2 : Simplification algébrique du numérateur *)
   have num: "SB (n + 1) - SB n = (6.5 / 2) * (2 ^ (n + 1)) - (6.5 / 2) * (2 ^ n)"
     using s_next s_curr by simp
@@ -2707,7 +2701,6 @@ proof -
   also have "... = 6.5 * (2 ^ (n - 1))"
     using hn by (cases n) (simp_all add: field_simps)
   finally have h_num_final: "SB (n + 1) - SB n = 6.5 * (2 ^ (n - 1))" .
-
   (* Étape 3 : Division par le facteur d'échelle *)
   show ?thesis
     unfolding h_num_final by (simp del: SB_def)

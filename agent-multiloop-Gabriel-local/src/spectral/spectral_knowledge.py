@@ -256,8 +256,8 @@ toutes documentees dans methode_spectral.thy et le PDF d'analyse pages 26-29 :
    - max(A) < min(B) (decalage chronologique)
    - RsP_bloc(A,B) = (sum_SA(A) - sum_SA(B)) / (sum_SB(A) - sum_SB(B))
    - Attendu : S'ECARTE de 1/2 (ex : -1/6 pour A=(2,3) B=(5,7,11))
-   - INTERPRETATION : l'ecart est du a l'ordinal des infinis (omega+1 != 1+omega).
-     Numeriquement valide mais algebriquement incoherent.
+   - L'origine theorique precise de cet ecart reste en cours d'investigation
+     et NE DOIT PAS etre affirmee par Gabriel.
    - Source : methode_spectral.thy::asymetrique_ordonnee_nat, PDF page 27
 
 4. CONFIGURATION ASYMETRIQUE CHAOTIQUE :

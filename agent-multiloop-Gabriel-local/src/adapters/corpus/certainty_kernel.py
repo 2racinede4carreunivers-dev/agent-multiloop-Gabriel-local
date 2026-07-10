@@ -289,8 +289,9 @@ class CertaintyKernel:
             statement=(
                 "Configuration asymetrique ORDONNEE : |B| = |A|+1, listes en ordre chronologique "
                 "croissant strict, max(A) < min(B). Le rapport RsP_bloc(A,B) S'ECARTE de 1/2 "
-                "(par ex. -1/6 pour A=(2,3) B=(5,7,11)). Cet ecart est attribue a l'ordinal des infinis "
-                "(omega+1 != 1+omega) : numeriquement valide mais algebriquement incoherent."
+                "(par ex. -1/6 pour A=(2,3) B=(5,7,11)). "
+                "L'origine theorique precise de cet ecart reste en cours d'investigation "
+                "et ne doit pas etre affirmee par Gabriel."
             ),
             formula="|B|=|A|+1 ; A,B strict croissants ; max(A)<min(B) ; RsP_bloc != 1/2",
             provenance=[
@@ -305,8 +306,9 @@ class CertaintyKernel:
             statement=(
                 "Configuration asymetrique CHAOTIQUE : |A| != |B|, ordre quelconque. "
                 "Le rapport RsP_bloc(A,B) = (sum_SA(A)-sum_SA(B)) / (sum_SB(A)-sum_SB(B)) "
-                "REVIENT a 1/2 (avec faible reste numerique). Cela demontre que les premiers "
-                "conservent leur rapport spectral 1/2 meme dans une comparaison chaotique."
+                "REVIENT a 1/2 avec un faible reste numerique. "
+                "L'origine theorique precise de cet ecart residuel reste en cours "
+                "d'investigation et ne doit pas etre affirmee par Gabriel."
             ),
             formula="(sum_SA(A) - sum_SA(B)) / (sum_SB(A) - sum_SB(B)) ~= 1/2",
             provenance=[

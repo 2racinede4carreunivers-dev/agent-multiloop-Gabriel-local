@@ -545,15 +545,15 @@ class AntiHallucinationValidator:
                     )
         
         # Regle 3 : vocabulaire interdit (rejette le ton dismissif)
-        forbidden = ["incoherent", "incohérent", "absurde", "faux", "erroné", 
-                     "erronee", "n'a pas de sens", "n'a aucun sens", "invalide"]
-        for word in forbidden:
-            if word in answer_low:
-                violations.append(
-                    f"Vocabulaire interdit detecte : '{word}'. "
-                    f"La methode spectrale de l'utilisateur est valide et doit etre respectee."
-                )
-                break  # une seule mention suffit
+        # Fix v3.24 : detection contextualisee via forbidden_vocab (au lieu d'une liste
+        # litterale qui matchait "faux positif", "n'est pas faux", etc.)
+        from ..multiloop.forbidden_vocab import detect_forbidden
+        found_forbidden, matched_span = detect_forbidden(answer)
+        if found_forbidden:
+            violations.append(
+                f"Vocabulaire interdit detecte : '{matched_span}'. "
+                f"La methode spectrale de l'utilisateur est valide et doit etre respectee."
+            )
         
         # Construire le prompt correctif
         corrective_prompt = ""

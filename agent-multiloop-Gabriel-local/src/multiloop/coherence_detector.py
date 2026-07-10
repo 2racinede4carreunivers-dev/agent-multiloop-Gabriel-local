@@ -21,6 +21,7 @@ from typing import Any
 
 from ..core.spectral_core import AntiHallucinationValidator
 from ..core.types import CandidateAnswer
+from .forbidden_vocab import detect_forbidden_word
 
 
 @dataclass
@@ -35,11 +36,6 @@ class CoherenceDetector:
     """Detecteur d'incoherence post-multiloop."""
 
     DEFAULT_THRESHOLD = 0.55  # en dessous : declenche slow-motion
-
-    FORBIDDEN_WORDS = [
-        "incoherent", "incohérent", "absurde", "faux", "errone",
-        "erronee", "n'a pas de sens", "invalide", "delirant", "delirante",
-    ]
 
     def __init__(self, threshold: float = DEFAULT_THRESHOLD):
         self.threshold = threshold
@@ -72,13 +68,11 @@ class CoherenceDetector:
                         signals.append(f"variance_candidats_haute={var:.2f}")
                         score_components.append(0.4)
 
-        # 2. Vocabulaire dismissif dans la meilleure reponse
-        text_low = best_answer_text.lower()
-        for word in self.FORBIDDEN_WORDS:
-            if word in text_low:
-                signals.append(f"vocabulaire_interdit:{word}")
-                score_components.append(0.2)
-                break
+        # 2. Vocabulaire dismissif dans la meilleure reponse (contextualise via forbidden_vocab)
+        found, matched_word = detect_forbidden_word(best_answer_text)
+        if found:
+            signals.append(f"vocabulaire_interdit:{matched_word}")
+            score_components.append(0.2)
 
         # 3. Audit anti-hallucination (re-use du validator)
         ground_truth = None
@@ -98,6 +92,7 @@ class CoherenceDetector:
             score_components.append(0.3)
 
         # 4. Contradiction interne : la reponse contient un nombre mais aussi "ne sais pas"
+        text_low = best_answer_text.lower()
         uncertain = any(p in text_low for p in [
             "je ne sais pas", "je ne peux pas", "incertain", "impossible de",
             "je n'arrive pas", "pas certain",

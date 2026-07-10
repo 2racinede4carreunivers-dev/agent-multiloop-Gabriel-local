@@ -1149,26 +1149,26 @@ definition liste_strictement_croissante :: "int list => bool" where
 
 definition asymetrique_ordonnee :: "int list => int list => bool" where
   "asymetrique_ordonnee A_indices B_indices =
-     ((ALL n : set A_indices. indice_valide n)  & 
-      (ALL n : set B_indices. indice_valide n)  & 
-      liste_strictement_croissante A_indices  & 
-      liste_strictement_croissante B_indices  & 
-      A_indices ~= []  & 
-      B_indices ~= []  & 
-      last A_indices < hd B_indices  & 
+     ((ALL n : set A_indices. indice_valide n)  &
+      (ALL n : set B_indices. indice_valide n)  &
+      liste_strictement_croissante A_indices  &
+      liste_strictement_croissante B_indices  &
+      A_indices ~= []  &
+      B_indices ~= []  &
+      last A_indices < hd B_indices  &
       length B_indices = length A_indices + 1)"
 
 definition asymetrique_chaotique :: "int list => int list => bool" where
   "asymetrique_chaotique A_indices B_indices =
-     ((ALL n : set A_indices. indice_valide n)  & 
-      (ALL n : set B_indices. indice_valide n)  & 
-      length A_indices ~= length B_indices  & 
+     ((ALL n : set A_indices. indice_valide n)  &
+      (ALL n : set B_indices. indice_valide n)  &
+      length A_indices ~= length B_indices  &
       ~ asymetrique_ordonnee A_indices B_indices)"
 
 lemma asymetrie_implique_indices_valides :
-  assumes "asymetrique_ordonnee A_indices B_indices  | 
+  assumes "asymetrique_ordonnee A_indices B_indices  |
            asymetrique_chaotique A_indices B_indices"
-  shows "(ALL n : set A_indices. indice_valide n)  & 
+  shows "(ALL n : set A_indices. indice_valide n)  &
          (ALL n : set B_indices. indice_valide n)"
 proof -
   from assms
@@ -1221,26 +1221,26 @@ definition liste_strictement_croissante_nat :: "nat list => bool" where
 
 definition asymetrique_ordonnee_nat :: "nat list => nat list => bool" where
   "asymetrique_ordonnee_nat A_indices B_indices =
-      ((ALL n : set A_indices. indice_valide_nat n)  & 
-       (ALL n : set B_indices. indice_valide_nat n)  & 
-       liste_strictement_croissante_nat A_indices  & 
-       liste_strictement_croissante_nat B_indices  & 
-       A_indices ~= []  & 
-       B_indices ~= []  & 
-       last A_indices < hd B_indices  & 
+      ((ALL n : set A_indices. indice_valide_nat n)  &
+       (ALL n : set B_indices. indice_valide_nat n)  &
+       liste_strictement_croissante_nat A_indices  &
+       liste_strictement_croissante_nat B_indices  &
+       A_indices ~= []  &
+       B_indices ~= []  &
+       last A_indices < hd B_indices  &
        length B_indices = length A_indices + 1)"
 
 definition asymetrique_chaotique_nat :: "nat list => nat list => bool" where
   "asymetrique_chaotique_nat A_indices B_indices =
-      ((ALL n : set A_indices. indice_valide_nat n)  & 
-       (ALL n : set B_indices. indice_valide_nat n)  & 
-       length A_indices ~= length B_indices  & 
+      ((ALL n : set A_indices. indice_valide_nat n)  &
+       (ALL n : set B_indices. indice_valide_nat n)  &
+       length A_indices ~= length B_indices  &
        ~ asymetrique_ordonnee_nat A_indices B_indices)"
 
 lemma asymetrie_nat_implique_indices_valides :
-  assumes "asymetrique_ordonnee_nat A_indices B_indices  | 
+  assumes "asymetrique_ordonnee_nat A_indices B_indices  |
            asymetrique_chaotique_nat A_indices B_indices"
-  shows "(ALL n : set A_indices. indice_valide_nat n)  & 
+  shows "(ALL n : set A_indices. indice_valide_nat n)  &
          (ALL n : set B_indices. indice_valide_nat n)"
 proof -
   from assms show ?thesis
@@ -2455,7 +2455,7 @@ section "Section XI : Regles de construction des suites A_i et B_i (Pas de Ring)
 text \<open>
   Soient :
     - x1, x2 : les indices spectraux (avec r = x2 / x1 comme raison de base).
-    - La condition terminale multiplicative s'appliquant sur l'avant-dernier 
+    - La condition terminale multiplicative s'appliquant sur l'avant-dernier
       et le dernier terme de la famille.
     - La substitution de la position 6 de la suite B par l'exposant 7 (Saut Zêta).
 \<close>
@@ -2473,7 +2473,7 @@ definition progression_simple_terme :: "real \<Rightarrow> real \<Rightarrow> na
 subsection \<open>XI.3. Condition Terminale : Avant-dernier terme (Position n-1)\<close>
 
 text \<open>
-  Règle du manuscrit : 
+  Règle du manuscrit :
   (x2/x1 - x1/x2) * terme_precedant_avant_dernier = avant_dernier
   Soit : (r - 1/r) * (a1 * r^(n-3))
 \<close>
@@ -2501,7 +2501,7 @@ definition suite_A_savard_construction :: "real \<Rightarrow> real \<Rightarrow>
 subsection \<open>XI.6. Substitution Spécifique Position 6 de la Suite B (n \<ge> 8)\<close>
 
 text \<open>
-  Règle du manuscrit : La suite B prend la progression classique mais insère 
+  Règle du manuscrit : La suite B prend la progression classique mais insère
   le saut structurel "x^7 (Zêta)" à la position 6, décalant les termes suivants.
 \<close>
 definition suite_B_savard_construction :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
@@ -2509,7 +2509,7 @@ definition suite_B_savard_construction :: "real \<Rightarrow> real \<Rightarrow>
      (if (n < 8) then suite_A_savard_construction a1 r n i
       else if (i = 1) then a1
       else if i \<le> 5 then progression_simple_terme a1 r i
-      else if (i = 6) then a1 * (r ^ 6) 
+      else if (i = 6) then a1 * (r ^ 6)
       else if i \<le> n - 2 then progression_simple_terme a1 r (i + 1)
       else if (i = n - 1) then (r - 1 / r) * (a1 * r ^ (n - 2))
       else if (i = n) then ((r - 1 / r) * (a1 * r ^ (n - 2))) * r
@@ -2598,8 +2598,8 @@ lemma validation_constante_B_savard:
 subsection "XI.10.b Détermination formelle des constantes par différence fine"
 
 text \<open>
-  Cette section formalise la découverte de Philippe Thomas Savard concernant 
-  l'extraction des constantes 3.25 et 6.5 par la différence fine de deux suites 
+  Cette section formalise la découverte de Philippe Thomas Savard concernant
+  l'extraction des constantes 3.25 et 6.5 par la différence fine de deux suites
   consécutives (10 et 9 termes), normalisée par l'écart minimal géométrique (2^8).
 \<close>
 
@@ -2671,9 +2671,9 @@ text \<open>
 
 subsection "XI.12. Preuve analytique générale de l'écart minimal stable"
 text \<open>
-  Théorème généralisé de Philippe Thomas Savard : 
-  Démonstration que pour toute suite de longueur n >= 8, la différence fine 
-  divisée par le facteur d'échelle géométrique (2^(n-2)) extrait de manière 
+  Théorème généralisé de Philippe Thomas Savard :
+  Démonstration que pour toute suite de longueur n >= 8, la différence fine
+  divisée par le facteur d'échelle géométrique (2^(n-2)) extrait de manière
   invariante les constantes spectrales 3.25 et 6.5.
 \<close>
 (* THEOREME GENERALISE : Suite A *)
@@ -3045,6 +3045,4 @@ text \<open>
 \<close>
 
 end
-
-
 

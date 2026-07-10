@@ -180,6 +180,50 @@ class TestMinimalIsabelleInstallation:
             )
 
 
+class TestMultiMirrorFallback:
+    """v3.27 : le workflow doit avoir une strategie multi-miroirs pour
+    telecharger Isabelle 2024. Le miroir officiel `isabelle.in.tum.de`
+    est parfois bloque depuis GitHub Actions (Connection reset by peer).
+    """
+
+    @pytest.fixture(scope="class")
+    def build_content(self):
+        build = REPO_ROOT / ".github" / "workflows" / "build.yml"
+        if not build.exists():
+            pytest.skip(f"{build} n'existe pas")
+        return build.read_text(encoding="utf-8")
+
+    @pytest.mark.parametrize("mirror", [
+        "mirror.clarkson.edu",
+        "ftp.gwdg.de",
+        "ftp.hu-berlin.de",
+        "isabelle.in.tum.de",
+    ])
+    def test_at_least_4_mirrors_configured(self, build_content, mirror):
+        """Au moins 4 miroirs alternatifs pour maximiser les chances."""
+        assert mirror in build_content, (
+            f"Miroir manquant : {mirror}"
+        )
+
+    def test_sourceforge_fallback_present(self, build_content):
+        """Un fallback SourceForge doit exister au cas ou tous les miroirs
+        HTTP officiels sont bloques."""
+        assert "sourceforge.net/projects/isabelle" in build_content
+
+    def test_integrity_check(self, build_content):
+        """Verification gzip -t sur l'archive avant extraction."""
+        assert "gzip -t Isabelle2024_linux.tar.gz" in build_content
+
+    def test_size_sanity_check(self, build_content):
+        """Rejet des fichiers < 100 MB (pages d'erreur HTTP)."""
+        assert "100000000" in build_content or "100 MB" in build_content
+
+    def test_loop_over_mirrors(self, build_content):
+        """La boucle bash 'for URL in MIRRORS' doit exister."""
+        assert "for URL in" in build_content
+        assert "MIRRORS=(" in build_content
+
+
 class TestDetailedErrorReporting:
     """v3.26 : le workflow doit afficher les erreurs Isabelle detaillees
     (numeros de ligne, type d'erreur) via isabelle build_log."""

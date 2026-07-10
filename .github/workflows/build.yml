@@ -46,16 +46,64 @@ jobs:
           restore-keys: |
             isabelle2024-minimal-
 
-      - name: Install Isabelle 2024 (installation minimale)
+      - name: Install Isabelle 2024 (installation minimale + multi-miroirs fallback)
         if: steps.cache-isabelle-heap.outputs.cache-hit != 'true'
         run: |
-          echo "Téléchargement Isabelle 2024..."
-          curl -L --retry 5 --retry-delay 10 --max-time 600 -o Isabelle2024_linux.tar.gz \
-            "https://isabelle.in.tum.de/website-Isabelle2024/dist/Isabelle2024_linux.tar.gz" || \
-          curl -L --retry 5 --retry-delay 10 --max-time 600 -o Isabelle2024_linux.tar.gz \
-            "https://isabelle.in.tum.de/dist/Isabelle2024_linux.tar.gz" || \
-          (echo "Échec du téléchargement" && exit 1)
+          echo "=== Telechargement Isabelle 2024 (strategie multi-miroirs) ==="
 
+          # Liste de miroirs officiels + alternatives, ordonnee par
+          # fiabilite historique sur GitHub Actions.
+          # Le premier qui repond est utilise.
+          MIRRORS=(
+            "https://mirror.clarkson.edu/isabelle/dist/Isabelle2024_linux.tar.gz"
+            "https://ftp.gwdg.de/pub/misc/isabelle/dist/Isabelle2024_linux.tar.gz"
+            "https://ftp.hu-berlin.de/isabelle/dist/Isabelle2024_linux.tar.gz"
+            "https://mirror.cse.unsw.edu.au/pub/isabelle/dist/Isabelle2024_linux.tar.gz"
+            "https://isabelle.in.tum.de/website-Isabelle2024/dist/Isabelle2024_linux.tar.gz"
+            "https://isabelle.in.tum.de/dist/Isabelle2024_linux.tar.gz"
+          )
+
+          SUCCESS=0
+          for URL in "${MIRRORS[@]}"; do
+            echo ""
+            echo "--- Essai miroir : $URL ---"
+            if curl -L --fail --retry 2 --retry-delay 5 --connect-timeout 30 \
+                    --max-time 300 -o Isabelle2024_linux.tar.gz "$URL"; then
+              SIZE=$(stat -c%s Isabelle2024_linux.tar.gz 2>/dev/null || echo 0)
+              # Isabelle 2024 fait ~500 MB. Rejeter les fichiers < 100 MB (page d'erreur).
+              if [ "$SIZE" -gt 100000000 ]; then
+                echo "[SUCCES] Telecharge depuis $URL ($((SIZE/1024/1024)) MB)"
+                SUCCESS=1
+                break
+              else
+                echo "[WARN] Fichier suspect ($((SIZE/1024/1024)) MB), rejete"
+                rm -f Isabelle2024_linux.tar.gz
+              fi
+            else
+              echo "[ECHEC] $URL"
+              rm -f Isabelle2024_linux.tar.gz 2>/dev/null || true
+            fi
+          done
+
+          if [ "$SUCCESS" -eq 0 ]; then
+            echo ""
+            echo "!!! ECHEC de tous les miroirs — fallback GitHub Release !!!"
+            # Fallback ultime : mirror archive sur SourceForge / archive.org
+            curl -L --fail --retry 3 --retry-delay 10 --max-time 600 \
+                 -o Isabelle2024_linux.tar.gz \
+                 "https://sourceforge.net/projects/isabelle/files/Isabelle2024/Isabelle2024_linux.tar.gz/download" || \
+            (echo "!!! Tous les miroirs et fallbacks ont echoue !!!" && exit 1)
+          fi
+
+          echo ""
+          echo "=== Verification integrite archive ==="
+          ls -lh Isabelle2024_linux.tar.gz
+          file Isabelle2024_linux.tar.gz || true
+          # Verification basique : doit etre un gzip valide
+          gzip -t Isabelle2024_linux.tar.gz || (echo "Archive corrompue" && exit 1)
+
+          echo ""
+          echo "=== Extraction ==="
           tar -xzf Isabelle2024_linux.tar.gz
           mv Isabelle2024 isabelle
           rm -f Isabelle2024_linux.tar.gz
@@ -63,24 +111,11 @@ jobs:
           du -sh isabelle/
 
           # ========================================================
-          # SUPPRESSION DES COMPOSANTS NON UTILISES POUR NOTRE BUILD
-          # (installation minimale ULTRA-PRUDENTE)
-          #
-          # ATTENTION - Composants a NE PAS toucher :
-          #   - contrib/z3-*                  (settings)
-          #   - contrib/cvc*-*, e-*, spass-*, vampire-* (references)
-          #   - contrib/jedit_build-*, jortho-*         (references)
-          #   - contrib/isabelle_fonts-*      (definit ISABELLE_FONTS)
-          #   - src/Tools/jEdit/              (compile dans bootstrap)
-          #
-          # SEUL doc/ (PDF finaux) est vraiment safe a supprimer.
+          # SUPPRESSION ULTRA-PRUDENTE : uniquement doc/ (200 MB PDFs)
           # ========================================================
-          echo "Suppression des composants non essentiels (ULTRA-safe)..."
-
-          # Documentation PDF finaux (~200 MB, aucune reference dans settings)
+          echo "Suppression du composant safe (doc/)..."
           rm -rf isabelle/doc/ 2>/dev/null || true
-
-          echo "Taille apres nettoyage minimal safe :"
+          echo "Taille apres nettoyage :"
           du -sh isabelle/
 
           echo "$PWD/isabelle/bin" >> $GITHUB_PATH

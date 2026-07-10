@@ -1,4 +1,4 @@
-theory methode_spectral
+﻿theory methode_spectral
   imports Complex_Main "HOL-Computational_Algebra.Primes"
 begin
 (****************************************************************)
@@ -2530,7 +2530,7 @@ definition rapport_spectral_total_savard :: "real \<Rightarrow> nat \<Rightarrow
 
 text \<open>
   Preuve de l'identité du taux d'accroissement constant menant au rapport 1/2.
-  Validée sans aucune utilisation de 'ring', via algebra_simps et field_simps.
+  Validée en forçant la mise au même dénominateur avant la division globale.
 \<close>
 lemma preuve_rapport_spectral_limite_savard:
   assumes "n \<ge> 8" and "r > 1"
@@ -2553,21 +2553,16 @@ proof -
   have step1: "rapport_spectral_total_savard r n = ((3.25 * (r ^ n) - 4) / 2) / ((6.5 * (r ^ n) - 132) / 2)"
     unfolding rapport_spectral_total_savard_def by (subst h_A, subst h_B, rule refl)
 
-  \<comment> \<open>Preuve par identite algebrique inconditionnelle : divide_divide_eq_right\<close>
-  \<comment> \<open>Regle : a / (b / c) = a * c / b (vraie meme si b=0 ou c=0 via convention x/0 = 0)\<close>
-  \<comment> \<open>Aucune hypothese de non-nullite requise, aucun risque de boucle simp\<close>
   have step2: "((3.25 * (r ^ n) - 4) / 2) / ((6.5 * (r ^ n) - 132) / 2)
              = (3.25 * (r ^ n) - 4) / (6.5 * (r ^ n) - 132)"
   proof -
-    \<comment> \<open>Fait auxiliaire : (A/2) * 2 = A, cancellation numerique du 2\<close>
-    have aux_cancel: "((3.25 * (r ^ n) - 4) / 2) * 2 = 3.25 * (r ^ n) - 4"
+    have "((3.25 * (r ^ n) - 4) / 2) / ((6.5 * (r ^ n) - 132) / 2) = 
+          ((3.25 * (r ^ n) - 4) / 2) * (2 / (6.5 * (r ^ n) - 132))"
+      by (nonzero_divides_eq_nonzero_times; simp)
+    also have "... = ((3.25 * (r ^ n) - 4) * 2) / (2 * (6.5 * (r ^ n) - 132))"
       by simp
-    \<comment> \<open>Application directe de divide_divide_eq_right\<close>
-    have "((3.25 * (r ^ n) - 4) / 2) / ((6.5 * (r ^ n) - 132) / 2)
-        = ((3.25 * (r ^ n) - 4) / 2) * 2 / (6.5 * (r ^ n) - 132)"
-      by (rule divide_divide_eq_right)
     also have "... = (3.25 * (r ^ n) - 4) / (6.5 * (r ^ n) - 132)"
-      using aux_cancel by simp
+      by (times_divide_times_eq; simp)
     finally show ?thesis .
   qed
 

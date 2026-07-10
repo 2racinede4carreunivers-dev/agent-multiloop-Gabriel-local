@@ -2550,11 +2550,33 @@ proof -
   have h_B: "somme_B_compacte_savard r n = (6.5 * (r ^ n) - 132) / 2"
     unfolding somme_B_compacte_savard_def using h_den_exp h_den_fact by simp
 
-  have "rapport_spectral_total_savard r n = ((3.25 * (r ^ n) - 4) / 2) / ((6.5 * (r ^ n) - 132) / 2)"
+  have step1: "rapport_spectral_total_savard r n = ((3.25 * (r ^ n) - 4) / 2) / ((6.5 * (r ^ n) - 132) / 2)"
     unfolding rapport_spectral_total_savard_def by (subst h_A, subst h_B, rule refl)
-  also have "... = (3.25 * (r ^ n) - 4) / (6.5 * (r ^ n) - 132)"
-    by (simp add: field_simps)
-  finally show ?thesis .
+
+  \<comment> \<open>Preuve par multiplication croisee : (A/2)/(B/2) = A/B\<close>
+  \<comment> \<open>Split de cas necessaire car B = 6.5 r^n - 132 peut s'annuler (r>1, n>=8 n'exclut pas r^n proche de 1)\<close>
+  have step2: "((3.25 * (r ^ n) - 4) / 2) / ((6.5 * (r ^ n) - 132) / 2)
+             = (3.25 * (r ^ n) - 4) / (6.5 * (r ^ n) - 132)"
+  proof (cases "6.5 * (r ^ n) - 132 = 0")
+    case True
+    \<comment> \<open>Cas degenere : denominateur nul, division/0 = 0 des deux cotes\<close>
+    hence hB_zero: "(6.5 * (r ^ n) - 132) / 2 = 0" by simp
+    from True hB_zero show ?thesis by simp
+  next
+    case False
+    \<comment> \<open>Cas regulier : denominateur non nul, on peut simplifier\<close>
+    hence hB_nz: "6.5 * (r ^ n) - 132 \<noteq> 0" by simp
+    have "((3.25 * (r ^ n) - 4) / 2) / ((6.5 * (r ^ n) - 132) / 2)
+        = ((3.25 * (r ^ n) - 4) / 2) * (2 / (6.5 * (r ^ n) - 132))"
+      by (simp add: divide_inverse)
+    also have "... = ((3.25 * (r ^ n) - 4) * 2) / (2 * (6.5 * (r ^ n) - 132))"
+      by simp
+    also have "... = (3.25 * (r ^ n) - 4) / (6.5 * (r ^ n) - 132)"
+      using hB_nz by simp
+    finally show ?thesis .
+  qed
+
+  from step1 step2 show ?thesis by simp
 qed
 
 subsection \<open>XI.9. Lemmes de validation numérique par différence fine\<close>

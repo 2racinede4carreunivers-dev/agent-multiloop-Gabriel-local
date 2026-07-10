@@ -2553,26 +2553,21 @@ proof -
   have step1: "rapport_spectral_total_savard r n = ((3.25 * (r ^ n) - 4) / 2) / ((6.5 * (r ^ n) - 132) / 2)"
     unfolding rapport_spectral_total_savard_def by (subst h_A, subst h_B, rule refl)
 
-  \<comment> \<open>Preuve par multiplication croisee : (A/2)/(B/2) = A/B\<close>
-  \<comment> \<open>Split de cas necessaire car B = 6.5 r^n - 132 peut s'annuler (r>1, n>=8 n'exclut pas r^n proche de 1)\<close>
+  \<comment> \<open>Preuve par identite algebrique inconditionnelle : divide_divide_eq_right\<close>
+  \<comment> \<open>Regle : a / (b / c) = a * c / b (vraie meme si b=0 ou c=0 via convention x/0 = 0)\<close>
+  \<comment> \<open>Aucune hypothese de non-nullite requise, aucun risque de boucle simp\<close>
   have step2: "((3.25 * (r ^ n) - 4) / 2) / ((6.5 * (r ^ n) - 132) / 2)
              = (3.25 * (r ^ n) - 4) / (6.5 * (r ^ n) - 132)"
-  proof (cases "6.5 * (r ^ n) - 132 = 0")
-    case True
-    \<comment> \<open>Cas degenere : denominateur nul, division/0 = 0 des deux cotes\<close>
-    hence hB_zero: "(6.5 * (r ^ n) - 132) / 2 = 0" by simp
-    from True hB_zero show ?thesis by simp
-  next
-    case False
-    \<comment> \<open>Cas regulier : denominateur non nul, on peut simplifier\<close>
-    hence hB_nz: "6.5 * (r ^ n) - 132 \<noteq> 0" by simp
-    have "((3.25 * (r ^ n) - 4) / 2) / ((6.5 * (r ^ n) - 132) / 2)
-        = ((3.25 * (r ^ n) - 4) / 2) * (2 / (6.5 * (r ^ n) - 132))"
-      by (simp add: divide_inverse)
-    also have "... = ((3.25 * (r ^ n) - 4) * 2) / (2 * (6.5 * (r ^ n) - 132))"
+  proof -
+    \<comment> \<open>Fait auxiliaire : (A/2) * 2 = A, cancellation numerique du 2\<close>
+    have aux_cancel: "((3.25 * (r ^ n) - 4) / 2) * 2 = 3.25 * (r ^ n) - 4"
       by simp
+    \<comment> \<open>Application directe de divide_divide_eq_right\<close>
+    have "((3.25 * (r ^ n) - 4) / 2) / ((6.5 * (r ^ n) - 132) / 2)
+        = ((3.25 * (r ^ n) - 4) / 2) * 2 / (6.5 * (r ^ n) - 132)"
+      by (rule divide_divide_eq_right)
     also have "... = (3.25 * (r ^ n) - 4) / (6.5 * (r ^ n) - 132)"
-      using hB_nz by simp
+      using aux_cancel by simp
     finally show ?thesis .
   qed
 

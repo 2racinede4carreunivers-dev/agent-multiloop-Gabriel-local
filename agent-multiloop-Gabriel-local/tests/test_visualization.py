@@ -86,7 +86,15 @@ def test_compute_SA_SB_has_two_series(core):
     c = compute_curve(core, "SA_SB", 1, 20)
     assert len(c.points) == 20  # serie SA
     assert len(c.secondary_points) == 20  # serie SB
-    assert c.secondary_label == "SB"
+    # v3.25 : label enrichi ("SB(n) : somme alternee B" au lieu de "SB")
+    assert "SB" in c.secondary_label, (
+        f"secondary_label doit contenir 'SB', trouve: {c.secondary_label!r}"
+    )
+    # v3.25 : nouveaux champs enrichis
+    assert c.primary_label != "", "primary_label doit etre defini pour la lisibilite"
+    assert c.critical_summary != "", "critical_summary doit etre defini (max 750 char)"
+    assert len(c.critical_summary) <= 750, "critical_summary doit etre <= 750 char"
+    assert c.axis_legend, "axis_legend doit contenir les explications des series"
 
 
 def test_compute_validates_bounds(core):

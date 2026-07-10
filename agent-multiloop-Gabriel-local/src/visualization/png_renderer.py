@@ -85,8 +85,9 @@ def render_png(
     ax.set_facecolor("#ffffff")
 
     # Courbe principale (marqueurs + ligne)
+    primary_label = curve.primary_label or curve.kind.value
     ax.plot(xs, ys, marker="o", markersize=4.5, linewidth=1.6,
-            color=COLOR_PRIMARY, label=curve.kind.value,
+            color=COLOR_PRIMARY, label=primary_label,
             markeredgecolor="white", markeredgewidth=0.6, zorder=3)
 
     # Serie secondaire si présente
@@ -157,16 +158,62 @@ def render_png(
         ax.spines[spine].set_color("#888888")
         ax.spines[spine].set_linewidth(0.8)
 
+    # v3.25 : Resume critique + legende des axes sous le graphique
+    # Reserve une zone en bas de la figure pour ces annotations
+    has_summary = bool(curve.critical_summary)
+    has_axis_legend = bool(curve.axis_legend)
+
+    # Calcul de la reservation basse (proportion de la hauteur de figure)
+    bottom_reserve = 0.06  # espace minimal (footer + watermark)
+    if has_summary:
+        bottom_reserve += 0.14
+    if has_axis_legend:
+        bottom_reserve += 0.03 + 0.025 * len(curve.axis_legend)
+
+    if has_summary:
+        # Panneau resume critique (encadre gris clair, texte serifs)
+        summary_text = _wrap_text(curve.critical_summary, width=115)
+        y_position = bottom_reserve - 0.05
+        fig.text(
+            0.5, y_position, summary_text,
+            ha="center", va="top", fontsize=8,
+            color="#333333",
+            bbox=dict(boxstyle="round,pad=0.5", fc="#f4f4f8",
+                      ec="#666666", lw=0.6, alpha=0.95),
+            wrap=True,
+        )
+
+    if has_axis_legend:
+        # Legende des axes en petit texte, alignee a gauche
+        legend_lines = [f"  {k} : {v}" for k, v in curve.axis_legend.items()]
+        legend_text = "Legende des axes et series :\n" + "\n".join(legend_lines)
+        y_legend = 0.045 + (0.02 if has_summary else 0)
+        fig.text(
+            0.015, y_legend, legend_text,
+            ha="left", va="bottom", fontsize=7,
+            color="#555555", family="monospace",
+        )
+
     # Footer scientifique (formule + timestamp)
     footer = f"Formule : {curve.formula}    |    Genere le : {curve.generated_at[:19]}Z"
-    fig.text(0.5, 0.01, footer, ha="center", fontsize=7.5,
+    fig.text(0.5, 0.012, footer, ha="center", fontsize=7,
              style="italic", color="#555555")
     # Watermark Gabriel
-    fig.text(0.99, 0.01, "Gabriel Multi-Loop Agent  -  Methode Spectrale Savard",
+    fig.text(0.99, 0.012, "Gabriel Multi-Loop Agent  -  Methode Spectrale Savard",
              ha="right", fontsize=6.5, color="#888888", style="italic")
 
-    plt.tight_layout(rect=[0, 0.035, 1, 1])
+    plt.tight_layout(rect=[0, bottom_reserve, 1, 1])
     plt.savefig(out_path, dpi=dpi, bbox_inches="tight",
                 facecolor=fig.get_facecolor())
     plt.close(fig)
     return out_path
+
+
+def _wrap_text(text: str, width: int = 115) -> str:
+    """Wrap un texte pour l'affichage matplotlib (respecte les phrases)."""
+    import textwrap
+    # Preserve les newlines explicites
+    lines: list[str] = []
+    for para in text.split("\n"):
+        lines.extend(textwrap.wrap(para, width=width) or [""])
+    return "\n".join(lines)

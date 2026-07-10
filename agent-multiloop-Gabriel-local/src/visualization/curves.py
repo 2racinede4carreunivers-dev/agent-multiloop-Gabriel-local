@@ -53,12 +53,26 @@ class CurveData:
     # Pour SA_SB : on a 2 series ; on stocke series secondaire ici
     secondary_points: list[CurvePoint] = field(default_factory=list)
     secondary_label: str = ""
+    # v3.25 : Label explicite de la serie principale (defaut = curve.kind.value)
+    primary_label: str = ""
     # Ligne de reference (eg. 0.5 pour le ratio)
     target_line: Optional[float] = None
     target_label: str = ""
     # Metadata pour audit citable
     formula: str = ""                   # formule mathematique exacte utilisee
     generated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    # v3.25 : Resume critique scholarly (max 750 caracteres) rendu sous le graphique.
+    # Doit decrire : (a) ce que la courbe MONTRE, (b) ce qu'elle ne montre PAS,
+    # (c) le contexte theorique, (d) la reference bibliographique si pertinente.
+    critical_summary: str = ""
+    # v3.25 : Legende explicite des axes (rendue en bas a droite du graphique).
+    # Format : {"n": "indice de position...", "SA(n)": "somme alternee A..."}
+    axis_legend: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        # Validation : critical_summary tronque a 750 caracteres (choix Philippe 2026-02)
+        if len(self.critical_summary) > 750:
+            self.critical_summary = self.critical_summary[:747] + "..."
 
     def summary(self) -> dict[str, Any]:
         """Resume compact pour audit JSON."""
@@ -119,12 +133,26 @@ def _compute_SA(core: SpectralMethodCore, n_min: int, n_max: int, scale: str) ->
         pts.append(CurvePoint(n=n, y_exact=sa, y_float=_project(sa, scale),
                               prime=core.get_prime_at_position(n)))
     return CurveData(
-        kind=CurveKind.SA, n_min=n_min, n_max=n_max, scale=scale,
-        title=f"Suite SA(n) - methode spectrale 1/2  (n={n_min}..{n_max})",
-        x_label="n (position du premier)",
-        y_label="SA(n)" + (f" ({scale})" if scale != "linear" else ""),
+        kind=CurveKind.SA, primary_label="SA(n) : somme alternee A", n_min=n_min, n_max=n_max, scale=scale,
+        title=f"Suite spectrale A : SA(n) = (13.2^n)/8 - 2   [n = {n_min}..{n_max}]",
+        x_label=f"n : indice de position dans la table des 1000 premiers ({n_min} <= n <= {n_max})",
+        y_label="SA(n) : somme alternee A" + (f"  (echelle {scale})" if scale != "linear" else ""),
         points=pts,
         formula="SA(n) = (13 * 2^n) / 8 - 2",
+        axis_legend={
+            "n": "indice de position (n=1 pour p1=2, n=2 pour p2=3, ...)",
+            "SA(n)": "valeur exacte de la somme alternee A a la position n",
+        },
+        critical_summary=(
+            "GRAPHIQUE : trace la suite spectrale A definie par SA(n) = (13.2^n)/8 - 2, "
+            "premier des deux invariants de la Methode Spectrale 1/2 de Savard. "
+            "L'axe horizontal represente l'indice de position n dans la table des "
+            "1000 premiers (n=1 correspond a p1=2). L'axe vertical donne la valeur "
+            "exacte de SA(n), calculee en arithmetique entiere Python. "
+            "NE MONTRE PAS le rapport spectral SA/SB (voir courbe RATIO) ni la "
+            "reconstruction des premiers (voir courbe DIGAMMA). "
+            "Source : methode_spectral.thy::somme_A_compacte_savard."
+        ),
     )
 
 
@@ -135,12 +163,26 @@ def _compute_SB(core: SpectralMethodCore, n_min: int, n_max: int, scale: str) ->
         pts.append(CurvePoint(n=n, y_exact=sb, y_float=_project(sb, scale),
                               prime=core.get_prime_at_position(n)))
     return CurveData(
-        kind=CurveKind.SB, n_min=n_min, n_max=n_max, scale=scale,
-        title=f"Suite SB(n) - methode spectrale 1/2  (n={n_min}..{n_max})",
-        x_label="n (position du premier)",
-        y_label="SB(n)" + (f" ({scale})" if scale != "linear" else ""),
+        kind=CurveKind.SB, primary_label="SB(n) : somme alternee B", n_min=n_min, n_max=n_max, scale=scale,
+        title=f"Suite spectrale B : SB(n) = (13.2^n)/4 - 66   [n = {n_min}..{n_max}]",
+        x_label=f"n : indice de position dans la table des 1000 premiers ({n_min} <= n <= {n_max})",
+        y_label="SB(n) : somme alternee B" + (f"  (echelle {scale})" if scale != "linear" else ""),
         points=pts,
         formula="SB(n) = (13 * 2^n) / 4 - 66",
+        axis_legend={
+            "n": "indice de position (n=1 pour p1=2, n=2 pour p2=3, ...)",
+            "SB(n)": "valeur exacte de la somme alternee B a la position n",
+        },
+        critical_summary=(
+            "GRAPHIQUE : trace la suite spectrale B definie par SB(n) = (13.2^n)/4 - 66, "
+            "second des deux invariants de la Methode Spectrale 1/2. "
+            "Par construction, SB(n) = 2 * (SA(n) + 2) - 66 : SB croit deux fois plus "
+            "vite que SA. L'axe horizontal est l'indice de position n dans la table "
+            "des 1000 premiers ; l'axe vertical donne la valeur exacte de SB(n) "
+            "(arithmetique entiere Python). "
+            "NE MONTRE PAS le rapport SA/SB. "
+            "Source : methode_spectral.thy::somme_B_compacte_savard."
+        ),
     )
 
 
@@ -153,14 +195,28 @@ def _compute_SA_SB(core: SpectralMethodCore, n_min: int, n_max: int, scale: str)
         sb_pts.append(CurvePoint(n=n, y_exact=sb, y_float=_project(sb, scale),
                                  prime=core.get_prime_at_position(n)))
     return CurveData(
-        kind=CurveKind.SA_SB, n_min=n_min, n_max=n_max, scale=scale,
-        title=f"Suites SA et SB superposees  (n={n_min}..{n_max})",
-        x_label="n",
-        y_label=("SA(n), SB(n) " + (f"({scale})" if scale != "linear" else "")),
+        kind=CurveKind.SA_SB, primary_label="SA(n) : somme alternee A", n_min=n_min, n_max=n_max, scale=scale,
+        title=f"Superposition SA(n) et SB(n) - Methode Spectrale 1/2   [n = {n_min}..{n_max}]",
+        x_label=f"n : indice de position dans la table des 1000 premiers ({n_min} <= n <= {n_max})",
+        y_label=("Valeurs SA(n) et SB(n) " + (f"({scale})" if scale != "linear" else "(lineaire)")),
         points=sa_pts,
         secondary_points=sb_pts,
-        secondary_label="SB",
+        secondary_label="SB(n) : somme alternee B",
         formula="SA(n) = (13.2^n)/8 - 2  ;  SB(n) = (13.2^n)/4 - 66",
+        axis_legend={
+            "n": "indice de position (n=1 pour p1=2, n=2 pour p2=3, ...)",
+            "SA(n) - bleu": "somme alternee A, formule (13.2^n)/8 - 2",
+            "SB(n) - bordeaux": "somme alternee B, formule (13.2^n)/4 - 66",
+        },
+        critical_summary=(
+            "GRAPHIQUE : superposition des deux suites spectrales SA(n) et SB(n) "
+            "sur le meme axe, permettant la comparaison visuelle de leur croissance "
+            "et de leur rapport. La courbe bleue est SA, la bordeaux est SB. "
+            "On voit que SB(n) ~= 2 * SA(n) pour n grand, ce qui refletera le "
+            "rapport asymptotique SA/SB -> 1/2 (voir courbe RATIO). "
+            "NE MONTRE PAS la valeur du rapport lui-meme (echelle absolue). "
+            "Sources : methode_spectral.thy::somme_A_compacte_savard, somme_B_compacte_savard."
+        ),
     )
 
 
@@ -175,60 +231,106 @@ def _compute_digamma(core: SpectralMethodCore, n_min: int, n_max: int, scale: st
                               prime=data.prime_value,
                               extra={"SA": int(data.SA_sum), "SB": int(data.SB_sum)}))
     return CurveData(
-        kind=CurveKind.DIGAMMA, n_min=n_min, n_max=n_max, scale=scale,
-        title=f"Digamma(n) = SB(n) - 64.P(n)  (n={n_min}..{n_max})",
-        x_label="n", y_label="digamma" + (f" ({scale})" if scale != "linear" else ""),
+        kind=CurveKind.DIGAMMA, primary_label="Digamma_1/2(n)", n_min=n_min, n_max=n_max, scale=scale,
+        title=(
+            f"Digamma_1/2(n) = SB(n) - 64 . P(n)   "
+            f"[reconstruction ratio 1/2, n = {n_min}..{n_max}]"
+        ),
+        x_label=f"n : indice de position dans la table des 1000 premiers ({n_min} <= n <= {n_max})",
+        y_label="Digamma_1/2(n) : reste apres extraction de P(n)"
+                + (f"  (echelle {scale})" if scale != "linear" else ""),
         points=pts,
-        formula="digamma(n) = SB(n) - 64 * P(n)  =>  reconstruction P = (SB - digamma) / 64",
+        formula=(
+            "digamma_1/2(n) = SB(n) - 64 * P(n)  "
+            "avec 64 = 128/2 (constante Savard specifique au ratio 1/2). "
+            "Reconstruction : P(n) = (SB(n) - digamma_1/2(n)) / 64."
+        ),
+        axis_legend={
+            "n": "indice de position (n=1 pour p1=2, n=2 pour p2=3, ...)",
+            "Digamma_1/2(n)": "residu SB(n) - 64.P(n) specifique au RATIO 1/2 (pas 1/3, 1/4, ...)",
+        },
+        critical_summary=(
+            "GRAPHIQUE : trace la fonction Digamma_1/2(n) = SB(n) - 64.P(n), "
+            "ATTENTION SPECIFIQUE AU RATIO 1/2 (constante 64 = 128/2). Pour un ratio "
+            "1/3 la constante serait differente, la courbe donc AUSSI. "
+            "L'axe horizontal est l'indice n. L'axe vertical est le residu obtenu "
+            "en soustrayant a SB(n) la contribution du n-ieme premier P(n) ponderee "
+            "par 64. Ce residu est CE QUI RESTE une fois le premier extrait, permet "
+            "de RECONSTRUIRE P(n) = (SB(n) - digamma) / 64. "
+            "NE MONTRE PAS le ratio spectral (voir RATIO) ni les primes bruts (voir PRIME). "
+            "Source : methode_spectral.thy::reconstruction_1_2."
+        ),
     )
 
 
 def _compute_invariant(core: SpectralMethodCore, n_min: int, n_max: int, scale: str) -> CurveData:
-    """D(n,P) = SB - SA - 1/2 * P  (invariant theorique pour le ratio 1/2).
-
-    On stocke en entier scale x8 pour garder l'exactitude :
-    D_x8 = SB_x8 - SA_x8 - 4*P  (= 8*D),  donc D = D_x8 / 8.
-    """
+    """D(n,P) = SB - SA - 1/2 * P  (invariant theorique pour le ratio 1/2)."""
     pts = []
     for n in range(n_min, n_max + 1):
         prime = core.get_prime_at_position(n)
         if prime is None:
             continue
-        # D_x8 = (SB - SA) * 8 - 4*P
         d_x8 = core._SB_scaled_x8(n) - core._SA_scaled_x8(n) - 4 * prime
         d_val = d_x8 / 8.0
         pts.append(CurvePoint(n=n, y_exact=d_x8, y_float=_project(d_val, scale),
                               prime=prime,
                               extra={"D_exact_x8": d_x8, "D_value": d_val}))
     return CurveData(
-        kind=CurveKind.INVARIANT, n_min=n_min, n_max=n_max, scale=scale,
-        title=f"Invariant D(n,P) = SB - SA - (1/2).P  (n={n_min}..{n_max})",
-        x_label="n", y_label="D(n,P)" + (f" ({scale})" if scale != "linear" else ""),
+        kind=CurveKind.INVARIANT, primary_label="D(n,P) : invariant", n_min=n_min, n_max=n_max, scale=scale,
+        title=f"Invariant spectral D(n,P) = SB(n) - SA(n) - (1/2).P(n)   [n = {n_min}..{n_max}]",
+        x_label=f"n : indice de position dans la table des 1000 premiers ({n_min} <= n <= {n_max})",
+        y_label="D(n,P) : invariant theorique" + (f"  ({scale})" if scale != "linear" else ""),
         points=pts,
         formula="D(n,P) = SB(n) - SA(n) - (1/2) * P(n)  (calcule en entier scale x8 pour exactitude)",
+        axis_legend={
+            "n": "indice de position dans la table des premiers",
+            "D(n,P)": "SB(n) - SA(n) - (1/2).P(n) : doit etre regulier si le ratio 1/2 est valide",
+        },
+        critical_summary=(
+            "GRAPHIQUE : trace l'invariant D(n,P) = SB(n) - SA(n) - (1/2).P(n). "
+            "Test de coherence de la Methode Spectrale 1/2 : si le ratio 1/2 est "
+            "correct, D doit etre regulier (nul ou lineaire). Un ecart signale une "
+            "possible anomalie theorique. Calcul en entier x8 (scale multiplicatif) "
+            "pour garantir l'exactitude. "
+            "NE MONTRE PAS l'origine causale d'eventuels ecarts."
+        ),
     )
 
 
 def _compute_ratio(core: SpectralMethodCore, n_min: int, n_max: int) -> CurveData:
-    """SA/SB en linaire (toujours)."""
+    """SA/SB en lineaire (toujours)."""
     pts = []
     for n in range(n_min, n_max + 1):
         sa_x8 = core._SA_scaled_x8(n)
         sb_x8 = core._SB_scaled_x8(n)
         if sb_x8 == 0:
             continue
-        ratio = sa_x8 / sb_x8  # division float, surete : 8*SA / 8*SB = SA/SB
+        ratio = sa_x8 / sb_x8
         pts.append(CurvePoint(n=n, y_exact=ratio, y_float=ratio,
                               prime=core.get_prime_at_position(n),
                               extra={"SA_x8": sa_x8, "SB_x8": sb_x8}))
     return CurveData(
-        kind=CurveKind.RATIO_SA_SB, n_min=n_min, n_max=n_max, scale="linear",
-        title=f"Ratio SA(n) / SB(n)  (convergence vers 1/2 asymptotique)  n={n_min}..{n_max}",
-        x_label="n", y_label="SA / SB",
+        kind=CurveKind.RATIO_SA_SB, primary_label="Rapport SA(n)/SB(n)", n_min=n_min, n_max=n_max, scale="linear",
+        title=f"Rapport spectral SA(n) / SB(n) - Convergence asymptotique vers 1/2   [n = {n_min}..{n_max}]",
+        x_label=f"n : indice de position dans la table des 1000 premiers ({n_min} <= n <= {n_max})",
+        y_label="Rapport SA(n) / SB(n)  (sans unite)",
         points=pts,
         target_line=0.5,
-        target_label="cible 1/2",
+        target_label="Cible asymptotique 1/2",
         formula="SA(n)/SB(n) -> 1/2 quand n -> infini",
+        axis_legend={
+            "n": "indice de position dans la table des premiers",
+            "SA/SB": "rapport spectral (adimensionnel), doit tendre vers 0.5",
+            "ligne verte pointillee": "cible asymptotique 1/2",
+        },
+        critical_summary=(
+            "GRAPHIQUE : trace le rapport spectral SA(n) / SB(n) qui, selon la Methode "
+            "Spectrale 1/2 de Savard, converge vers 1/2 quand n -> infini. La ligne "
+            "verte pointillee marque la cible asymptotique. Les annotations montrent "
+            "les valeurs aux extremums et le point de plus grande divergence. "
+            "NE MONTRE PAS d'autres ratios (1/3, 1/4, ...). "
+            "Source : methode_spectral.thy::preuve_rapport_spectral_limite_savard."
+        ),
     )
 
 
@@ -244,11 +346,25 @@ def _compute_gap(core: SpectralMethodCore, n_min: int, n_max: int, scale: str) -
         pts.append(CurvePoint(n=n, y_exact=gap, y_float=_project(gap, scale),
                               prime=p1, extra={"prime_next": p2}))
     return CurveData(
-        kind=CurveKind.GAP, n_min=n_min, n_max=n_max, scale=scale,
-        title=f"Ecarts consecutifs p(n+1) - p(n)  (n={n_min}..{n_max})",
-        x_label="n", y_label="Delta_p" + (f" ({scale})" if scale != "linear" else ""),
+        kind=CurveKind.GAP, primary_label="Delta_p(n) : ecart consecutif", n_min=n_min, n_max=n_max, scale=scale,
+        title=f"Ecarts consecutifs entre premiers : Delta_p(n) = P(n+1) - P(n)   [n = {n_min}..{n_max}]",
+        x_label=f"n : indice de position dans la table des 1000 premiers ({n_min} <= n <= {n_max})",
+        y_label="Delta_p(n) : ecart entre P(n+1) et P(n)"
+                + (f"  ({scale})" if scale != "linear" else ""),
         points=pts,
         formula="Delta_p(n) = P(n+1) - P(n)",
+        axis_legend={
+            "n": "indice de position dans la table des premiers",
+            "Delta_p(n)": "difference entre le (n+1)-ieme et le n-ieme premier",
+        },
+        critical_summary=(
+            "GRAPHIQUE : trace les ecarts consecutifs Delta_p(n) = P(n+1) - P(n) "
+            "entre premiers successifs. Utile pour visualiser l'irregularite de "
+            "leur distribution (ecarts pairs a l'exception de 3-2=1). "
+            "L'axe horizontal est l'indice de position n. L'axe vertical est "
+            "l'ecart en unites entieres. "
+            "NE MONTRE PAS de tendance moyenne (voir loi de Cramer / conjectures)."
+        ),
     )
 
 
@@ -260,11 +376,25 @@ def _compute_prime(core: SpectralMethodCore, n_min: int, n_max: int, scale: str)
             continue
         pts.append(CurvePoint(n=n, y_exact=p, y_float=_project(p, scale), prime=p))
     return CurveData(
-        kind=CurveKind.PRIME, n_min=n_min, n_max=n_max, scale=scale,
-        title=f"Croissance des nombres premiers P(n)  (n={n_min}..{n_max})",
-        x_label="n", y_label="P(n)" + (f" ({scale})" if scale != "linear" else ""),
+        kind=CurveKind.PRIME, primary_label="P(n) : n-ieme premier", n_min=n_min, n_max=n_max, scale=scale,
+        title=f"Croissance des nombres premiers : P(n) fonction de n   [n = {n_min}..{n_max}]",
+        x_label=f"n : indice de position dans la table des 1000 premiers ({n_min} <= n <= {n_max})",
+        y_label="P(n) : valeur du n-ieme premier"
+                + (f"  ({scale})" if scale != "linear" else ""),
         points=pts,
         formula="P(n) = n-ieme nombre premier (1..1000)",
+        axis_legend={
+            "n": "indice de position (n=1 pour p1=2)",
+            "P(n)": "valeur du n-ieme nombre premier (2, 3, 5, 7, 11, ...)",
+        },
+        critical_summary=(
+            "GRAPHIQUE : trace la croissance des nombres premiers P(n) en fonction "
+            "de leur indice de position n. Suit approximativement P(n) ~ n * ln(n) "
+            "(theoreme des nombres premiers). L'axe horizontal est n, l'axe vertical "
+            "est la valeur reelle du n-ieme premier. "
+            "NE MONTRE PAS la structure spectrale (voir SA, SB, RATIO). "
+            "Source : table des 1000 premiers embarquee dans SpectralMethodCore."
+        ),
     )
 
 

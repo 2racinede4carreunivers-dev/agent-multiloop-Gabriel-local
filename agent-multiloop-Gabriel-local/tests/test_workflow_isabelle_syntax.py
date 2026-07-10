@@ -146,38 +146,71 @@ class TestMinimalIsabelleInstallation:
         )
 
     @pytest.mark.parametrize("removed_component", [
-        "isabelle/doc/",                # Documentation PDF ~200 MB
-        "isabelle/src/HOL/Examples/",   # Exemples HOL avances
-        "isabelle/src/HOL/Isar_Examples/",  # Exemples Isar
-        "isabelle/contrib/isabelle_fonts-",  # Polices decoratives
+        "isabelle/doc/",                # Documentation PDF ~200 MB (SEUL safe)
     ])
     def test_minimal_removes_unused_components(self, build_content, removed_component):
-        """L'installation minimale (version prudente) supprime uniquement
-        les composants VRAIMENT non references dans etc/build.props :
-        doc/, Examples HOL, fonts. Les SMT solvers et jEdit restent."""
+        """L'installation minimale ULTRA-prudente supprime UNIQUEMENT doc/
+        (les PDFs finaux). Tous les autres composants sont references dans
+        les settings/build.props/env vars d'Isabelle et cassent le build
+        si supprimes."""
         assert removed_component in build_content, (
-            f"L'installation minimale doit supprimer `{removed_component}` "
-            f"pour reduire la taille disque"
+            f"L'installation minimale doit supprimer `{removed_component}`"
         )
 
     def test_no_removal_of_referenced_components(self, build_content):
         """CRITIQUE : ne PAS supprimer les composants references dans
-        etc/build.props ou etc/settings d'Isabelle. Bug reporte
-        2026-07-10 : suppression de contrib/z3-* et src/Tools/jEdit/
-        causait 'Missing Isabelle component' au demarrage."""
+        etc/build.props ou etc/settings d'Isabelle.
+        Bugs reportes :
+        - 2026-07-10 (a) : contrib/z3-* + src/Tools/jEdit/ -> 'Missing component'
+        - 2026-07-10 (b) : contrib/isabelle_fonts-* -> 'Undefined ISABELLE_FONTS'
+        """
         forbidden_removals = [
             r"rm\s+-rf\s+.*contrib/z3-",
             r"rm\s+-rf\s+.*contrib/cvc",
             r"rm\s+-rf\s+.*contrib/jedit_build",
             r"rm\s+-rf\s+.*contrib/jortho",
+            r"rm\s+-rf\s+.*contrib/isabelle_fonts-",  # AJOUTE (bug 2026-07-10b)
             r"rm\s+-rf\s+.*src/Tools/jEdit",
         ]
         import re
         for pat in forbidden_removals:
             assert not re.search(pat, build_content), (
                 f"Suppression interdite detectee : pattern `{pat}` "
-                f"est reference dans etc/build.props d'Isabelle."
+                f"est reference dans Isabelle (build.props/settings/env)."
             )
+
+
+class TestDetailedErrorReporting:
+    """v3.26 : le workflow doit afficher les erreurs Isabelle detaillees
+    (numeros de ligne, type d'erreur) via isabelle build_log."""
+
+    @pytest.fixture(scope="class")
+    def build_content(self):
+        build = REPO_ROOT / ".github" / "workflows" / "build.yml"
+        if not build.exists():
+            pytest.skip(f"{build} n'existe pas")
+        return build.read_text(encoding="utf-8")
+
+    def test_build_log_error_command(self, build_content):
+        """Sur echec, isabelle build_log -H Error doit etre invoque."""
+        assert "isabelle build_log -H Error Methode_Spectral" in build_content, (
+            "Le workflow doit invoquer 'isabelle build_log -H Error' "
+            "pour afficher les erreurs Isabelle detaillees en cas d'echec"
+        )
+
+    def test_failure_step_conditional(self, build_content):
+        """L'etape 'Affichage detaille des erreurs' doit etre conditionnee
+        au fait que le build a echoue (if: failure())."""
+        assert "if: failure()" in build_content or "if: ${{ failure()" in build_content
+
+    def test_build_output_log_captured(self, build_content):
+        """La sortie doit etre capturee dans build_output.log via tee."""
+        assert "tee build_output.log" in build_content
+
+    def test_env_vars_verification_step(self, build_content):
+        """Une etape de verification des variables env Isabelle doit exister
+        pour diagnostiquer les problemes d'ISABELLE_FONTS, ML_HOME, etc."""
+        assert "isabelle getenv" in build_content or "getenv ISABELLE_HOME" in build_content
 
     def test_polyml_and_jdk_preserved(self, build_content):
         """CRITIQUE : polyml (moteur ML) et jdk (JVM) NE doivent PAS

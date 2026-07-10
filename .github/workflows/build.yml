@@ -64,32 +64,34 @@ jobs:
 
           # ========================================================
           # SUPPRESSION DES COMPOSANTS NON UTILISES POUR NOTRE BUILD
-          # (installation minimale prudente, gain ~250 MB sur ~1.4 GB)
+          # (installation minimale ULTRA-PRUDENTE)
           #
-          # ATTENTION : Isabelle verifie certains composants au demarrage
-          # via etc/build.props et etc/settings. Ne PAS supprimer :
-          #   - contrib/z3-*  (referenced dans settings)
-          #   - contrib/cvc4-*, e-*, spass-*, vampire-* (references)
-          #   - contrib/jedit_build-*, jortho-* (references)
-          #   - src/Tools/jEdit/ (compile dans le bootstrap)
-          # Seul le contenu de doc/ (PDF finaux) est safe a supprimer.
+          # ATTENTION - Composants a NE PAS toucher :
+          #   - contrib/z3-*                  (settings)
+          #   - contrib/cvc*-*, e-*, spass-*, vampire-* (references)
+          #   - contrib/jedit_build-*, jortho-*         (references)
+          #   - contrib/isabelle_fonts-*      (definit ISABELLE_FONTS)
+          #   - src/Tools/jEdit/              (compile dans bootstrap)
+          #
+          # SEUL doc/ (PDF finaux) est vraiment safe a supprimer.
           # ========================================================
-          echo "Suppression des composants non essentiels (safe)..."
+          echo "Suppression des composants non essentiels (ULTRA-safe)..."
 
-          # Documentation PDF finaux (~200 MB, aucune reference dans build.props)
+          # Documentation PDF finaux (~200 MB, aucune reference dans settings)
           rm -rf isabelle/doc/ 2>/dev/null || true
-
-          # Exemples HOL avances (non requis par notre session Methode_Spectral)
-          rm -rf isabelle/src/HOL/Examples/ 2>/dev/null || true
-          rm -rf isabelle/src/HOL/Isar_Examples/ 2>/dev/null || true
-
-          # Composants polices etendus (safe : uniquement decoratif)
-          rm -rf isabelle/contrib/isabelle_fonts-*/ 2>/dev/null || true
 
           echo "Taille apres nettoyage minimal safe :"
           du -sh isabelle/
 
           echo "$PWD/isabelle/bin" >> $GITHUB_PATH
+
+      - name: Vérification préalable Isabelle (settings)
+        if: steps.cache-isabelle-heap.outputs.cache-hit != 'true'
+        run: |
+          echo "=== Verification des variables d'environnement Isabelle ==="
+          "$PWD/isabelle/bin/isabelle" getenv ISABELLE_HOME
+          "$PWD/isabelle/bin/isabelle" getenv ISABELLE_FONTS || true
+          "$PWD/isabelle/bin/isabelle" getenv ML_HOME
 
       - name: Restore Isabelle PATH (cache hit)
         if: steps.cache-isabelle-heap.outputs.cache-hit == 'true'
@@ -99,10 +101,39 @@ jobs:
           du -sh isabelle/ 2>/dev/null || echo "(taille non disponible)"
 
       - name: Vérification et Compilation de methode_spectral.thy
+        id: isabelle-build
         run: |
          echo "Compilation via session Isabelle 'Methode_Spectral' (fichier ROOT)..."
          cd agent-multiloop-Gabriel-local/theories
-         isabelle build -v -D .
+         # -v : verbose, -o show_question_marks=false : affiche mieux les erreurs
+         isabelle build -v -D . 2>&1 | tee build_output.log
+         BUILD_EXIT=${PIPESTATUS[0]}
+         echo "Exit code Isabelle : $BUILD_EXIT"
+         exit $BUILD_EXIT
+
+      - name: Affichage detaille des erreurs (si echec)
+        if: failure() && steps.isabelle-build.outcome == 'failure'
+        run: |
+          echo "=================================================================="
+          echo "ISABELLE BUILD FAILED - Diagnostic detaille"
+          echo "=================================================================="
+          cd agent-multiloop-Gabriel-local/theories
+          # Extraction des erreurs avec numeros de ligne
+          echo ""
+          echo "=== Erreurs Isabelle (avec ligne et fichier) ==="
+          isabelle build_log -H Error Methode_Spectral 2>&1 || true
+          echo ""
+          echo "=== Erreurs Isabelle (via build_log -H Warning) ==="
+          isabelle build_log -H Warning Methode_Spectral 2>&1 | head -50 || true
+          echo ""
+          echo "=== Extrait build_output.log (50 dernieres lignes) ==="
+          tail -50 build_output.log || true
+          echo ""
+          echo "=== Grep '***' dans build_output.log (erreurs Isabelle) ==="
+          grep -n '\*\*\*' build_output.log || echo "(aucune ligne avec *** trouvee)"
+          echo ""
+          echo "=== Grep 'line' dans build_output.log ==="
+          grep -in 'line [0-9]' build_output.log || echo "(aucune reference a une ligne)"
 
       - name: Generate attestation report (SHA-256 de la théorie)
         run: |

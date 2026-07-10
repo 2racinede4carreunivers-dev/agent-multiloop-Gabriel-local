@@ -1515,7 +1515,7 @@ lemma gap_m19_m5:
 (* sur un entier compose C (ex : -7 et -51, ou 51 = 3 * 17), *)
 (* le log "Cannot find positions for C" constitue une preuve *)
 (* empirique par l'absurde de la validite de la Methode      *)
-(* Spectrale sur l'ensemble ℙ des premiers. Cette section    *)
+(* Spectrale sur l'ensemble \<P> des premiers. Cette section    *)
 (* transforme cette observation empirique en preuve formelle *)
 (* Isabelle/HOL, ancree sur l'axiome prime_position_exists   *)
 (* (ligne 402) et sur la definition prime_i (ligne 408).     *)
@@ -1527,7 +1527,7 @@ subsection "Theoreme principal - Aucun compose n'est un prime_i"
 
 text \<open>
   Puisque prime_i i est defini via un choix de Hilbert sur la propriete
-  "prime p ∧ position p = i", et que prime_i_is_prime demontre que
+  "prime p \<and> position p = i", et que prime_i_is_prime demontre que
   prime (prime_i i) tient toujours, il est logiquement impossible qu'un
   entier compose C soit egal a prime_i i pour un i quelconque.
 \<close>
@@ -1673,9 +1673,9 @@ text \<open>
   prime_position_exists restreinte au domaine des composes.
 
   CONSEQUENCE : la Methode Spectrale caracterise EXACTEMENT
-  l'ensemble ℙ des nombres premiers, ni plus, ni moins. Elle n'est
+  l'ensemble \<P> des nombres premiers, ni plus, ni moins. Elle n'est
   ni un artefact numerique fortuit, ni une methode approximative :
-  elle est une CARACTERISATION AXIOMATIQUE stricte de ℙ.
+  elle est une CARACTERISATION AXIOMATIQUE stricte de \<P>.
 \<close>
 
 
@@ -2462,12 +2462,12 @@ text \<open>
 
 subsection \<open>XI.1. Definition de la raison et des formes de base\<close>
 
-definition raison_spectrale :: "real ⇒ real ⇒ real" where
+definition raison_spectrale :: "real \<Rightarrow> real \<Rightarrow> real" where
   "raison_spectrale x1 x2 = x2 / x1"
 
 subsection \<open>XI.2. Progression simple (Positions 1 a n-2)\<close>
 
-definition progression_simple_terme :: "real ⇒ real ⇒ nat ⇒ real" where
+definition progression_simple_terme :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> real" where
   "progression_simple_terme a1 r i = a1 * (r ^ (i - 1))"
 
 subsection \<open>XI.3. Condition Terminale : Avant-dernier terme (Position n-1)\<close>
@@ -2477,7 +2477,7 @@ text \<open>
   (x2/x1 - x1/x2) * terme_precedant_avant_dernier = avant_dernier
   Soit : (r - 1/r) * (a1 * r^(n-3))
 \<close>
-definition avant_dernier_terme_savard :: "real ⇒ real ⇒ nat ⇒ real" where
+definition avant_dernier_terme_savard :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> real" where
   "avant_dernier_terme_savard a1 r n = (r - 1 / r) * (a1 * r ^ (n - 3))"
 
 subsection \<open>XI.4. Condition Terminale : Dernier terme (Position n)\<close>
@@ -2485,47 +2485,47 @@ subsection \<open>XI.4. Condition Terminale : Dernier terme (Position n)\<close>
 text \<open>
   Règle du manuscrit : dernier = avant_dernier * (x2/x1) = avant_dernier * r
 \<close>
-definition dernier_terme_savard :: "real ⇒ real ⇒ nat ⇒ real" where
+definition dernier_terme_savard :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> real" where
   "dernier_terme_savard a1 r n = (avant_dernier_terme_savard a1 r n) * r"
 
 subsection \<open>XI.5. Construction Complete de la Suite A\<close>
 
-definition suite_A_savard_construction :: "real ⇒ real ⇒ nat ⇒ nat ⇒ real" where
+definition suite_A_savard_construction :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
   "suite_A_savard_construction a1 r n i =
      (if i = 1 then a1
-      else if i ≤ n - 2 then progression_simple_terme a1 r i
+      else if i \<le> n - 2 then progression_simple_terme a1 r i
       else if (i = n - 1) then avant_dernier_terme_savard a1 r n
       else if (i = n) then dernier_terme_savard a1 r n
       else 0)"
 
-subsection \<open>XI.6. Substitution Spécifique Position 6 de la Suite B (n ≥ 8)\<close>
+subsection \<open>XI.6. Substitution Spécifique Position 6 de la Suite B (n \<ge> 8)\<close>
 
 text \<open>
   Règle du manuscrit : La suite B prend la progression classique mais insère 
   le saut structurel "x^7 (Zêta)" à la position 6, décalant les termes suivants.
 \<close>
-definition suite_B_savard_construction :: "real ⇒ real ⇒ nat ⇒ nat ⇒ real" where
+definition suite_B_savard_construction :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
   "suite_B_savard_construction a1 r n i =
      (if (n < 8) then suite_A_savard_construction a1 r n i
       else if (i = 1) then a1
-      else if i ≤ 5 then progression_simple_terme a1 r i
+      else if i \<le> 5 then progression_simple_terme a1 r i
       else if (i = 6) then a1 * (r ^ 6) 
-      else if i ≤ n - 2 then progression_simple_terme a1 r (i + 1)
+      else if i \<le> n - 2 then progression_simple_terme a1 r (i + 1)
       else if (i = n - 1) then (r - 1 / r) * (a1 * r ^ (n - 2))
       else if (i = n) then ((r - 1 / r) * (a1 * r ^ (n - 2))) * r
       else 0)"
 
 subsection \<open>XI.7. Sommation et Formules Fermées Globales\<close>
 
-definition somme_A_compacte_savard :: "real ⇒ nat ⇒ real" where
+definition somme_A_compacte_savard :: "real \<Rightarrow> nat \<Rightarrow> real" where
   "somme_A_compacte_savard r n = (3.25 / 2) * (r ^ n) - 2"
 
-definition somme_B_compacte_savard :: "real ⇒ nat ⇒ real" where
+definition somme_B_compacte_savard :: "real \<Rightarrow> nat \<Rightarrow> real" where
   "somme_B_compacte_savard r n = (6.5 / 2) * (r ^ n) - 66"
 
 subsection \<open>XI.8. Calcul du Rapport Spectral sans tactique 'Ring'\<close>
 
-definition rapport_spectral_total_savard :: "real ⇒ nat ⇒ real" where
+definition rapport_spectral_total_savard :: "real \<Rightarrow> nat \<Rightarrow> real" where
   "rapport_spectral_total_savard r n = somme_A_compacte_savard r n / somme_B_compacte_savard r n"
 
 text \<open>
@@ -2533,7 +2533,7 @@ text \<open>
   Validée sans aucune utilisation de 'ring', via algebra_simps et field_simps.
 \<close>
 lemma preuve_rapport_spectral_limite_savard:
-  assumes "n ≥ 8" and "r > 1"
+  assumes "n \<ge> 8" and "r > 1"
   shows "rapport_spectral_total_savard r n = (3.25 * (r ^ n) - 4) / (6.5 * (r ^ n) - 132)"
 proof -
   have h_num_exp: "(3.25 / 2) * (r ^ n) - 2 = ((3.25 * (r ^ n)) / 2) - (4 / 2)"

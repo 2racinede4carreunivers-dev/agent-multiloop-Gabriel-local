@@ -159,3 +159,37 @@ class TestSectionXIValidation16Preserved:
         assert "text ‹" not in after_2400, (
             "Aucun 'text ‹' Unicode ne doit subsister"
         )
+
+
+class TestNoUnicodeIsabelleSymbols:
+    """v3.27b : regression du bug 'Inner lexical error' sur ligne 2465
+    (build GitHub Actions 2026-07-10). Isabelle 2024 en mode batch refuse
+    les symboles Unicode dans les declarations de types et d'expressions
+    (=>, >=, <=, forall, exists, etc.). Il faut utiliser les tokens ASCII
+    \\<Rightarrow>, \\<ge>, \\<le>, \\<forall>, etc."""
+
+    @pytest.fixture(scope="class")
+    def thy(self):
+        return (Path("/app/agent-multiloop-Gabriel-local") / "theories" /
+                "methode_spectral.thy").read_text(encoding="utf-8")
+
+    @pytest.mark.parametrize("unicode_sym,ascii_token", [
+        ("\u21d2", r"\<Rightarrow>"),   # =>
+        ("\u2265", r"\<ge>"),           # >=
+        ("\u2264", r"\<le>"),           # <=
+        ("\u2260", r"\<noteq>"),        # !=
+        ("\u2119", r"\<P>"),            # P majuscule ajoure
+        ("\u2200", r"\<forall>"),
+        ("\u2203", r"\<exists>"),
+        ("\u2227", r"\<and>"),
+        ("\u2228", r"\<or>"),
+        ("\u00ac", r"\<not>"),
+        ("\u2208", r"\<in>"),
+        ("\u27f9", r"\<Longrightarrow>"),
+    ])
+    def test_no_unicode_symbol(self, thy, unicode_sym, ascii_token):
+        assert unicode_sym not in thy, (
+            f"Symbole Unicode Isabelle '{unicode_sym}' (U+{ord(unicode_sym):04X}) "
+            f"detecte. Utiliser '{ascii_token}' (ASCII) pour compatibilite "
+            f"batch build."
+        )

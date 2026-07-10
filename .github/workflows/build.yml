@@ -64,34 +64,29 @@ jobs:
 
           # ========================================================
           # SUPPRESSION DES COMPOSANTS NON UTILISES POUR NOTRE BUILD
-          # (installation minimale, gain ~450-500 MB sur ~1.4 GB)
+          # (installation minimale prudente, gain ~250 MB sur ~1.4 GB)
+          #
+          # ATTENTION : Isabelle verifie certains composants au demarrage
+          # via etc/build.props et etc/settings. Ne PAS supprimer :
+          #   - contrib/z3-*  (referenced dans settings)
+          #   - contrib/cvc4-*, e-*, spass-*, vampire-* (references)
+          #   - contrib/jedit_build-*, jortho-* (references)
+          #   - src/Tools/jEdit/ (compile dans le bootstrap)
+          # Seul le contenu de doc/ (PDF finaux) est safe a supprimer.
           # ========================================================
-          echo "Suppression des composants non essentiels..."
+          echo "Suppression des composants non essentiels (safe)..."
 
-          # Documentation PDF (~200 MB)
+          # Documentation PDF finaux (~200 MB, aucune reference dans build.props)
           rm -rf isabelle/doc/ 2>/dev/null || true
 
-          # SMT solvers externes (Z3, CVC*) - non requis par Methode_Spectral
-          rm -rf isabelle/contrib/z3-*/ 2>/dev/null || true
-          rm -rf isabelle/contrib/cvc*-*/ 2>/dev/null || true
-          rm -rf isabelle/contrib/e-*/ 2>/dev/null || true
-          rm -rf isabelle/contrib/spass-*/ 2>/dev/null || true
-          rm -rf isabelle/contrib/vampire-*/ 2>/dev/null || true
-
-          # jEdit GUI et orthographe - GitHub Actions est headless
-          rm -rf isabelle/contrib/jedit_build-*/ 2>/dev/null || true
-          rm -rf isabelle/contrib/jortho-*/ 2>/dev/null || true
-          rm -rf isabelle/src/Tools/jEdit/ 2>/dev/null || true
-
-          # Exemples, tutoriels, source docs (non necessaires au build)
-          rm -rf isabelle/src/Doc/ 2>/dev/null || true
+          # Exemples HOL avances (non requis par notre session Methode_Spectral)
           rm -rf isabelle/src/HOL/Examples/ 2>/dev/null || true
           rm -rf isabelle/src/HOL/Isar_Examples/ 2>/dev/null || true
 
-          # Composants IsaFoR/ATP secondaires
+          # Composants polices etendus (safe : uniquement decoratif)
           rm -rf isabelle/contrib/isabelle_fonts-*/ 2>/dev/null || true
 
-          echo "Taille apres nettoyage minimal :"
+          echo "Taille apres nettoyage minimal safe :"
           du -sh isabelle/
 
           echo "$PWD/isabelle/bin" >> $GITHUB_PATH

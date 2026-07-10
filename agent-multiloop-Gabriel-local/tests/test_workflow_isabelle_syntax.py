@@ -147,17 +147,37 @@ class TestMinimalIsabelleInstallation:
 
     @pytest.mark.parametrize("removed_component", [
         "isabelle/doc/",                # Documentation PDF ~200 MB
-        "isabelle/contrib/z3-",         # SMT solver Z3
-        "isabelle/contrib/jedit_build-",# jEdit GUI (headless CI)
-        "isabelle/src/Doc/",            # Source docs
-        "isabelle/src/HOL/Examples/",   # Exemples HOL
+        "isabelle/src/HOL/Examples/",   # Exemples HOL avances
+        "isabelle/src/HOL/Isar_Examples/",  # Exemples Isar
+        "isabelle/contrib/isabelle_fonts-",  # Polices decoratives
     ])
     def test_minimal_removes_unused_components(self, build_content, removed_component):
-        """L'installation minimale doit supprimer les composants non essentiels."""
+        """L'installation minimale (version prudente) supprime uniquement
+        les composants VRAIMENT non references dans etc/build.props :
+        doc/, Examples HOL, fonts. Les SMT solvers et jEdit restent."""
         assert removed_component in build_content, (
             f"L'installation minimale doit supprimer `{removed_component}` "
             f"pour reduire la taille disque"
         )
+
+    def test_no_removal_of_referenced_components(self, build_content):
+        """CRITIQUE : ne PAS supprimer les composants references dans
+        etc/build.props ou etc/settings d'Isabelle. Bug reporte
+        2026-07-10 : suppression de contrib/z3-* et src/Tools/jEdit/
+        causait 'Missing Isabelle component' au demarrage."""
+        forbidden_removals = [
+            r"rm\s+-rf\s+.*contrib/z3-",
+            r"rm\s+-rf\s+.*contrib/cvc",
+            r"rm\s+-rf\s+.*contrib/jedit_build",
+            r"rm\s+-rf\s+.*contrib/jortho",
+            r"rm\s+-rf\s+.*src/Tools/jEdit",
+        ]
+        import re
+        for pat in forbidden_removals:
+            assert not re.search(pat, build_content), (
+                f"Suppression interdite detectee : pattern `{pat}` "
+                f"est reference dans etc/build.props d'Isabelle."
+            )
 
     def test_polyml_and_jdk_preserved(self, build_content):
         """CRITIQUE : polyml (moteur ML) et jdk (JVM) NE doivent PAS

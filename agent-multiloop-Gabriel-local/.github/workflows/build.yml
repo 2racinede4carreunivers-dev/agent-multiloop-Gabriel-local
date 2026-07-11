@@ -35,15 +35,117 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Isabelle
+      - name: Install SSL certificates
         run: |
           sudo apt-get update
-          sudo apt-get install -y isabelle
-          isabelle version
+          sudo apt-get install -y ca-certificates curl
+          sudo update-ca-certificates
 
-      - name: Build Isabelle session
+      - name: Cache Isabelle heap (HOL-Computational_Algebra + Methode_Spectral)
+        uses: actions/cache@v4
+        id: cache-isabelle-heap
+        with:
+          path: |
+            ~/.isabelle/Isabelle2024/heaps
+            isabelle
+          key: isabelle2024-minimal-${{ hashFiles('theories/ROOT', 'theories/methode_spectral.thy') }}
+          restore-keys: |
+            isabelle2024-minimal-
+
+      - name: Install Isabelle 2024 (minimal + multi-mirror fallback)
+        if: steps.cache-isabelle-heap.outputs.cache-hit != 'true'
         run: |
-          isabelle build -v -D .
+          echo "=== Download Isabelle 2024 (multi-mirror strategy) ==="
+
+          MIRRORS=(
+            "https://mirror.clarkson.edu/isabelle/dist/Isabelle2024_linux.tar.gz"
+            "https://ftp.gwdg.de/pub/misc/isabelle/dist/Isabelle2024_linux.tar.gz"
+            "https://ftp.hu-berlin.de/isabelle/dist/Isabelle2024_linux.tar.gz"
+            "https://mirror.cse.unsw.edu.au/pub/isabelle/dist/Isabelle2024_linux.tar.gz"
+            "https://isabelle.in.tum.de/website-Isabelle2024/dist/Isabelle2024_linux.tar.gz"
+            "https://isabelle.in.tum.de/dist/Isabelle2024_linux.tar.gz"
+          )
+
+          SUCCESS=0
+          for URL in "${MIRRORS[@]}"; do
+            echo ""
+            echo "--- Trying mirror: $URL ---"
+            if curl -L --fail --retry 2 --retry-delay 5 --connect-timeout 30 \
+                    --max-time 300 -o Isabelle2024_linux.tar.gz "$URL"; then
+              SIZE=$(stat -c%s Isabelle2024_linux.tar.gz 2>/dev/null || echo 0)
+              if [ "$SIZE" -gt 100000000 ]; then
+                echo "[SUCCESS] Downloaded from $URL ($((SIZE/1024/1024)) MB)"
+                SUCCESS=1
+                break
+              else
+                echo "[WARN] Suspicious file size ($((SIZE/1024/1024)) MB), rejected"
+                rm -f Isabelle2024_linux.tar.gz
+              fi
+            else
+              echo "[FAIL] $URL"
+              rm -f Isabelle2024_linux.tar.gz 2>/dev/null || true
+            fi
+          done
+
+          if [ "$SUCCESS" -eq 0 ]; then
+            echo ""
+            echo "!!! All mirrors failed - fallback to SourceForge !!!"
+            curl -L --fail --retry 3 --retry-delay 10 --max-time 600 \
+                 -o Isabelle2024_linux.tar.gz \
+                 "https://sourceforge.net/projects/isabelle/files/Isabelle2024/Isabelle2024_linux.tar.gz/download" || \
+            (echo "!!! All mirrors and fallbacks failed !!!" && exit 1)
+          fi
+
+          echo ""
+          echo "=== Archive integrity checks ==="
+          ls -lh Isabelle2024_linux.tar.gz
+          file Isabelle2024_linux.tar.gz || true
+          gzip -t Isabelle2024_linux.tar.gz || (echo "Corrupted archive" && exit 1)
+
+          echo ""
+          echo "=== Extraction ==="
+          tar -xzf Isabelle2024_linux.tar.gz
+          mv Isabelle2024 isabelle
+          rm -f Isabelle2024_linux.tar.gz
+          rm -rf isabelle/doc/ 2>/dev/null || true
+
+          echo "$PWD/isabelle/bin" >> $GITHUB_PATH
+
+      - name: Verify Isabelle settings (first install)
+        if: steps.cache-isabelle-heap.outputs.cache-hit != 'true'
+        run: |
+          "$PWD/isabelle/bin/isabelle" getenv ISABELLE_HOME
+          "$PWD/isabelle/bin/isabelle" getenv ISABELLE_FONTS || true
+          "$PWD/isabelle/bin/isabelle" getenv ML_HOME
+
+      - name: Restore Isabelle PATH (cache hit)
+        if: steps.cache-isabelle-heap.outputs.cache-hit == 'true'
+        run: |
+          echo "Cache hit: reusing local Isabelle installation."
+          echo "$PWD/isabelle/bin" >> $GITHUB_PATH
+
+      - name: Build Isabelle session (Methode_Spectral)
+        id: isabelle-build
+        run: |
+          echo "Compiling Isabelle session 'Methode_Spectral' from theories/ROOT ..."
+          cd theories
+          isabelle build -v -D . 2>&1 | tee build_output.log
+          BUILD_EXIT=${PIPESTATUS[0]}
+          echo "Exit code Isabelle: $BUILD_EXIT"
+          exit $BUILD_EXIT
+
+      - name: Show Isabelle diagnostics on failure
+        if: failure() && steps.isabelle-build.outcome == 'failure'
+        run: |
+          cd theories
+          echo "=== Isabelle errors (build_log -H Error) ==="
+          isabelle build_log -H Error Methode_Spectral 2>&1 || true
+          echo ""
+          echo "=== Last 50 lines of build_output.log ==="
+          tail -50 build_output.log || true
+          echo ""
+          echo "=== Grep '***' from build_output.log ==="
+          grep -n '\*\*\*' build_output.log || echo "(no Isabelle '***' error lines found)"
 
       - name: Compute SHA256 of methode_spectral.thy
         id: hash-thy
@@ -110,9 +212,9 @@ jobs:
   # ==========================================================================
   attestation-provenance:
     name: Attestation SHA256 (Isabelle + Lean si disponible)
-    needs: [validation-isabelle]
+    needs: [validation-isabelle, validation-lean]
     runs-on: ubuntu-latest
-    if: success()
+    if: needs.validation-isabelle.result == 'success' && (needs.validation-lean.result == 'success' || needs.validation-lean.result == 'skipped')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

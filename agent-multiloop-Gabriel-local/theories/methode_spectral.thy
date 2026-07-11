@@ -1,4 +1,4 @@
-theory methode_spectral
+﻿theory methode_spectral
   imports Complex_Main "HOL-Computational_Algebra.Primes"
 begin
 (****************************************************************)
@@ -268,7 +268,7 @@ section "Axiomatisation positive"
 
 axiomatization where
   spectral_postulate_pos:
-    "\<And>n p. \<lbrakk> n \<ge> 1; prime p \<rbrakk> \<Longrightarrow> prime_equation n p = real p"
+    "!!n p. n >= 1 ==> prime p ==> prime_equation n p = real p"
 
 lemma prime_equation_for_primes_pos:
   assumes "n >= 1" "prime p"
@@ -781,7 +781,7 @@ section "Axiomatisation spectral 1/4"
 
 axiomatization where
   spectral_postulate_1_4:
-    "\<And>n p. \<lbrakk> n > 0; prime p \<rbrakk> \<Longrightarrow> prime_equation_1_4 n p = real p"
+    "!!n p. n > 0 ==> prime p ==> prime_equation_1_4 n p = real p"
 
 
 (**************************************************************)
@@ -865,7 +865,7 @@ section "Axiomatisation rapport 1/3."
 
 axiomatization where
   spectral_postulate_1_3:
-    "\<And>n p. \<lbrakk> n > 0; prime p \<rbrakk> \<Longrightarrow> prime_equation_1_3 n p = real p"
+    "!!n p. n > 0 ==> prime p ==> prime_equation_1_3 n p = real p"
 
 
 (**************************************************************)
@@ -1098,23 +1098,6 @@ lemma premier_mix_6_value:
 
 section "Suites negatives : equations spectrales"
 
-text \<open>
-  Choix de typage intentionnel entre les sections VI et XII :
-
-  - Section VI (SA_neg_eq, SB_neg_eq) : indice n : real, exponentiation
-    via `powr` (real-real). Utile pour l'analyse continue asymptotique
-    (limites, derivees, etc.).
-
-  - Section XII (somme_A_neg_k, somme_B_neg_k) : indice n : nat,
-    exponentiation via `^` (real-nat). Utile pour la reconstruction
-    discrete des premiers.
-
-  Ces deux representations sont EQUIVALENTES sur les entiers positifs
-  (2 powr (real n) = 2 ^ n pour n : nat) mais Isabelle ne les identifie
-  PAS automatiquement. Toute preuve reliant les deux doit passer par
-  un bridging explicite : `powr_realpow` ou `powr_of_nat`.
-\<close>
-
 definition SA_neg_eq :: "real => real" where
   "SA_neg_eq n = 3.25 * (2 powr n) - 2"
 
@@ -1143,8 +1126,7 @@ definition RsP_neg :: "real => real => real" where
 
 axiomatization where
   spectral_ratio_neg_un_demi:
-    "\<And>n1 n2. \<lbrakk> n1 \<le> -1; n2 \<le> -1; n1 \<noteq> n2 \<rbrakk>
-                 \<Longrightarrow> RsP_neg n1 n2 = 1/2"
+    "!!n1 n2. n1 <= -1 ==> n2 <= -1 ==> n1 ~= n2 ==> RsP_neg n1 n2 = 1/2"
 
 lemma RsP_neg_un_demi_general:
   assumes "n1 <= -1" "n2 <= -1" "n1 ~= n2"
@@ -1184,13 +1166,23 @@ definition asymetrique_chaotique :: "int list => int list => bool" where
       ~ asymetrique_ordonnee A_indices B_indices)"
 
 lemma asymetrie_implique_indices_valides :
-  assumes "asymetrique_ordonnee A_indices B_indices \<or>
+  assumes "asymetrique_ordonnee A_indices B_indices  |
            asymetrique_chaotique A_indices B_indices"
-  shows "(\<forall>n \<in> set A_indices. indice_valide n) \<and>
-         (\<forall>n \<in> set B_indices. indice_valide n)"
-  using assms
-  unfolding asymetrique_ordonnee_def asymetrique_chaotique_def
-  by auto
+  shows "(ALL n : set A_indices. indice_valide n)  &
+         (ALL n : set B_indices. indice_valide n)"
+proof -
+  from assms
+  show ?thesis
+  proof
+    assume h1: "asymetrique_ordonnee A_indices B_indices"
+    then show ?thesis
+      unfolding asymetrique_ordonnee_def by auto
+  next
+    assume h2: "asymetrique_chaotique A_indices B_indices"
+    then show ?thesis
+      unfolding asymetrique_chaotique_def by auto
+  qed
+qed
 (**************************************************************)
 (* SECTION : Methode de comparaison asymetrique (1/2 et 1/4)  *)
 (**************************************************************)
@@ -1409,8 +1401,7 @@ definition RsP_neg_un_tiers :: "real => real => real" where
 
 axiomatization where
   spectral_ratio_neg_un_tiers:
-    "\<And>n1 n2. \<lbrakk> n1 \<le> -1; n2 \<le> -1; n1 \<noteq> n2 \<rbrakk>
-                 \<Longrightarrow> RsP_neg_un_tiers n1 n2 = 1/3"
+    "!!n1 n2. n1 <= -1 ==> n2 <= -1 ==> n1 ~= n2 ==> RsP_neg_un_tiers n1 n2 = 1/3"
 
 lemma RsP_neg_un_tiers_general:
   assumes "n1 <= -1" "n2 <= -1" "n1 ~= n2"
@@ -1447,8 +1438,8 @@ definition RsP_neg_un_quart :: "real => real => real" where
 
 axiomatization where
   spectral_ratio_neg_un_quart:
-    "\<And>n1 n2. \<lbrakk> n1 \<le> -1; n2 \<le> -1; n1 \<noteq> n2 \<rbrakk>
-                 \<Longrightarrow> RsP_neg_un_quart n1 n2 = 1/4"
+    "!!n1 n2. n1 <= -1 ==> n2 <= -1 ==> n1 ~= n2 ==>
+                 RsP_neg_un_quart n1 n2 = 1/4"
 
 lemma RsP_neg_un_quart_general:
   assumes "n1 <= -1" "n2 <= -1" "n1 ~= n2"
@@ -2058,10 +2049,10 @@ text \<open>
 \<close>
 axiomatization where
   spectral_gap_postulate_1_3:
-    "\<And>p_high p_low A_next B_high D_high D_low.
-       \<lbrakk> prime p_high; prime p_low \<rbrakk>
-       \<Longrightarrow> gap_equation_1_3 A_next B_high D_high D_low =
-             real (p_low - p_high)"
+    "!!p_high p_low A_next B_high D_high D_low.
+       prime p_high ==> prime p_low ==>
+       gap_equation_1_3 A_next B_high D_high D_low =
+         real (p_low - p_high)"
 
 
 (**************************************************************)
@@ -2139,10 +2130,10 @@ text \<open>
 \<close>
 axiomatization where
   spectral_gap_postulate_1_4:
-    "\<And>p_high p_low A_next B_high D_high D_low.
-       \<lbrakk> prime p_high; prime p_low \<rbrakk>
-       \<Longrightarrow> gap_equation_1_4 A_next B_high D_high D_low =
-             real (p_low - p_high)"
+    "!!p_high p_low A_next B_high D_high D_low.
+       prime p_high ==> prime p_low ==>
+       gap_equation_1_4 A_next B_high D_high D_low =
+         real (p_low - p_high)"
 
 
 (**************************************************************)
@@ -2539,7 +2530,7 @@ definition rapport_spectral_total_savard :: "real \<Rightarrow> nat \<Rightarrow
 
 text \<open>
   Preuve de l'identité du taux d'accroissement constant menant au rapport 1/2.
-  Validée sans aucune utilisation de 'ring', via algebra_simps et field_simps.
+  Validée en forçant la mise au même dénominateur avant la division globale.
 \<close>
 lemma preuve_rapport_spectral_limite_savard:
   assumes "n \<ge> 8" and "r > 1"
@@ -2562,27 +2553,23 @@ proof -
   have step1: "rapport_spectral_total_savard r n = ((3.25 * (r ^ n) - 4) / 2) / ((6.5 * (r ^ n) - 132) / 2)"
     unfolding rapport_spectral_total_savard_def by (subst h_A, subst h_B, rule refl)
 
-  \<comment> \<open>Preuve par identite algebrique inconditionnelle : divide_divide_eq_right\<close>
-  \<comment> \<open>Regle : a / (b / c) = a * c / b (vraie meme si b=0 ou c=0 via convention x/0 = 0)\<close>
-  \<comment> \<open>Aucune hypothese de non-nullite requise, aucun risque de boucle simp\<close>
   have step2: "((3.25 * (r ^ n) - 4) / 2) / ((6.5 * (r ^ n) - 132) / 2)
              = (3.25 * (r ^ n) - 4) / (6.5 * (r ^ n) - 132)"
-  proof -
-    \<comment> \<open>Fait auxiliaire : (A/2) * 2 = A, cancellation numerique du 2\<close>
-    have aux_cancel: "((3.25 * (r ^ n) - 4) / 2) * 2 = 3.25 * (r ^ n) - 4"
-      by simp
-    \<comment> \<open>Application directe de divide_divide_eq_right\<close>
+  proof (cases "6.5 * (r ^ n) - 132 = 0")
+    case True
+    then show ?thesis by simp
+  next
+    case False
     have "((3.25 * (r ^ n) - 4) / 2) / ((6.5 * (r ^ n) - 132) / 2)
-        = ((3.25 * (r ^ n) - 4) / 2) * 2 / (6.5 * (r ^ n) - 132)"
-      by (rule divide_divide_eq_right)
-    also have "... = (3.25 * (r ^ n) - 4) / (6.5 * (r ^ n) - 132)"
-      using aux_cancel by simp
+        = ((3.25 * (r ^ n) - 4) / 2) * (2 / (6.5 * (r ^ n) - 132))"
+      by (simp add: divide_simps)
+    also from False have "... = (3.25 * (r ^ n) - 4) / (6.5 * (r ^ n) - 132)"
+      by (simp add: field_simps)
     finally show ?thesis .
   qed
 
   from step1 step2 show ?thesis by simp
 qed
-
 subsection \<open>XI.9. Lemmes de validation numérique par différence fine\<close>
 
 text \<open>
@@ -2691,30 +2678,22 @@ theorem ecart_minimal_universel_A:
   assumes hn: "n \<ge> 8"
   shows "(SA (n + 1) - SA n) / (2 ^ (n - 1)) = 3.25"
 proof -
-  \<comment> \<open>Etape 1 : Puissance de 2 decomposable car n >= 8 >= 1\<close>
-  have h_pow: "(2::real) ^ n = 2 * 2 ^ (n - 1)"
-    using hn by (cases n) auto
-  \<comment> \<open>Etape 2 : Difference de suite A via lemme deja prouve\<close>
   have h_diff: "SA (n + 1) - SA n = (13 / 8) * 2 ^ n"
-    using difference_SA_succ[of n] by simp
-  \<comment> \<open>Etape 3 : Reformulation numerateur = 3.25 * 2^(n-1)\<close>
-  have h_num: "SA (n + 1) - SA n = 3.25 * 2 ^ (n - 1)"
-  proof -
-    have "SA (n + 1) - SA n = (13 / 8) * 2 ^ n"
-      by (rule h_diff)
-    also have "... = (13 / 8) * (2 * 2 ^ (n - 1))"
-      by (simp only: h_pow)
-    also have "... = ((13 / 8) * 2) * 2 ^ (n - 1)"
-      by (simp add: mult.assoc)
-    also have "... = 3.25 * 2 ^ (n - 1)"
-      by simp
-    finally show ?thesis .
-  qed
-  \<comment> \<open>Etape 4 : Non-nullite du denominateur (2 est un numeral non nul)\<close>
-  have h_nz: "(2::real) ^ (n - 1) \<noteq> 0" by simp
-  \<comment> \<open>Etape 5 : Division finale par le facteur d'echelle\<close>
-  show ?thesis
-    unfolding h_num using h_nz by simp
+    using difference_SA_succ by simp
+  have h_pow: "(2::real) ^ n = 2 ^ (n - 1) * 2"
+    using hn by (cases n) simp_all
+  have nz: "(2::real) ^ (n - 1) \<noteq> 0"
+    by simp
+
+  have "(SA (n + 1) - SA n) / (2 ^ (n - 1)) = ((13 / 8) * 2 ^ n) / (2 ^ (n - 1))"
+    by (simp add: h_diff)
+  also have "... = ((13 / 8) * (2 ^ (n - 1) * 2)) / (2 ^ (n - 1))"
+    by (simp add: h_pow)
+  also have "... = (13 / 8) * 2"
+    using nz by (simp add: field_simps)
+  also have "... = 3.25"
+    by simp
+  finally show ?thesis .
 qed
 (* THEOREME GENERALISE : Suite B *)
 theorem ecart_minimal_universel_B:
@@ -2722,30 +2701,22 @@ theorem ecart_minimal_universel_B:
   assumes hn: "n \<ge> 8"
   shows "(SB (n + 1) - SB n) / (2 ^ (n - 1)) = 6.5"
 proof -
-  \<comment> \<open>Etape 1 : Puissance de 2 decomposable car n >= 8 >= 1\<close>
-  have h_pow: "(2::real) ^ n = 2 * 2 ^ (n - 1)"
-    using hn by (cases n) auto
-  \<comment> \<open>Etape 2 : Difference de suite B via lemme deja prouve\<close>
   have h_diff: "SB (n + 1) - SB n = (13 / 4) * 2 ^ n"
-    using difference_SB_succ[of n] by simp
-  \<comment> \<open>Etape 3 : Reformulation numerateur = 6.5 * 2^(n-1)\<close>
-  have h_num: "SB (n + 1) - SB n = 6.5 * 2 ^ (n - 1)"
-  proof -
-    have "SB (n + 1) - SB n = (13 / 4) * 2 ^ n"
-      by (rule h_diff)
-    also have "... = (13 / 4) * (2 * 2 ^ (n - 1))"
-      by (simp only: h_pow)
-    also have "... = ((13 / 4) * 2) * 2 ^ (n - 1)"
-      by (simp add: mult.assoc)
-    also have "... = 6.5 * 2 ^ (n - 1)"
-      by simp
-    finally show ?thesis .
-  qed
-  \<comment> \<open>Etape 4 : Non-nullite du denominateur\<close>
-  have h_nz: "(2::real) ^ (n - 1) \<noteq> 0" by simp
-  \<comment> \<open>Etape 5 : Division finale par le facteur d'echelle\<close>
-  show ?thesis
-    unfolding h_num using h_nz by simp
+    using difference_SB_succ by simp
+  have h_pow: "(2::real) ^ n = 2 ^ (n - 1) * 2"
+    using hn by (cases n) simp_all
+  have nz: "(2::real) ^ (n - 1) \<noteq> 0"
+    by simp
+
+  have "(SB (n + 1) - SB n) / (2 ^ (n - 1)) = ((13 / 4) * 2 ^ n) / (2 ^ (n - 1))"
+    by (simp add: h_diff)
+  also have "... = ((13 / 4) * (2 ^ (n - 1) * 2)) / (2 ^ (n - 1))"
+    by (simp add: h_pow)
+  also have "... = (13 / 4) * 2"
+    using nz by (simp add: field_simps)
+  also have "... = 6.5"
+    by simp
+  finally show ?thesis .
 qed
 
 (****************************************************************************
@@ -2876,98 +2847,98 @@ definition terme_B_pos :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarro
 (*  Suite A 1 terme   : [2]                                                   *)
 lemma suite_A_1_terme:
   "terme_A_pos 2 2 1 1 = 2"
-  unfolding terme_A_pos_def by (simp add: field_simps)
+  unfolding terme_A_pos_def by simp
 
 (*  Suite A 2 termes  : [2, 3]                                                *)
 lemma suite_A_2_termes_pos1:
   "terme_A_pos 2 2 2 1 = 2"
-  unfolding terme_A_pos_def by (simp add: field_simps)
+  unfolding terme_A_pos_def by simp
 
 lemma suite_A_2_termes_pos2:
   "terme_A_pos 2 2 2 2 = 3"
-  unfolding terme_A_pos_def by (simp add: field_simps)
+  unfolding terme_A_pos_def by simp
 
 (*  Suite A 3 termes  : [2, 3, 6]                                             *)
 lemma suite_A_3_termes_pos3:
   "terme_A_pos 2 2 3 3 = 6"
-  unfolding terme_A_pos_def by (simp add: field_simps)
+  unfolding terme_A_pos_def by simp
 
 (*  Suite A 4 termes  : [2, 4, 6, 12] - position 3 = 6 (penultieme)           *)
 lemma suite_A_4_termes_pos3:
   "terme_A_pos 2 2 4 3 = 6"
-  unfolding terme_A_pos_def by (simp add: field_simps)
+  unfolding terme_A_pos_def by simp
 
 lemma suite_A_4_termes_pos4:
   "terme_A_pos 2 2 4 4 = 12"
-  unfolding terme_A_pos_def by (simp add: field_simps)
+  unfolding terme_A_pos_def by simp
 
 (*  Suite A 5 termes  : [2, 4, 8, 12, 24]                                     *)
 lemma suite_A_5_termes_pos4:
   "terme_A_pos 2 2 5 4 = 12"
-  unfolding terme_A_pos_def by (simp add: field_simps)
+  unfolding terme_A_pos_def by simp
 
 lemma suite_A_5_termes_pos5:
   "terme_A_pos 2 2 5 5 = 24"
-  unfolding terme_A_pos_def by (simp add: field_simps)
+  unfolding terme_A_pos_def by simp
 
 (*  Suite A 7 termes  : [2, 4, 8, 16, 32, 48, 96]                             *)
 lemma suite_A_7_termes_pos6:
   "terme_A_pos 2 2 7 6 = 48"
-  unfolding terme_A_pos_def by (simp add: field_simps)
+  unfolding terme_A_pos_def by simp
 
 lemma suite_A_7_termes_pos7:
   "terme_A_pos 2 2 7 7 = 96"
-  unfolding terme_A_pos_def by (simp add: field_simps)
+  unfolding terme_A_pos_def by simp
 
 (*  Suite A 8 termes  : [2, 4, 8, 16, 32, 64, 96, 192]                        *)
 lemma suite_A_8_termes_pos6:
   "terme_A_pos 2 2 8 6 = 64"
-  unfolding terme_A_pos_def by (simp add: field_simps)
+  unfolding terme_A_pos_def by simp
 
 lemma suite_A_8_termes_pos7:
   "terme_A_pos 2 2 8 7 = 96"
-  unfolding terme_A_pos_def by (simp add: field_simps)
+  unfolding terme_A_pos_def by simp
 
 lemma suite_A_8_termes_pos8:
   "terme_A_pos 2 2 8 8 = 192"
-  unfolding terme_A_pos_def by (simp add: field_simps)
+  unfolding terme_A_pos_def by simp
 
 (*  Suite B 8 termes  : [2, 4, 8, 16, 32, 128, 192, 384]                      *)
 (*  Substitution position 6 : 128 = 2 * 64 = position 7 de la suite A         *)
 (*  Positions 7 et 8 suivent la regle penultieme / dernier avec base decalee  *)
 lemma suite_B_8_termes_pos6:
   "terme_B_pos 2 2 8 6 = 128"
-  unfolding terme_B_pos_def by (simp add: field_simps)
+  unfolding terme_B_pos_def by simp
 
 lemma suite_B_8_termes_pos7:
   "terme_B_pos 2 2 8 7 = 192"
-  unfolding terme_B_pos_def by (simp add: field_simps)
+  unfolding terme_B_pos_def by simp
 
 lemma suite_B_8_termes_pos8:
   "terme_B_pos 2 2 8 8 = 384"
-  unfolding terme_B_pos_def by (simp add: field_simps)
+  unfolding terme_B_pos_def by simp
 
 (*  Suite B 9 termes  : [2, 4, 8, 16, 32, 128, 256, 384, 768]                 *)
 lemma suite_B_9_termes_pos6:
   "terme_B_pos 2 2 9 6 = 128"
-  unfolding terme_B_pos_def by (simp add: field_simps)
+  unfolding terme_B_pos_def by simp
 
 lemma suite_B_9_termes_pos7:
   "terme_B_pos 2 2 9 7 = 256"
-  unfolding terme_B_pos_def by (simp add: field_simps)
+  unfolding terme_B_pos_def by simp
 
 lemma suite_B_9_termes_pos9:
   "terme_B_pos 2 2 9 9 = 768"
-  unfolding terme_B_pos_def by (simp add: field_simps)
+  unfolding terme_B_pos_def by simp
 
 (*  Suite B 10 termes : [2, 4, 8, 16, 32, 128, 256, 512, 768, 1536]           *)
 lemma suite_B_10_termes_pos8:
   "terme_B_pos 2 2 10 8 = 512"
-  unfolding terme_B_pos_def by (simp add: field_simps)
+  unfolding terme_B_pos_def by simp
 
 lemma suite_B_10_termes_pos10:
   "terme_B_pos 2 2 10 10 = 1536"
-  unfolding terme_B_pos_def by (simp add: field_simps)
+  unfolding terme_B_pos_def by simp
 
 (* === XII.7. Validations numeriques formules fermees positives (k=2)         === *)
 (*   Premier 11 = 5ieme positif : Somme A = 50, Somme B = 38                  *)

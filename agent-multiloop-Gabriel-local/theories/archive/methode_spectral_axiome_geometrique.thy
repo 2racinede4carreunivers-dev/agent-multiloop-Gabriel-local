@@ -2347,6 +2347,96 @@ text \<open>
   d'Isabelle/HOL, une concordance axiomatique entre la methode spectrale et la
   vision analytique classique de la distribution des nombres premiers.
 \<close>
+(**************************************************************)
+(* CHAPITRE DEUXIEME : Axiomatisation analytique (zeta) et spectrale *)
+(**************************************************************)
+
+text \<open>
+  Dans ce chapitre, nous introduisons une axiomatisation abstraite de la fonction
+  zeta de Riemann et de ses zeros non triviaux, dans le but de formuler, dans le
+  langage d'Isabelle/HOL, une version informative de la conjecture de Riemann.
+  Il ne s'agit pas d'une demonstration, mais d'une mise en forme logique d'une
+  conjecture classique de la theorie analytique des nombres.
+\<close>
+typedecl complex_zero_zeta   \<comment> \<open>type abstrait pour les zeros non triviaux de zeta\<close>
+
+consts
+  Re_cz :: "complex_zero_zeta => real"   \<comment> \<open>partie reelle du zero\<close>
+  Im_cz :: "complex_zero_zeta => real"   \<comment> \<open>partie imaginaire du zero\<close>
+
+text \<open>
+  Nous ne definissons pas ici la fonction zeta elle-meme, ni son prolongement
+  analytique. Nous supposons simplement l'existence d'un ensemble abstrait de
+  zeros non triviaux, chacun muni d'une partie reelle et d'une partie imaginaire.
+\<close>
+text \<open>
+  Conjecture de Riemann (version axiomatique).
+
+  La conjecture de Riemann affirme que tous les zeros non triviaux de la fonction
+  zeta de Riemann ont une partie reelle egale a 1/2. Nous l'exprimons ici sous la
+  forme d'un axiome, afin de pouvoir raisonner dans un cadre ou cette conjecture
+  est supposee vraie, sans pretendre la demontrer.
+\<close>
+axiomatization where
+  Riemann_Hypothesis:
+    "ALL r::complex_zero_zeta. Re_cz r = 1 / 2"
+
+typedecl prime_number
+
+consts
+  P_of :: "prime_index => prime_number"
+
+text \<open>
+  Interpretation : le type \<open>prime_index\<close> represente un indice abstrait pour les
+  nombres premiers, et \<open>P_of\<close> associe a chaque indice un nombre premier. Dans la
+  theorie analytique classique, les zeros de zeta controlent la distribution de ces
+  nombres premiers. Nous ne formalisons pas ici la formule explicite, mais nous
+  admettons ce lien comme principe conceptuel.
+\<close>
+(**************************************************************)
+(* SECTION : Modele geometrique des aires sur la droite critique *)
+(**************************************************************)
+
+text \<open>
+  La presente section introduit un modele abstrait ou la droite critique
+  Re(s) = 1/2 est representee par une aire totale T, tronquee a une hauteur
+  finie. Une sous-aire Tn = T/n correspond a une zone ou les zeros sont plus
+  denses, en lien avec un intervalle tronque de nombres premiers. L'aire
+  restante T_rest = T - Tn est mise en correspondance avec une aire relative
+  generee par une courbure effective de la droite critique, induite par la
+  structure combinatoire des ecarts mixtes. L'egalite de ces deux aires est
+  interpretee comme une condition geometrique equivalente a la conjecture de
+  Riemann, sans constituer une demonstration analytique.
+\<close>
+typedecl area
+typedecl interval
+
+consts
+  T      :: area      \<comment> \<open>aire totale de la droite critique\<close>
+  Tn     :: area      \<comment> \<open>sous-aire T/n plus dense en zeros\<close>
+  T_rest :: area      \<comment> \<open>aire restante T - Tn\<close>
+
+  P      :: interval  \<comment> \<open>intervalle complet de nombres premiers associe a T\<close>
+  Pn     :: interval  \<comment> \<open>intervalle tronque associe a Tn\<close>
+
+consts
+  relative_value :: "interval => real"
+  geometric_area :: "real => area"
+
+axiomatization where
+  mixed_gap_surplus:
+    "relative_value Pn > relative_value P" and
+
+  complementary_areas:
+    "T_rest = geometric_area (relative_value Pn - relative_value P)"
+
+consts Re_zero :: "zero_zeta => real"
+
+axiomatization where
+  all_zeros_on_critical_line:
+    "(T_rest = geometric_area (relative_value Pn - relative_value P)) ==> (ALL r::zero_zeta. Re_zero r = 1/2)"
+
+
 (****************************************************************************
  * SECTION XI. REGLES DE CONSTRUCTION DES SUITES A_i / B_i (8+ TERMES)
  * POUR RAPPORT SPECTRAL RsP = 1/k_i

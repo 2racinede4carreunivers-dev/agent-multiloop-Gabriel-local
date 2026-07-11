@@ -174,6 +174,22 @@ lemma digamma_calc_37 : digamma_calc n37 37 = 10878 := by
 lemma digamma_calc_41 : digamma_calc n41 41 = 23934 := by
   unfold digamma_calc n41 SB; norm_num
 
+lemma relation_29 : digamma_calc n29 29 = SA n29 - D29 := by
+  unfold digamma_calc SA SB n29 D29
+  norm_num
+
+lemma relation_31 : digamma_calc n31 31 = SA n31 + D31 := by
+  unfold digamma_calc SA SB n31 D31
+  norm_num
+
+lemma relation_37 : digamma_calc n37 37 = SA n37 + D37 := by
+  unfold digamma_calc SA SB n37 D37
+  norm_num
+
+lemma relation_41 : digamma_calc n41 41 = SA n41 + D41 := by
+  unfold digamma_calc SA SB n41 D41
+  norm_num
+
 -- ============================================================================
 -- SECTION 6 : Equation generale de reconstruction (theoreme central)
 -- ============================================================================
@@ -646,6 +662,10 @@ def A3 : List ℕ := [2, 9, 10]
 
 /-- Exemple 3x3 : B3 = [3, 11, 15]. -/
 def B3 : List ℕ := [3, 11, 15]
+
+/-- Enonce de l'exemple 3x3 de la section HOL (la preuve numerique est optionnelle). -/
+def exemple_3x3_spectral : Prop :=
+  rapport_spectral_un_demi_nn A3 B3
 
 -- ============================================================================
 -- SECTION XIII : Validation epipolaire du plan trifocal (lien avec Riemann)

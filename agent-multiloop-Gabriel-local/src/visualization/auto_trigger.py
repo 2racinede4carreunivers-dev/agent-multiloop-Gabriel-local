@@ -97,6 +97,60 @@ def _detect_rsp_config(qnorm: str) -> tuple[Optional[str], list[str]]:
 # Mots-cles
 # --------------------------------------------------------------------------
 # Verbes/noms qui signalent une volonte de visualisation
+# Marqueurs conversationnels/theoriques qui BLOQUENT l'auto-trigger visualisation
+# (Philippe 2026-02) : quand la question est une DISCUSSION conceptuelle et non
+# une demande de graphique, la presence isolee de "sa"/"voir"/"schema" ne doit
+# PAS declencher la visualisation SA/SB. Ces marqueurs suggerent :
+#  - une reference a d'autres theories (Archimede, parabole, quadrature)
+#  - une explication conceptuelle ("il s'agit", "laisse-moi te", "en soit")
+#  - une description d'un schema NON-spectral fournit par l'utilisateur
+_CONVERSATIONAL_ANTI_PATTERNS: set[str] = {
+    # Autres theories mathematiques classiques
+    "archimede", "parabole", "quadrature", "trifocal", "trifocale",
+    "pythagore", "euclide", "descartes", "riemann", "galois", "hilbert",
+    # Marqueurs de discussion / reformulation
+    "il s'agit", "il s agit", "laisse moi", "laisse-moi",
+    "je t'explique", "je vais t'expliquer", "je vais te faire",
+    "en soit", "en soi", "en realite", "en fait", "en somme",
+    "d'abord", "d abord", "ensuite", "par ailleurs", "toutefois",
+    "cependant", "neanmoins", "en definitive",
+    # Metadiscours sur un schema fourni par l'utilisateur
+    "sur mon schema", "sur ce schema", "dans mon schema", "mon dessin",
+    "l'image", "cette image", "la figure", "cette figure",
+    "annotation", "annotations", "annote",
+    # Descriptions geometriques generales (non spectrales)
+    "aire", "aires", "surface", "surfaces", "perimetre", "perimeter",
+    "triangle", "triangles", "carre", "carres", "rectangle", "rectangles",
+    "cercle", "cercles", "polygone", "polygones",
+    "peser", "peser theorique", "pesee", "balancier",
+}
+
+
+def _has_conversational_context(qnorm: str, question_len: int) -> tuple[bool, list[str]]:
+    """
+    v3.28 : Detecte si la question est une DISCUSSION conceptuelle plutot
+    qu'une demande de visualisation spectrale.
+
+    Regle : si >= 2 anti-patterns detectes OU si question > 300 chars avec
+    >= 1 anti-pattern, on considere que c'est une conversation et on
+    BLOQUE l'auto-trigger visualisation.
+
+    Args:
+        qnorm: question normalisee (accents retires, lowercase).
+        question_len: longueur brute de la question originale.
+
+    Returns:
+        (is_conversational, hits) : True si contexte conversationnel detecte,
+        et la liste des anti-patterns matches (pour le reasoning).
+    """
+    hits = [p for p in _CONVERSATIONAL_ANTI_PATTERNS if p in qnorm]
+    if len(hits) >= 2:
+        return True, hits
+    if question_len > 300 and len(hits) >= 1:
+        return True, hits
+    return False, hits
+
+
 _VIZ_KEYWORDS = {
     "courbe", "courbes", "graphique", "graphiques", "graphe", "graphes",
     "trace", "tracer", "traces", "tracerais",
@@ -286,6 +340,16 @@ def detect_visualization_intent(question: str) -> Optional[VisualizationIntent]:
     if not question or not question.strip():
         return None
     qnorm = _normalize(question)
+    question_len = len(question)
+
+    # 0) GARDE-FOU v3.28 (Philippe 2026-02) : detecter le contexte conversationnel
+    # AVANT toute detection viz. Si l'utilisateur discute d'un concept, d'un
+    # schema fourni, ou d'autres theories (Archimede, quadrature, etc.), on
+    # ne doit PAS auto-declencher un graphique SA/SB, meme si des mots-cles
+    # isoles matchent (comme "sa" dans "sa longueur" ou "voir" dans "tu peux voir").
+    is_conversational, conv_hits = _has_conversational_context(qnorm, question_len)
+    if is_conversational:
+        return None
 
     # 1) Verifier qu'il y a un mot-cle de visualisation
     viz_hits = [kw for kw in _VIZ_KEYWORDS if kw in qnorm]

@@ -70,8 +70,11 @@ jobs:
           for URL in "${MIRRORS[@]}"; do
             echo ""
             echo "--- Trying mirror: $URL ---"
-            if curl -L --fail --retry 2 --retry-delay 5 --connect-timeout 30 \
-                    --max-time 300 -o Isabelle2024_linux.tar.gz "$URL"; then
+            # Timings augmentes (Philippe 2026-02) : retry-delay 5 -> 20s
+            # pour laisser aux miroirs surcharges le temps de se retablir
+            # entre les tentatives sur un meme miroir.
+            if curl -L --fail --retry 3 --retry-delay 20 --connect-timeout 60 \
+                    --max-time 600 -o Isabelle2024_linux.tar.gz "$URL"; then
               SIZE=$(stat -c%s Isabelle2024_linux.tar.gz 2>/dev/null || echo 0)
               if [ "$SIZE" -gt 100000000 ]; then
                 echo "[SUCCESS] Downloaded from $URL ($((SIZE/1024/1024)) MB)"
@@ -90,7 +93,10 @@ jobs:
           if [ "$SUCCESS" -eq 0 ]; then
             echo ""
             echo "!!! All mirrors failed - fallback to SourceForge !!!"
-            curl -L --fail --retry 3 --retry-delay 10 --max-time 600 \
+            # Timings augmentes (Philippe 2026-02) : retry-delay 10 -> 20s,
+            # retries 3 -> 4 pour maximiser les chances sur le fallback ultime.
+            curl -L --fail --retry 4 --retry-delay 20 --connect-timeout 60 \
+                 --max-time 900 \
                  -o Isabelle2024_linux.tar.gz \
                  "https://sourceforge.net/projects/isabelle/files/Isabelle2024/Isabelle2024_linux.tar.gz/download" || \
             (echo "!!! All mirrors and fallbacks failed !!!" && exit 1)

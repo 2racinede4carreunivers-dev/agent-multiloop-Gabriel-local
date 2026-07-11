@@ -110,6 +110,16 @@ class Pipeline:
             spectral_core=self.spectral_core,
             audit_store=self.audit_store,
         )
+        # v3.27 : LLM Reformulator - reformulations contextuelles pour slow-motion
+        from ..multiloop.llm_reformulator import LLMReformulator
+        llm_reform_cfg = slowmo_cfg.get("llm_reformulations", {}) if slowmo_cfg else {}
+        self.llm_reformulator_enabled = bool(llm_reform_cfg.get("enabled", True))
+        self.llm_reformulator = LLMReformulator(
+            llm_manager=self.llm,
+            timeout_s=float(llm_reform_cfg.get("timeout_s", 5.0)),
+            num_variants=int(llm_reform_cfg.get("num_variants", 4)),
+            temperature=float(llm_reform_cfg.get("temperature", 0.3)),
+        ) if self.llm_reformulator_enabled else None
         # NOUVEAU: boucle automatique Wolfram <-> Gabriel <-> Isabelle
         self.verification_loop = AutomaticVerificationLoop(
             config=config,
@@ -122,6 +132,47 @@ class Pipeline:
         logger.info("✓ Slow-Motion Debugger enabled: %s (coherence_threshold=%.2f, %d certitudes)",
                     self.slowmo_enabled, coherence_threshold,
                     len(self.certainty_kernel.certainties))
+        logger.info("✓ LLM Reformulator enabled: %s",
+                    self.llm_reformulator_enabled)
+
+    async def _compute_llm_reformulations(
+        self, question: str, decomposition, qid: str,
+    ) -> list[str]:
+        """
+        v3.27 : Genere des reformulations contextuelles via LLM pour enrichir
+        les suggestions du Slow-Motion Debugger.
+
+        Retourne une liste vide si :
+          - LLMReformulator est desactive dans la config
+          - La decomposition est None (parse echoue)
+          - LLM en timeout / erreur (fallback silencieux)
+
+        La fusion avec les heuristiques est faite dans SlowMotionDebugger.debug().
+        """
+        if not self.llm_reformulator or decomposition is None:
+            return []
+        try:
+            result = await self.llm_reformulator.reformulate(
+                question=question,
+                decomposed=decomposition,
+            )
+            if result.is_useful():
+                logger.info(
+                    "Q[%s] LLMReformulator : %d reformulations en %d ms",
+                    qid, len(result.reformulations), result.latency_ms,
+                )
+                return result.reformulations
+            if result.fallback_reason:
+                logger.info(
+                    "Q[%s] LLMReformulator fallback : %s",
+                    qid, result.fallback_reason,
+                )
+            return []
+        except Exception as exc:
+            logger.warning(
+                "Q[%s] LLMReformulator exception (silencieux) : %s", qid, exc,
+            )
+            return []
 
     async def process(self, question: str) -> FinalAnswer:
         """Traite une question end-to-end via le pipeline."""
@@ -204,11 +255,18 @@ class Pipeline:
 
             if coherence.incoherent and not conversational_bypass:
                 logger.warning("Q[%s] INCOHERENCE => Slow-Motion Debugger active", qid)
+                # v3.27 : Reformulations LLM contextuelles calculees en amont
+                # (pipeline async) pour eviter la rigidite du fallback heuristique
+                # qui proposait toujours "reconstruction de nombres premiers".
+                llm_reformulations = await self._compute_llm_reformulations(
+                    question, decomposition, qid,
+                )
                 final = self.slow_motion.debug(
                     question=question,
                     final=final,
                     coherence_report=coherence,
                     precomputed_facts=precomputed_facts,
+                    llm_reformulations=llm_reformulations,
                 )
                 # Apres slow-motion : la reponse est certifiee, on saute l'audit
                 self._annotate_epistemic(final, precomputed_facts, goal, qid)

@@ -65,6 +65,15 @@ audit:
 slow_motion:
   enabled: true                # active le debugger ralenti
   coherence_threshold: 0.55    # seuil sous lequel on declenche (0..1)
+  # v3.27 : LLM Reformulator - genere des reformulations contextuelles via LLM
+  # (Claude / OpenAI / Ollama) au lieu de proposer toujours la meme
+  # reformulation heuristique ("reconstruction de nombres premiers").
+  # Fallback silencieux vers les heuristiques en cas de timeout / erreur.
+  llm_reformulations:
+    enabled: true              # active la reformulation LLM
+    num_variants: 4            # nombre de reformulations demandees (3-5 ideal)
+    timeout_s: 5.0             # timeout LLM (fallback silencieux au-dela)
+    temperature: 0.3           # basse pour rester factuel
 
 # === Pipeline cognitif ===
 pipeline:

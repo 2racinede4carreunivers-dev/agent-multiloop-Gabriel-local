@@ -106,6 +106,7 @@ class SlowMotionDebugger:
         coherence_report: CoherenceReport,
         precomputed_facts: Optional[dict[str, Any]] = None,
         skip_auto_audit: bool = False,
+        llm_reformulations: Optional[list[str]] = None,
     ) -> FinalAnswer:
         """
         Execute la procedure complete du Slow-Motion Debugger.
@@ -115,6 +116,10 @@ class SlowMotionDebugger:
             final: la FinalAnswer multiloop jugee incoherente.
             coherence_report: le diagnostic du CoherenceDetector.
             precomputed_facts: facts spectraux deja calcules par le pipeline.
+            llm_reformulations: reformulations contextuelles pre-calculees par
+                LLMReformulator (v3.27). Fusionnees en tete des suggestions
+                heuristiques pour eviter la rigidite "reconstruction de nombres
+                premiers" propose systematiquement pour toutes les requetes.
         
         Returns:
             FinalAnswer enrichie : answer_text = reponse certifiee,
@@ -236,15 +241,32 @@ class SlowMotionDebugger:
         )
 
         # T10 (ex-T7). Reformulations textuelles (suggestions pour relancer Gabriel)
-        suggestions = self._build_reformulations(decomposed, bypassed)
-        if suggestions:
+        heuristic_suggestions = self._build_reformulations(decomposed, bypassed)
+        # v3.27 : Fusion avec reformulations LLM contextuelles (si fournies)
+        if llm_reformulations:
+            from .llm_reformulator import merge_reformulations
+            suggestions = merge_reformulations(
+                llm_reformulations=llm_reformulations,
+                heuristic_reformulations=heuristic_suggestions,
+                max_total=6,
+            )
             timeline.add(
                 10, "REFORMULATIONS",
-                f"{len(suggestions)} suggestion(s) generee(s) "
+                f"{len(suggestions)} suggestion(s) LLM+heuristiques : "
+                f"{len(llm_reformulations)} contextuelles (LLM) + "
+                f"{len(heuristic_suggestions)} heuristiques : "
+                + " | ".join(f'"{s}"' for s in suggestions[:3]),
+            )
+        elif heuristic_suggestions:
+            suggestions = heuristic_suggestions
+            timeline.add(
+                10, "REFORMULATIONS",
+                f"{len(suggestions)} suggestion(s) heuristique(s) "
                 f"pour clarifier la requete future : "
                 + " | ".join(f'"{s}"' for s in suggestions[:3]),
             )
         else:
+            suggestions = []
             timeline.add(
                 10, "REFORMULATIONS",
                 "Aucune reformulation proposee car la requete est resolue par le "

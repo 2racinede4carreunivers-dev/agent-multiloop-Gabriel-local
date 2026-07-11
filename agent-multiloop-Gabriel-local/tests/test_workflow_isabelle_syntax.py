@@ -16,8 +16,14 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path("/app")
-LOCAL_ROOT = REPO_ROOT / "agent-multiloop-Gabriel-local"
+# v3.26 : Detection dynamique de la racine du repo au lieu de Path("/app")
+# en dur, qui ne marchait qu'en pod Emergent. Priorite :
+#   1. Le parent du dossier tests/ (cas standard, marche partout)
+#   2. Un sous-dossier `agent-multiloop-Gabriel-local/` si le repo est nested
+#   3. /app pour retro-compatibilite pod Emergent
+_TESTS_DIR = Path(__file__).resolve().parent
+LOCAL_ROOT = _TESTS_DIR.parent
+REPO_ROOT = LOCAL_ROOT.parent if (LOCAL_ROOT.parent / ".git").is_dir() else LOCAL_ROOT
 
 
 def _workflow_files():

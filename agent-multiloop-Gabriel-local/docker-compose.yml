@@ -47,6 +47,11 @@ services:
       - ./theories:/home/agent/app/theories:ro
       # Guide de configuration (utilise par tests/test_env_config.py) :
       - ./CONFIG_ENV_GUIDE.md:/home/agent/app/CONFIG_ENV_GUIDE.md:ro
+      # v3.26 : workflows GitHub Actions (utilises par tests/test_validation16_*
+      # et tests/test_workflow_isabelle_syntax.py) :
+      - ./.github:/home/agent/app/.github:ro
+      # docker-compose.yml lui-meme (test_paths_resolution_container_fix) :
+      - ./docker-compose.yml:/home/agent/app/docker-compose.yml:ro
       # Module RAG cognitif Gabriel (sinon : No module named 'memory')
       - ./memory:/home/agent/app/memory
       # Monter le .env local (pas celui du dossier parent !)

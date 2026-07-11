@@ -2691,22 +2691,30 @@ theorem ecart_minimal_universel_A:
   assumes hn: "n \<ge> 8"
   shows "(SA (n + 1) - SA n) / (2 ^ (n - 1)) = 3.25"
 proof -
-  (* Étape 1 : Déploiement des définitions de la suite A pour n+1 et n *)
-  have s_next: "SA (n + 1) = (3.25 / 2) * (2 ^ (n + 1)) - 2" by (simp add: SA_def)
-  have s_curr: "SA n       = (3.25 / 2) * (2 ^ n) - 2"       by (simp add: SA_def)
-  (* Étape 2 : Simplification algébrique du numérateur *)
-  have num: "SA (n + 1) - SA n = (3.25 / 2) * (2 ^ (n + 1)) - (3.25 / 2) * (2 ^ n)"
-    using s_next s_curr by simp
-  also have "... = (3.25 / 2) * (2 * 2 ^ n - 2 ^ n)"
-    by (simp add: algebra_simps)
-  also have "... = (3.25 / 2) * (2 ^ n)"
-    by simp
-  also have "... = 3.25 * (2 ^ (n - 1))"
-    using hn by (cases n) (simp_all add: field_simps)
-  finally have h_num_final: "SA (n + 1) - SA n = 3.25 * (2 ^ (n - 1))" .
-  (* Étape 3 : Division par le facteur d'échelle de la zone stable *)
+  \<comment> \<open>Etape 1 : Puissance de 2 decomposable car n >= 8 >= 1\<close>
+  have h_pow: "(2::real) ^ n = 2 * 2 ^ (n - 1)"
+    using hn by (cases n) auto
+  \<comment> \<open>Etape 2 : Difference de suite A via lemme deja prouve\<close>
+  have h_diff: "SA (n + 1) - SA n = (13 / 8) * 2 ^ n"
+    using difference_SA_succ[of n] by simp
+  \<comment> \<open>Etape 3 : Reformulation numerateur = 3.25 * 2^(n-1)\<close>
+  have h_num: "SA (n + 1) - SA n = 3.25 * 2 ^ (n - 1)"
+  proof -
+    have "SA (n + 1) - SA n = (13 / 8) * 2 ^ n"
+      by (rule h_diff)
+    also have "... = (13 / 8) * (2 * 2 ^ (n - 1))"
+      by (simp only: h_pow)
+    also have "... = ((13 / 8) * 2) * 2 ^ (n - 1)"
+      by (simp add: mult.assoc)
+    also have "... = 3.25 * 2 ^ (n - 1)"
+      by simp
+    finally show ?thesis .
+  qed
+  \<comment> \<open>Etape 4 : Non-nullite du denominateur (2 est un numeral non nul)\<close>
+  have h_nz: "(2::real) ^ (n - 1) \<noteq> 0" by simp
+  \<comment> \<open>Etape 5 : Division finale par le facteur d'echelle\<close>
   show ?thesis
-    unfolding h_num_final by (simp del: SA_def)
+    unfolding h_num using h_nz by simp
 qed
 (* THEOREME GENERALISE : Suite B *)
 theorem ecart_minimal_universel_B:
@@ -2714,22 +2722,30 @@ theorem ecart_minimal_universel_B:
   assumes hn: "n \<ge> 8"
   shows "(SB (n + 1) - SB n) / (2 ^ (n - 1)) = 6.5"
 proof -
-  (* Étape 1 : Déploiement des définitions de la suite B pour n+1 et n *)
-  have s_next: "SB (n + 1) = (6.5 / 2) * (2 ^ (n + 1)) - 66" by (simp add: SB_def)
-  have s_curr: "SB n       = (6.5 / 2) * (2 ^ n) - 66"       by (simp add: SB_def)
-  (* Étape 2 : Simplification algébrique du numérateur *)
-  have num: "SB (n + 1) - SB n = (6.5 / 2) * (2 ^ (n + 1)) - (6.5 / 2) * (2 ^ n)"
-    using s_next s_curr by simp
-  also have "... = (6.5 / 2) * (2 * 2 ^ n - 2 ^ n)"
-    by (simp add: algebra_simps)
-  also have "... = (6.5 / 2) * (2 ^ n)"
-    by simp
-  also have "... = 6.5 * (2 ^ (n - 1))"
-    using hn by (cases n) (simp_all add: field_simps)
-  finally have h_num_final: "SB (n + 1) - SB n = 6.5 * (2 ^ (n - 1))" .
-  (* Étape 3 : Division par le facteur d'échelle *)
+  \<comment> \<open>Etape 1 : Puissance de 2 decomposable car n >= 8 >= 1\<close>
+  have h_pow: "(2::real) ^ n = 2 * 2 ^ (n - 1)"
+    using hn by (cases n) auto
+  \<comment> \<open>Etape 2 : Difference de suite B via lemme deja prouve\<close>
+  have h_diff: "SB (n + 1) - SB n = (13 / 4) * 2 ^ n"
+    using difference_SB_succ[of n] by simp
+  \<comment> \<open>Etape 3 : Reformulation numerateur = 6.5 * 2^(n-1)\<close>
+  have h_num: "SB (n + 1) - SB n = 6.5 * 2 ^ (n - 1)"
+  proof -
+    have "SB (n + 1) - SB n = (13 / 4) * 2 ^ n"
+      by (rule h_diff)
+    also have "... = (13 / 4) * (2 * 2 ^ (n - 1))"
+      by (simp only: h_pow)
+    also have "... = ((13 / 4) * 2) * 2 ^ (n - 1)"
+      by (simp add: mult.assoc)
+    also have "... = 6.5 * 2 ^ (n - 1)"
+      by simp
+    finally show ?thesis .
+  qed
+  \<comment> \<open>Etape 4 : Non-nullite du denominateur\<close>
+  have h_nz: "(2::real) ^ (n - 1) \<noteq> 0" by simp
+  \<comment> \<open>Etape 5 : Division finale par le facteur d'echelle\<close>
   show ?thesis
-    unfolding h_num_final by (simp del: SB_def)
+    unfolding h_num using h_nz by simp
 qed
 
 (****************************************************************************

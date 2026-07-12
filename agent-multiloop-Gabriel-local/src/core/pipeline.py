@@ -176,21 +176,52 @@ class Pipeline:
 
     async def process(self, question: str) -> FinalAnswer:
         """Traite une question end-to-end via le pipeline."""
+        return await self.process_with_progress(question, progress_cb=None)
+
+    async def process_with_progress(
+        self,
+        question: str,
+        progress_cb: Any | None = None,
+    ) -> FinalAnswer:
+        """Traite une question end-to-end via le pipeline avec callbacks de progression."""
         qid = uuid.uuid4().hex[:8]
+
+        def _emit(event: str, **payload: Any) -> None:
+            if not progress_cb:
+                return
+            try:
+                progress_cb(event, payload)
+            except Exception:
+                # Le callback UI ne doit jamais bloquer le pipeline.
+                pass
+
+        _emit("stage_start", stage="abstraction", qid=qid)
 
         # 1. Abstraction
         ctx = self.abstraction.abstract(qid, question)
         logger.info("Q[%s] domain=%s model=%s intent=%s", qid, ctx.detected_domain, ctx.detected_model, ctx.metadata.get("intent"))
+        _emit(
+            "stage_done",
+            stage="abstraction",
+            domain=ctx.detected_domain,
+            model=str(ctx.detected_model) if ctx.detected_model else None,
+            intent=ctx.metadata.get("intent"),
+        )
 
+        _emit("stage_start", stage="meta_reasoning", qid=qid)
         # 2. Meta-raisonnement
         goal = self.goal_analyzer.analyze(ctx)
         strategy = self.strategy_selector.select(ctx, goal)
         plan = self.proof_planner.plan(ctx, goal, strategy)
+        _emit("stage_done", stage="meta_reasoning", intent=goal.get("intent"), model=plan.get("model"))
 
+        _emit("stage_start", stage="concept_navigation", qid=qid)
         # 3. Navigation conceptuelle
         concept_names = [c.name for c in ctx.concepts]
         expanded = self.navigator.expand_concepts(concept_names)
+        _emit("stage_done", stage="concept_navigation", concepts=len(concept_names), expanded=len(expanded))
 
+        _emit("stage_start", stage="direct_compute", qid=qid)
         # 4. Calcul direct (le coeur de la verite mathematique)
         precomputed_facts: dict[str, Any] = {}
         if goal["needs_computation"]:
@@ -204,7 +235,15 @@ class Pipeline:
                     wolfram_check = await self.verifier.verify_prime(p_val)
                     precomputed_facts["wolfram_verification"] = wolfram_check
                     logger.info("Q[%s] Wolfram check: %s", qid, wolfram_check.get("outcome"))
+        _emit(
+            "stage_done",
+            stage="direct_compute",
+            needs_computation=bool(goal.get("needs_computation")),
+            fact_keys=list(precomputed_facts.keys())[:8],
+            has_error=bool(precomputed_facts.get("error")),
+        )
 
+        _emit("stage_start", stage="generalization", qid=qid)
         # 5. Generalisation
         general = self.generalizer.generalize(
             precomputed_facts,
@@ -214,10 +253,23 @@ class Pipeline:
                 "question": question,
             },
         )
+        _emit("stage_done", stage="generalization")
 
+        _emit("stage_start", stage="multiloop", qid=qid)
         # 6. Construction du prompt grounded + Multi-loop self-critique
         base_prompt = self._build_base_prompt(ctx, plan, general, expanded)
-        final = await self.refinement.run(ctx, precomputed_facts, base_prompt)
+        final = await self.refinement.run(
+            ctx,
+            precomputed_facts,
+            base_prompt,
+            progress_cb=progress_cb,
+        )
+        _emit(
+            "stage_done",
+            stage="multiloop",
+            iterations=final.iterations_used,
+            best_score=final.best_score,
+        )
         
         # 6.bis NOUVEAU: Detection d'incoherence post-multiloop
         # Si la sortie multiloop est potentiellement incoherente, on declenche
@@ -255,6 +307,7 @@ class Pipeline:
 
             if coherence.incoherent and not conversational_bypass:
                 logger.warning("Q[%s] INCOHERENCE => Slow-Motion Debugger active", qid)
+                _emit("slow_motion_triggered", coherence=coherence.score, signals=coherence.signals[:3])
                 # v3.27 : Reformulations LLM contextuelles calculees en amont
                 # (pipeline async) pour eviter la rigidite du fallback heuristique
                 # qui proposait toujours "reconstruction de nombres premiers".
@@ -270,6 +323,7 @@ class Pipeline:
                 )
                 # Apres slow-motion : la reponse est certifiee, on saute l'audit
                 self._annotate_epistemic(final, precomputed_facts, goal, qid)
+                _emit("pipeline_done", score=final.best_score, iterations=final.iterations_used, slow_motion=True)
                 return final
         
         # 6.ter Audit silencieux post-pipeline (anti-hallucination)
@@ -296,6 +350,7 @@ class Pipeline:
 
         # 8. Axes cognitifs 4+5 : EpistemicClaim + MetaReasoner
         self._annotate_epistemic(final, precomputed_facts, goal, qid)
+        _emit("pipeline_done", score=final.best_score, iterations=final.iterations_used, slow_motion=False)
 
         return final
 

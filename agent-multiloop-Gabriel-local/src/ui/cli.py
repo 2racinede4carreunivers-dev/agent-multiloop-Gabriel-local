@@ -4,10 +4,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
 from pathlib import Path
 
 from rich.align import Align
 from rich.console import Console, Group
+from rich.live import Live
 from rich.panel import Panel
 from rich.rule import Rule
 from rich.table import Table
@@ -26,6 +28,16 @@ console = Console()
 
 # Chemin canonique du .env de Gabriel (celui charge par dotenv en priorite #2)
 _ROOT_ENV_PATH = Path(__file__).resolve().parent.parent.parent / ".env"
+
+
+def _env_live_trace() -> bool:
+    val = os.environ.get("GABRIEL_LIVE_TRACE", "1").strip().lower()
+    return val not in {"0", "false", "no", "off"}
+
+
+def _env_cinematic() -> bool:
+    val = os.environ.get("GABRIEL_CINEMATIC", "1").strip().lower()
+    return val not in {"0", "false", "no", "off"}
 
 
 BANNER = """
@@ -317,6 +329,8 @@ class CLIInterface:
         self.config = load_config()
         self.user_name = self.config.get("agent", {}).get("user_name", "Philippe")
         self.orchestrator = Orchestrator(self.config)
+        self.live_trace_enabled = _env_live_trace()
+        self.cinematic_enabled = _env_cinematic() and self.live_trace_enabled
         # Mode debug manuel : partage le kernel et spectral_core du pipeline
         self._debug_session: DebugSession | None = None
         # Axe 5 - MetaReasoner singleton (auto-evaluation par categorie)
@@ -2723,6 +2737,143 @@ class CLIInterface:
             lines.append(("Configuration", cfg))
         return lines
 
+    @staticmethod
+    def _progress_bar(ratio: float, width: int = 24) -> str:
+        bounded = max(0.0, min(1.0, ratio))
+        fill = int(round(bounded * width))
+        return f"[{'#' * fill}{'-' * (width - fill)}]"
+
+    @staticmethod
+    def _stage_label(stage: str) -> str:
+        labels = {
+            "gap_wrapper": "Filtre gap/visualisation",
+            "abstraction": "Analyse de la question",
+            "meta_reasoning": "Choix de strategie",
+            "concept_navigation": "Navigation conceptuelle",
+            "direct_compute": "Calculs spectraux",
+            "generalization": "Generalisation",
+            "multiloop": "Boucle multi-loop",
+        }
+        return labels.get(stage, stage)
+
+    def _build_progress_panel(self, lines: list[str], state: dict[str, object]) -> object:
+        body = "\n".join(lines[-12:]) if lines else "Preparation..."
+        if not self.cinematic_enabled:
+            return Panel(
+                body,
+                title="[bold cyan]Trace en direct - raisonnement Gabriel[/bold cyan]",
+                border_style="cyan",
+                padding=(0, 1),
+            )
+
+        now = time.monotonic()
+        started_at = float(state.get("started_at", now))
+        overall_elapsed = now - started_at
+        current_stage = str(state.get("current_stage", "initialisation"))
+        stage_started_at = float(state.get("stage_started_at", now))
+        stage_elapsed = now - stage_started_at
+        stage_done = int(state.get("stage_done", 0))
+        stage_total = int(state.get("stage_total", 6))
+        iter_cur = int(state.get("iter_cur", 0))
+        iter_max = int(state.get("iter_max", 0))
+        confidence = float(state.get("confidence", 0.0))
+
+        pipeline_ratio = stage_done / max(stage_total, 1)
+        multiloop_ratio = (iter_cur / max(iter_max, 1)) if iter_max > 0 else 0.0
+        confidence_ratio = confidence / 10.0
+        confidence_color = "green" if confidence >= 8 else "yellow" if confidence >= 6 else "red"
+
+        summary = Table.grid(padding=(0, 1), expand=True)
+        summary.add_column(style="bold cyan", ratio=1)
+        summary.add_column(style="white", ratio=4)
+        summary.add_row(
+            "Pipeline",
+            f"[cyan]{self._progress_bar(pipeline_ratio)}[/cyan] {stage_done}/{stage_total}",
+        )
+        summary.add_row(
+            "Multi-loop",
+            f"[magenta]{self._progress_bar(multiloop_ratio)}[/magenta] {iter_cur}/{iter_max if iter_max else '?'}",
+        )
+        summary.add_row(
+            "Confiance",
+            f"[{confidence_color}]{self._progress_bar(confidence_ratio)}[/{confidence_color}] [{confidence_color}]{confidence:.2f}/10[/{confidence_color}]",
+        )
+        summary.add_row("Etape", f"{self._stage_label(current_stage)} ({stage_elapsed:.1f}s)")
+        summary.add_row("Duree", f"{overall_elapsed:.1f}s")
+
+        header = Panel(
+            summary,
+            title="[bold bright_cyan]Mode cinematique - progression en direct[/bold bright_cyan]",
+            border_style="bright_cyan",
+            padding=(0, 1),
+        )
+        logs = Panel(
+            body,
+            title="[bold cyan]Journal des etapes[/bold cyan]",
+            border_style="cyan",
+            padding=(0, 1),
+        )
+        return Group(header, logs)
+
+    def _apply_progress_event(self, state: dict[str, object], event: str, payload: dict | None) -> str:
+        payload = payload or {}
+        if event == "stage_start":
+            stage = str(payload.get("stage", "?"))
+            state["current_stage"] = stage
+            state["stage_started_at"] = time.monotonic()
+            return f"-> {self._stage_label(stage)}..."
+        if event == "stage_done":
+            stage = str(payload.get("stage", "?"))
+            state["stage_done"] = min(int(state.get("stage_done", 0)) + 1, int(state.get("stage_total", 6)))
+            if stage == "direct_compute":
+                if payload.get("has_error"):
+                    return "[direct_compute] Calcul termine avec avertissement."
+                keys = payload.get("fact_keys") or []
+                return f"[direct_compute] OK ({len(keys)} faits calcules)."
+            if stage == "multiloop":
+                score = float(payload.get("best_score", state.get("confidence", 0.0)) or 0.0)
+                state["confidence"] = score
+                return (
+                    f"[multiloop] termine: iter={payload.get('iterations', '?')} "
+                    f"score={score:.2f}/10"
+                )
+            return f"[{stage}] termine."
+        if event == "multiloop_iteration_start":
+            state["iter_cur"] = int(payload.get("iteration", state.get("iter_cur", 0)))
+            state["iter_max"] = int(payload.get("max_iterations", state.get("iter_max", 0)))
+            return (
+                f"   Tour {payload.get('iteration', '?')}/{payload.get('max_iterations', '?')} "
+                f"({payload.get('num_candidates', '?')} candidats)"
+            )
+        if event == "multiloop_candidate_scored":
+            score = float(payload.get("score", 0.0) or 0.0)
+            state["confidence"] = max(float(state.get("confidence", 0.0)), score)
+            grounded = "ancre" if payload.get("grounded") else "faible ancrage"
+            return (
+                f"      candidat {payload.get('candidate', '?')}: "
+                f"score {score:.2f}/10 ({grounded})"
+            )
+        if event == "multiloop_round_best":
+            score = float(payload.get("score", 0.0) or 0.0)
+            state["confidence"] = max(float(state.get("confidence", 0.0)), score)
+            return (
+                f"   meilleur du tour: {score:.2f}/10 "
+                f"(seuil {payload.get('threshold', '?')})"
+            )
+        if event == "multiloop_stop":
+            return "   seuil atteint, arret anticipe."
+        if event == "slow_motion_triggered":
+            coh = payload.get("coherence", "?")
+            return f"[slow-motion] incoherence detectee (score={coh})."
+        if event == "pipeline_done":
+            score = float(payload.get("score", state.get("confidence", 0.0)) or 0.0)
+            state["confidence"] = score
+            return (
+                f"-> Finalisation: score={score:.2f}/10, "
+                f"iterations={payload.get('iterations', '?')}"
+            )
+        return ""
+
     async def interactive_mode(self) -> None:
         self.banner()
         # Installation des raccourcis clavier (readline) + historique persistant
@@ -2764,6 +2915,12 @@ class CLIInterface:
                     ("ask type", "bold magenta"),
                     (" / ", "dim"),
                     ("ask rules", "bold magenta"),
+                    ("\n  Trace live : ", "dim"),
+                    ("ON", "bold green") if self.live_trace_enabled else ("OFF", "bold yellow"),
+                    (" (env GABRIEL_LIVE_TRACE=0 pour masquer)", "dim"),
+                    ("\n  Mode cinematique : ", "dim"),
+                    ("ON", "bold bright_cyan") if self.cinematic_enabled else ("OFF", "bold yellow"),
+                    (" (env GABRIEL_CINEMATIC=0 pour mode compact)", "dim"),
                 ),
                 border_style="bright_green",
                 padding=(0, 2),
@@ -2800,8 +2957,42 @@ class CLIInterface:
                         f"pour ajouter un commentaire structure.[/yellow]\n"
                     )
                     continue
-                console.print("\n  [dim]Reflexion en cours (multi-loop self-critique)...[/dim]")
-                answer = await self.orchestrator.ask(user_input)
+                if self.live_trace_enabled:
+                    progress_lines: list[str] = [
+                        "Demarrage du traitement...",
+                        "Ce trace montre les etapes et scores en temps reel.",
+                    ]
+                    progress_state: dict[str, object] = {
+                        "started_at": time.monotonic(),
+                        "current_stage": "initialisation",
+                        "stage_started_at": time.monotonic(),
+                        "stage_done": 0,
+                        "stage_total": 7,
+                        "iter_cur": 0,
+                        "iter_max": 0,
+                        "confidence": 0.0,
+                    }
+                    with Live(
+                        self._build_progress_panel(progress_lines, progress_state),
+                        console=console,
+                        refresh_per_second=8,
+                        transient=True,
+                    ) as live:
+
+                        def _on_progress(event: str, payload: dict | None) -> None:
+                            msg = self._apply_progress_event(progress_state, event, payload)
+                            if not msg:
+                                return
+                            progress_lines.append(msg)
+                            if len(progress_lines) > 12:
+                                progress_lines[:] = progress_lines[-12:]
+                            live.update(self._build_progress_panel(progress_lines, progress_state))
+
+                        answer = await self.orchestrator.ask(user_input, progress_cb=_on_progress)
+                else:
+                    console.print("\n  [dim]Reflexion en cours (multi-loop self-critique)...[/dim]")
+                    answer = await self.orchestrator.ask(user_input)
+
                 self._display_answer(answer)
             except Exception as exc:
                 logger.error("Erreur traitement : %s", exc, exc_info=True)

@@ -101,6 +101,7 @@ class PipelineWithGapDetection:
         self,
         question: str,
         previous_answer: Optional[FinalAnswer] = None,
+        progress_cb: Any | None = None,
     ) -> FinalAnswer:
         """
         Processus amélioré :
@@ -111,9 +112,21 @@ class PipelineWithGapDetection:
         """
         qid = uuid.uuid4().hex[:8]
 
+        def _emit(event: str, **payload: Any) -> None:
+            if not progress_cb:
+                return
+            try:
+                progress_cb(event, payload)
+            except Exception:
+                pass
+
+        _emit("stage_start", stage="gap_wrapper", qid=qid)
+
         # --- 0) AUTO-TRIGGER VISUALISATION ---
         viz_answer = self._try_visualization(qid, question)
         if viz_answer is not None:
+            _emit("stage_done", stage="gap_wrapper", branch="visualization")
+            _emit("pipeline_done", score=viz_answer.best_score, iterations=viz_answer.iterations_used, slow_motion=False)
             return viz_answer
 
         # --- 1) ÉCART (GAP) ---
@@ -140,6 +153,8 @@ class PipelineWithGapDetection:
                 answer = self._build_composite_rejection_answer(
                     qid, question, rejections, p1, p2
                 )
+                _emit("stage_done", stage="gap_wrapper", branch="gap_composite_rejection")
+                _emit("pipeline_done", score=answer.best_score, iterations=answer.iterations_used, slow_motion=False)
                 return answer
 
             gap_result = self.gap_solver.solve_gap(p1, p2)
@@ -147,13 +162,16 @@ class PipelineWithGapDetection:
             if gap_result is not None:
                 logger.info(f"Q[{qid}] Écart résolu : {gap_result.gap_count} nombres")
                 answer = self._build_gap_answer(qid, question, gap_result)
+                _emit("stage_done", stage="gap_wrapper", branch="gap_solver")
+                _emit("pipeline_done", score=answer.best_score, iterations=answer.iterations_used, slow_motion=False)
                 return answer
             else:
                 logger.error(f"Q[{qid}] GapSolver échoué pour {gap_type}")
 
         # --- 2) PIPELINE STANDARD ---
         logger.info(f"Q[{qid}] Pas d'écart détecté, pipeline standard")
-        result = await self.pipeline.process(question)
+        _emit("stage_done", stage="gap_wrapper", branch="standard_pipeline")
+        result = await self.pipeline.process_with_progress(question, progress_cb=progress_cb)
 
         # --- 3) AUTO-GRAPHIQUES POST-RECONSTRUCTION (Q2, Q1.x, Q3.x) ---
         # Si le pipeline standard vient de repondre a une question canonique,
@@ -165,6 +183,14 @@ class PipelineWithGapDetection:
             logger.warning(f"Q[{qid}] auto-graphs post-pipeline echec : {exc}")
 
         return result
+
+    async def process_with_progress(
+        self,
+        question: str,
+        progress_cb: Any | None = None,
+    ) -> FinalAnswer:
+        """Compatibilite: expose le meme contrat que Pipeline.process_with_progress."""
+        return await self.process(question, progress_cb=progress_cb)
 
     def _maybe_attach_question_graphs(
         self, qid: str, question: str, result: FinalAnswer

@@ -30,8 +30,11 @@ class Orchestrator:
         (utilisée pour introspection CLI et pour la commande `reset`)."""
         return self.pipeline.llm.conversation_memory
 
-    async def ask(self, question: str) -> FinalAnswer:
-        result = await self.pipeline.process(question)
+    async def ask(self, question: str, progress_cb: Any | None = None) -> FinalAnswer:
+        if progress_cb:
+            result = await self.pipeline.process_with_progress(question, progress_cb=progress_cb)
+        else:
+            result = await self.pipeline.process(question)
         # Journal léger (backward-compatible)
         self.memory.append({"role": "user", "content": question})
         self.memory.append({"role": "assistant", "content": result.answer_text})

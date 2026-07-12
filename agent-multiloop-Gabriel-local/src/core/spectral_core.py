@@ -345,6 +345,170 @@ class SpectralMethodCore:
             "method": "RsP_chaotique = (sum_SA(A) - sum_SA(B)) / (sum_SB(A) - sum_SB(B))",
         }
 
+    def compute_RsP_bloc_sym(self, A_indices: List[int], B_indices: List[int]) -> Dict:
+        """
+        v3.29 : Rapport spectral SYMETRIQUE n*n (|A| = |B|).
+
+        Formule identique au cas chaotique mais avec la contrainte |A|=|B|.
+        Attendu : RsP = 1/2 EXACT quand les blocs sont symetriques (par le
+        theoreme fondamental de la Methode Spectrale 1/2 de Savard).
+
+        R_sym(A, B) = (sum_SA(A) - sum_SA(B)) / (sum_SB(A) - sum_SB(B))
+
+        Args:
+            A_indices: liste d'indices de positions dans la table des premiers
+            B_indices: idem, avec |B| = |A|
+
+        Returns:
+            Dict avec RsP_fraction, RsP_decimal, matches_half, etc.
+        """
+        from fractions import Fraction
+        if len(A_indices) != len(B_indices):
+            return {
+                "error": (
+                    f"Config symetrique exige |A|=|B| (recu |A|={len(A_indices)}, "
+                    f"|B|={len(B_indices)}). Utilisez compute_RsP_bloc_asym ou "
+                    f"compute_RsP_ordonnee pour les configurations asymetriques."
+                ),
+                "A": A_indices, "B": B_indices,
+            }
+        sa_A = sum(self._SA_int(a) for a in A_indices)
+        sa_B = sum(self._SA_int(b) for b in B_indices)
+        sb_A = sum(self._SB_int(a) for a in A_indices)
+        sb_B = sum(self._SB_int(b) for b in B_indices)
+        num = sa_A - sa_B
+        den = sb_A - sb_B
+        if den == 0:
+            return {
+                "error": "denominateur (sum_SB_A - sum_SB_B) = 0 : blocs A et B identiques ?",
+                "A": A_indices, "B": B_indices,
+            }
+        frac = Fraction(num, den)
+        decimal = num / den
+        n_size = len(A_indices)
+        return {
+            "configuration": f"sym_{n_size}x{n_size}",
+            "A_indices": A_indices,
+            "B_indices": B_indices,
+            "n_size": n_size,
+            "sum_SA_A": sa_A, "sum_SA_B": sa_B,
+            "sum_SB_A": sb_A, "sum_SB_B": sb_B,
+            "numerator": num, "denominator": den,
+            "RsP_fraction": f"{frac.numerator}/{frac.denominator}",
+            "RsP_decimal": decimal,
+            "matches_half": frac == Fraction(1, 2),
+            "near_half": abs(decimal - 0.5) < 0.05,
+            "method": (
+                f"RsP_symetrique_{n_size}x{n_size} = "
+                f"(sum_SA(A) - sum_SA(B)) / (sum_SB(A) - sum_SB(B))"
+            ),
+            "theorem_reference": "methode_spectral.thy::RsP_bloc_1_2",
+        }
+
+    def compute_gap_between_primes(
+        self, i: int, j: int, ratio: str = "1/2",
+    ) -> Dict:
+        """
+        v3.29 : Ecart entre le i-ieme et le j-ieme premier (ratio 1/2 par defaut).
+
+        Deux modes :
+          - Ecart direct : |P(j) - P(i)| (calcul factuel)
+          - Ecart spectral : via gap_equation_1_3 / 1_4 pour ratios differents
+
+        Args:
+            i, j: positions (1-indexed) des premiers a comparer
+            ratio: "1/2", "1/3", ou "1/4" selon le regime spectral
+
+        Returns:
+            Dict avec p_i, p_j, gap, formule utilisee.
+        """
+        p_i = self.get_prime_at_position(i)
+        p_j = self.get_prime_at_position(j)
+        if p_i is None or p_j is None:
+            return {
+                "error": (
+                    f"Position hors table (1..1000). Recu i={i} (p={p_i}), "
+                    f"j={j} (p={p_j})."
+                ),
+                "i": i, "j": j,
+            }
+        gap = p_j - p_i
+        theorem_map = {
+            "1/2": "methode_spectral.thy::spectral_postulate_pos + difference_SB_succ",
+            "1/3": "methode_spectral.thy::spectral_gap_postulate_1_3",
+            "1/4": "methode_spectral.thy::spectral_gap_postulate_1_4",
+        }
+        return {
+            "i": i, "j": j,
+            "p_i": p_i, "p_j": p_j,
+            "gap_direct": gap,
+            "gap_abs": abs(gap),
+            "ratio_regime": ratio,
+            "method": f"gap = P({j}) - P({i}) = {p_j} - {p_i} = {gap}",
+            "theorem_reference": theorem_map.get(ratio, "regime inconnu"),
+            "note": (
+                "Gap direct : difference numerique entre premiers. "
+                "Pour la reconstruction spectrale de l'ecart, utiliser "
+                "compute_gap_spectral (regime 1/3 ou 1/4)."
+            ),
+        }
+
+    def compute_gap_spectral(
+        self, i: int, ratio: str = "1/3",
+    ) -> Dict:
+        """
+        v3.29 : Ecart spectral au ratio 1/k (k=3 ou 4) via difference des sommes.
+
+        Pour le regime 1/k, l'ecart P(i+1) - P(i) est reconstructible via :
+            gap_1_k(i) = (SB_scaled(i) - SB_scaled(i-1)) / factor_1_k
+
+        Reference : gap_equation_1_3 (spectral_gap_postulate_1_3 dans le .thy)
+        """
+        p_i = self.get_prime_at_position(i)
+        p_next = self.get_prime_at_position(i + 1)
+        if p_i is None or p_next is None:
+            return {
+                "error": f"Position hors table (1..1000). Recu i={i}",
+                "i": i,
+            }
+        direct_gap = p_next - p_i
+        # Facteurs de reconstruction pour chaque ratio (constantes Savard)
+        factors = {"1/2": 64, "1/3": 96, "1/4": 128}
+        factor = factors.get(ratio)
+        if factor is None:
+            return {
+                "error": f"Ratio '{ratio}' non supporte. Utiliser 1/2, 1/3 ou 1/4.",
+                "i": i,
+            }
+        # SB(i) - SB(i-1) mesure la contribution du i-ieme premier
+        sb_current = self._SB_int(i)
+        sb_previous = self._SB_int(i - 1) if i > 1 else 0
+        sb_delta = sb_current - sb_previous
+        # Le gap reconstruit = sb_delta / facteur (approximation)
+        return {
+            "i": i,
+            "p_i": p_i,
+            "p_next": p_next,
+            "direct_gap": direct_gap,
+            "ratio": ratio,
+            "factor": factor,
+            "SB_i": sb_current,
+            "SB_i_minus_1": sb_previous,
+            "SB_delta": sb_delta,
+            "gap_spectral_reconstructed": sb_delta // factor,
+            "method": (
+                f"gap_spectral({i}) = (SB({i}) - SB({i-1})) / {factor} = "
+                f"{sb_delta} / {factor} = {sb_delta // factor}"
+            ),
+            "theorem_reference": (
+                "methode_spectral.thy::spectral_gap_postulate_1_3"
+                if ratio == "1/3" else
+                "methode_spectral.thy::spectral_gap_postulate_1_4"
+                if ratio == "1/4" else
+                "methode_spectral.thy::difference_SB_succ"
+            ),
+        }
+
     def compute_RsP_ordonnee(self, A_indices: List[int], B_indices: List[int]) -> Dict:
         """
         Rapport spectral asymetrique ORDONNEE (formule a sommes ALTERNEES).

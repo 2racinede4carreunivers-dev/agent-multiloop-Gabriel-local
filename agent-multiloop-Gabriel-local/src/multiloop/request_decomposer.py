@@ -87,6 +87,14 @@ class RequestDecomposer:
         "ratio_spectral": [
             r"rapport\s+spectral", r"calcul.*ratio",
             r"\bRsP\b", r"calcul.*rapport",
+            # v3.30 (Philippe 2026-02) : requetes bloc asymetrique
+            # chaotique / ordonnee formulees en langage naturel avec
+            # "Bloc A= {...} Bloc B= {...}" (accolades ou parentheses).
+            r"asym[ée]trique\s+chaotique",
+            r"chaotique\s+asym[ée]trique",
+            r"asym[ée]trique\s+ordonn[ée]",
+            r"ordonn[ée]\s+asym[ée]trique",
+            r"bloc\s*[ab]\s*=",  # signal "Bloc A=" / "Bloc B="
         ],
         "gap": [r"\bgap\b", r"ecart", r"écart"],
     }
@@ -264,6 +272,8 @@ class RequestDecomposer:
           "rapport spectral symetrique 4*4"  -> (4, True)
           "configuration symetrique 3x3"     -> (3, True)
           "rapport asymetrique 5*3"          -> (5, False) (premiere taille)
+          "asymetrique chaotique"            -> (0, False) (v3.30)
+          "asymetrique ordonnee"             -> (0, False) (v3.30)
 
         Returns: (size_announced, is_symmetric) ou None si rien d'annonce.
         """
@@ -276,6 +286,12 @@ class RequestDecomposer:
         )
         if m:
             return (int(m.group(1)), False)
+        # v3.30 : "asymetrique chaotique" ou "asymetrique ordonnee" sans NxN
+        # → configuration asymetrique annoncee, taille inconnue (0 = a deduire
+        # depuis les tuples extraits).
+        if re.search(r"asym[ée]trique\s+(?:chaotique|ordonn[ée])", t) \
+                or re.search(r"(?:chaotique|ordonn[ée])\s+asym[ée]trique", t):
+            return (0, False)
         # Cherche "symetrique N*N" ou "symetrique NxN"
         m = re.search(
             r"(?<![a-z])sym[ée]trique\s*(\d+)\s*[x*]\s*(\d+)",
@@ -295,13 +311,42 @@ class RequestDecomposer:
     @staticmethod
     def _extract_tuples(text: str) -> list[list[int]]:
         """
-        Extrait les tuples entre parentheses : (a,b,c) -> [a, b, c].
-        CORRECTION : capturer aussi les nombres NÉGATIFS
+        Extrait les tuples des blocs cites dans la requete.
+
+        v3.30 (Philippe 2026-02) : Supporte 4 formats :
+          1) "Bloc A= {7,11,23} Bloc B= {29,31,17,53,2}"  (labels + accolades)
+          2) "Bloc A= (7,11,23) Bloc B= (29,31,17,53,2)"  (labels + parentheses)
+          3) "(7,11,23) (29,31,17,53,2)"                  (parentheses seules)
+          4) "{7,11,23} {29,31,17,53,2}"                  (accolades seules)
+          5) Formats mixtes acceptes : "Bloc A= {7,11,23} Bloc B= (29,31,17,53,2)"
+
+        CORRECTION : capture aussi les nombres NEGATIFS.
+
+        PRIORITE : si des labels "Bloc A=" / "Bloc B=" sont presents, on les
+        utilise en priorite pour eviter les ambiguites (ex : autres nombres
+        entre parentheses dans le texte).
         """
-        tuples = []
-        for match in re.finditer(r"\(([^)]+)\)", text):
+        # v3.30 : recherche des labels explicites en priorite
+        m_a = re.search(
+            r"bloc\s*a\s*=\s*[\{\(\[]\s*([^\}\)\]]+?)\s*[\}\)\]]",
+            text, re.IGNORECASE,
+        )
+        m_b = re.search(
+            r"bloc\s*b\s*=\s*[\{\(\[]\s*([^\}\)\]]+?)\s*[\}\)\]]",
+            text, re.IGNORECASE,
+        )
+        if m_a and m_b:
+            a_nums = re.findall(r"-?\d+", m_a.group(1))
+            b_nums = re.findall(r"-?\d+", m_b.group(1))
+            if a_nums and b_nums:
+                return [[int(n) for n in a_nums], [int(n) for n in b_nums]]
+
+        # Fallback : n'importe quelle paire de blocs {..} ou (..) dans l'ordre.
+        # FIX : capture aussi les negatifs.
+        tuples: list[list[int]] = []
+        # Pattern acceptant { ... } OU ( ... ) OU [ ... ]
+        for match in re.finditer(r"[\{\(\[]([^\}\)\]]+?)[\}\)\]]", text):
             content = match.group(1)
-            # FIX : -?\d+ pour capturer les négatifs
             nums = re.findall(r"-?\d+", content)
             if nums:
                 tuples.append([int(n) for n in nums])

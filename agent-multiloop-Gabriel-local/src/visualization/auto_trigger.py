@@ -123,6 +123,28 @@ _CONVERSATIONAL_ANTI_PATTERNS: set[str] = {
     "triangle", "triangles", "carre", "carres", "rectangle", "rectangles",
     "cercle", "cercles", "polygone", "polygones",
     "peser", "peser theorique", "pesee", "balancier",
+    # v3.30 (Philippe 2026-02) : marqueurs d'OPINION / DISCUSSION EXPERTE.
+    # Une question qui sollicite un jugement, une opinion, un avis expert
+    # sur la theorie/methode n'est PAS une demande de graphique meme si
+    # elle contient des mots-cles isoles (voir, sa, schema...).
+    "ton opinion", "ton avis", "ton point de vue", "ton jugement",
+    "quel est ton", "penses-tu", "penses tu", "que penses",
+    "qu'en penses", "qu en penses", "selon toi", "d'apres toi", "d apres toi",
+    "assistant expert", "expert de la", "experts de la",
+    "analyse d'expert", "analyse d expert", "avis d'expert", "avis d expert",
+    "theorie geometrique", "theorie des nombres", "geometrie du spectre",
+    "merite d'etre", "merite d etre", "merite-t-elle", "merite t elle",
+    "peut-elle", "peut elle", "est-elle", "est elle",
+    "avenir", "futur", "suite logique",
+    "archives", "publication scientifique", "soumise", "soumettre",
+    "opinion", "jugement",
+    # Cas particulier (Philippe 2026-02) : "savoir" en tant que verbe
+    # d'interrogation ("le premier point est A SAVOIR...", "il faut savoir")
+    "a savoir", "il faut savoir", "faut-il savoir", "sans savoir",
+    # Marqueur du nom propre "Savard" (Philippe Thomas Savard) - la mention
+    # de l'auteur signale une discussion sur son oeuvre, pas une demande de
+    # visualisation. On l'ajoute en anti-pattern (compte pour 1 hit).
+    "savard",
 }
 
 
@@ -279,13 +301,29 @@ def _normalize(question: str) -> str:
     return q
 
 
-def _detect_kind(qnorm: str) -> tuple[Optional[CurveKind], list[str]]:
-    """Identifie le type de courbe demande, retourne (kind, mots-cles matches)."""
+def _detect_kind(qnorm: str, original: str = "") -> tuple[Optional[CurveKind], list[str]]:
+    """Identifie le type de courbe demande, retourne (kind, mots-cles matches).
+
+    v3.30 (Philippe 2026-02) : quand seul le pattern generique `\\bsa\\b` ou
+    `\\bsb\\b` matche (pronom possessif francais 'sa'/'sb'), on exige que le
+    token soit ecrit en MAJUSCULES dans le texte ORIGINAL pour eviter les
+    faux positifs sur 'sa place', 'sa suite logique', etc.
+    """
     matched: list[str] = []
+    # Patterns "ambigus" (matchent aussi des mots courants francais)
+    _AMBIGUOUS_STANDALONE = {r"\bsa\b", r"\bsb\b"}
     for kind, patterns in _KIND_PATTERNS:
         for pat in patterns:
             m = re.search(pat, qnorm, re.IGNORECASE)
             if m:
+                # Si c'est un pattern ambigu ET qu'on a le texte original,
+                # exiger la casse MAJUSCULE dans l'original.
+                if pat in _AMBIGUOUS_STANDALONE and original:
+                    token = m.group(0).strip()
+                    # Chercher SA ou SB en majuscules dans l'original
+                    upper_re = r"\b" + token.upper() + r"\b"
+                    if not re.search(upper_re, original):
+                        continue  # pronom francais, on ignore
                 matched.append(m.group(0).strip())
                 return kind, matched
     return None, matched
@@ -352,7 +390,13 @@ def detect_visualization_intent(question: str) -> Optional[VisualizationIntent]:
         return None
 
     # 1) Verifier qu'il y a un mot-cle de visualisation
-    viz_hits = [kw for kw in _VIZ_KEYWORDS if kw in qnorm]
+    # v3.30 (Philippe 2026-02) : matching MOT-ENTIER (regex \b...\b) pour
+    # eviter que "savoir" (present dans "a savoir", "il faut savoir")
+    # matche "voir" en sous-chaine.
+    viz_hits: list[str] = []
+    for kw in _VIZ_KEYWORDS:
+        if re.search(r"\b" + re.escape(kw) + r"\b", qnorm):
+            viz_hits.append(kw)
     if not viz_hits:
         return None
 
@@ -360,7 +404,7 @@ def detect_visualization_intent(question: str) -> Optional[VisualizationIntent]:
     rsp_cfg, rsp_matches = _detect_rsp_config(qnorm)
 
     # 3) Identifier le type de courbe (CurveKind classique)
-    kind, kind_matches = _detect_kind(qnorm)
+    kind, kind_matches = _detect_kind(qnorm, original=question)
 
     # Si on a une config RsP, on force kind=RATIO_SA_SB (placeholder pour le rendu)
     if rsp_cfg is not None:

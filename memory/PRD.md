@@ -4,7 +4,23 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.23 — 1286/1287 tests Pytest ✅ — Preuve Isabelle `preuve_rapport_spectral_limite_savard` corrigée par multiplication croisée avec split de cas**
+**Production-Ready v3.30 — 1490/1490 tests Pytest ✅ — Parsing `Bloc A= {...} Bloc B= {...}` + Anti-faux-positif graphes sur questions d'opinion**
+
+### Changelog 2026-02 v3.30 (Parsing bloc chaotique/ordonné + Contexte d'opinion)
+- **Bug P0-A (parsing)** : Le multi-loop échouait à extraire les blocs `Bloc A= {7,11,23} Bloc B= {29,31,17,53,2}` (accolades) formulés en asymétrique chaotique ou ordonnée. `tuple_A`/`tuple_B` restaient à `None`, la requête tombait à score 0.35 et déclenchait le kernel d'urgence.
+- **Fix P0-A** dans `src/multiloop/request_decomposer.py` :
+  - `_extract_tuples()` : nouvelle logique prioritaire sur labels `Bloc A=` / `Bloc B=` (regex `bloc\s*[ab]\s*=\s*[\{\(\[]...[\}\)\]]`), avec fallback générique sur toutes les paires `{...}`, `(...)`, `[...]`.
+  - `INTENT_PATTERNS["ratio_spectral"]` : ajout de `asym[ée]trique\s+chaotique`, `asym[ée]trique\s+ordonn[ée]`, `bloc\s*[ab]\s*=`.
+  - `_extract_announced_config()` : reconnaît `asymétrique chaotique/ordonnée` sans `NxN` → renvoie `(0, False)`.
+- **Bug P0-B (contexte visuel)** : Gabriel déclenchait à tort le graphique `CurveKind.SA` sur les questions conceptuelles d'opinion. Causes : (1) `voir` matchait `savoir` en sous-chaîne ; (2) pattern `\bsa\b` matchait le pronom français `sa` (« sa place », « sa suite »).
+- **Fix P0-B** dans `src/visualization/auto_trigger.py` :
+  - `_VIZ_KEYWORDS` désormais matché en **mot-entier** (`\b...\b`), plus jamais en sous-chaîne.
+  - `_detect_kind()` : nouveau paramètre `original` — les patterns ambigus `\bsa\b`/`\bsb\b` exigent la casse **MAJUSCULE** dans le texte original pour éviter les pronoms.
+  - `_CONVERSATIONAL_ANTI_PATTERNS` enrichis : `ton opinion`, `ton avis`, `penses-tu`, `assistant expert`, `merite d'etre`, `peut-elle`, `est-elle`, `avenir`, `archives`, `soumise`, `a savoir`, `savard`, etc.
+- **23 nouveaux tests** :
+  - `tests/test_bloc_chaotique_ordonne_v330.py` (12 tests) : accolades, parenthèses, crochets, formats mixtes, intents, calculs end-to-end via `analyze_spectral_ratio`.
+  - `tests/test_auto_trigger_opinion_context_v330.py` (11 tests) : questions d'opinion bloquées, `savoir`/`sa pronom` filtrés, demandes explicites `trace SA` toujours actives, `chaos-savard` explicite toujours actif.
+- **Total : 1490/1490 tests passent** (1467 → 1490, zéro régression).
 
 ### Changelog 2026-02 v3.23 (Fix Isabelle preuve_rapport_spectral_limite_savard ligne 2556)
 - **Bug** : La preuve du lemme `preuve_rapport_spectral_limite_savard` (`theories/methode_spectral.thy`) échouait avec `Failed to finish proof` sur l'étape `by (simp add: field_simps)` pour l'égalité `((A)/2) / ((B)/2) = A / B` où A = `3.25 * r^n - 4` et B = `6.5 * r^n - 132`. Isabelle normalisait via 3.25 = 13/4 et 6.5 = 13/2 en `(r^n * 52 - 64)/(r^n * 104 - 2112) = (r^n * 26 - 32)/(r^n * 52 - 1056)` mais refusait de conclure sans témoin de non-nullité du dénominateur.

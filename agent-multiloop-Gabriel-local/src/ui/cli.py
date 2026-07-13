@@ -8,8 +8,10 @@ from pathlib import Path
 
 from rich.align import Align
 from rich.console import Console, Group
+from rich.live import Live
 from rich.panel import Panel
 from rich.rule import Rule
+from rich.spinner import Spinner
 from rich.table import Table
 from rich.text import Text
 
@@ -2723,6 +2725,191 @@ class CLIInterface:
             lines.append(("Configuration", cfg))
         return lines
 
+    @staticmethod
+    def _env_enabled(var_name: str, default: bool = False) -> bool:
+        raw = os.environ.get(var_name)
+        if raw is None:
+            return default
+        return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+    def _render_live_progress_panel(self, state: dict[str, object]) -> Panel:
+        phase = str(state.get("phase", "Initialisation"))
+        detail = str(state.get("detail", ""))
+        iteration = int(state.get("iteration", 0) or 0)
+        max_iterations = int(state.get("max_iterations", 0) or 0)
+        best_score = state.get("best_score")
+        verbose = bool(state.get("verbose_trace", False))
+        assumptions = state.get("assumptions", [])
+        options = state.get("options", [])
+        recent_events = state.get("recent_events", [])
+
+        body = Text()
+        body.append(" Analyse en cours...\n", style="bold bright_cyan")
+        body.append("\n  Phase : ", style="bold yellow")
+        body.append(phase, style="white")
+
+        if iteration and max_iterations:
+            body.append("\n  Multi-loop : ", style="bold yellow")
+            body.append(f"iteration {iteration}/{max_iterations}", style="bright_white")
+            if isinstance(best_score, (int, float)):
+                body.append(f"   meilleur score={best_score:.1f}/10", style="dim")
+
+        if detail:
+            body.append("\n  Detail : ", style="bold yellow")
+            body.append(detail, style="dim")
+
+        if verbose and isinstance(assumptions, list) and assumptions:
+            body.append("\n\n  Hypotheses : ", style="bold yellow")
+            for item in assumptions[-3:]:
+                body.append("\n    - ", style="yellow")
+                body.append(str(item), style="dim")
+
+        if verbose and isinstance(options, list) and options:
+            body.append("\n\n  Choix evalues : ", style="bold yellow")
+            for item in options[-4:]:
+                body.append("\n    - ", style="yellow")
+                body.append(str(item), style="bright_white")
+
+        if verbose and isinstance(recent_events, list) and recent_events:
+            body.append("\n\n  Journal live : ", style="bold yellow")
+            for item in recent_events[-5:]:
+                body.append("\n    * ", style="cyan")
+                body.append(str(item), style="dim")
+
+        return Panel(
+            Group(
+                Spinner("dots", text="Execution pipeline + multiloop"),
+                Text(""),
+                body,
+            ),
+            title="[bold cyan]Gabriel Live Trace[/bold cyan]",
+            border_style="cyan",
+            padding=(1, 2),
+        )
+
+    def _make_progress_callback(
+        self,
+        state: dict[str, object],
+        live_handle: list[Live | None],
+        cinematic: bool,
+        verbose_trace: bool,
+    ):
+        phase_labels = {
+            "wrapper_start": "Preparation",
+            "wrapper_delegate_pipeline": "Delegation pipeline",
+            "pipeline_start": "Initialisation pipeline",
+            "abstraction_done": "Abstraction",
+            "meta_reasoning_done": "Meta-raisonnement",
+            "navigation_done": "Navigation conceptuelle",
+            "spectral_compute_done": "Calcul spectral",
+            "generalization_done": "Generalisation",
+            "multiloop_start": "Demarrage multiloop",
+            "multiloop_iteration_start": "Generation de candidats",
+            "multiloop_iteration_end": "Selection du meilleur candidat",
+            "multiloop_early_stop": "Arret anticipe (score suffisant)",
+            "silent_audit_done": "Audit silencieux",
+            "pipeline_done": "Finalisation",
+            "wrapper_done": "Termine",
+            "multi_objective_start": "Mode multi-objectifs",
+            "multi_objective_item_done": "Objectif traite",
+            "gap_detected": "Detection GAP",
+            "intent_hypotheses": "Hypotheses d'intent",
+            "assumptions_detected": "Hypotheses de travail",
+            "decision_gate": "Arbitrage de route",
+            "spectral_parse_strategy": "Choix d'interpretation",
+        }
+
+        def _push_list(key: str, value: str, limit: int) -> None:
+            buf = state.get(key)
+            if not isinstance(buf, list):
+                buf = []
+            buf.append(value)
+            if len(buf) > limit:
+                buf = buf[-limit:]
+            state[key] = buf
+
+        def _on_progress(event: dict[str, Any]) -> None:
+            ev = str(event.get("event", ""))
+            state["phase"] = phase_labels.get(ev, ev or "Traitement")
+            state["verbose_trace"] = verbose_trace
+
+            if ev == "multiloop_iteration_start":
+                state["iteration"] = int(event.get("iteration", 0) or 0)
+                state["max_iterations"] = int(event.get("max_iterations", 0) or 0)
+                state["detail"] = "Generation et critique des candidats"
+            elif ev == "multiloop_candidate_scored" and cinematic:
+                cand = int(event.get("candidate", 0) or 0)
+                total = int(event.get("num_candidates", 0) or 0)
+                score = event.get("score")
+                if isinstance(score, (int, float)):
+                    state["detail"] = f"candidat {cand}/{total} evalue a {score:.1f}/10"
+                else:
+                    state["detail"] = f"candidat {cand}/{total} evalue"
+            elif ev == "multiloop_iteration_end":
+                state["best_score"] = event.get("best_score")
+                state["detail"] = "Meilleur candidat retenu pour ce tour"
+            elif ev == "multi_objective_item_done":
+                idx = int(event.get("index", 0) or 0)
+                intent = str(event.get("intent", ""))
+                state["detail"] = f"objectif #{idx} termine ({intent})"
+            elif ev == "abstraction_done":
+                intent = event.get("intent")
+                state["detail"] = f"intent detecte: {intent}"
+            elif ev == "meta_reasoning_done":
+                strategy = event.get("strategy")
+                state["detail"] = f"strategie: {strategy}"
+                if verbose_trace and strategy:
+                    _push_list("options", f"Strategie retenue: {strategy}", 8)
+            elif ev == "spectral_compute_done":
+                has_error = bool(event.get("has_error"))
+                state["detail"] = "calcul spectral termine" if not has_error else "calcul spectral avec incident"
+            elif ev == "intent_hypotheses":
+                candidates = event.get("candidates")
+                if isinstance(candidates, list) and candidates:
+                    state["detail"] = "candidats intent: " + ", ".join(str(c) for c in candidates[:4])
+                    if verbose_trace:
+                        _push_list("options", "Intents candidats: " + ", ".join(str(c) for c in candidates[:4]), 8)
+            elif ev == "assumptions_detected":
+                assumptions = event.get("assumptions")
+                if isinstance(assumptions, list) and assumptions:
+                    state["detail"] = assumptions[0]
+                    if verbose_trace:
+                        for a in assumptions:
+                            _push_list("assumptions", str(a), 8)
+            elif ev == "decision_gate":
+                strategy = str(event.get("strategy", ""))
+                goal_intent = str(event.get("goal_intent", ""))
+                needs_comp = bool(event.get("needs_computation"))
+                model = str(event.get("model", ""))
+                state["detail"] = (
+                    f"route={goal_intent or 'general'} | calcul={'oui' if needs_comp else 'non'} | modele={model}"
+                )
+                if verbose_trace:
+                    _push_list("options", f"Arbitrage: {strategy} -> {goal_intent}", 8)
+            elif ev == "spectral_parse_strategy":
+                detail = str(event.get("detail", "")).strip()
+                strategy = str(event.get("strategy", "")).strip()
+                state["detail"] = detail or strategy or "strategie d'interpretation appliquee"
+                if verbose_trace:
+                    _push_list("options", f"Parser: {strategy} ({detail})", 8)
+            elif ev == "pipeline_done":
+                mode = event.get("mode")
+                state["detail"] = f"mode final: {mode}"
+            elif ev == "wrapper_done":
+                mode = event.get("mode")
+                state["detail"] = f"route finale: {mode}"
+
+            if verbose_trace:
+                msg = state.get("detail")
+                if isinstance(msg, str) and msg.strip():
+                    _push_list("recent_events", f"{state.get('phase', '')}: {msg.strip()}", 12)
+
+            live = live_handle[0]
+            if live is not None:
+                live.update(self._render_live_progress_panel(state), refresh=True)
+
+        return _on_progress
+
     async def interactive_mode(self) -> None:
         self.banner()
         # Installation des raccourcis clavier (readline) + historique persistant
@@ -2800,8 +2987,43 @@ class CLIInterface:
                         f"pour ajouter un commentaire structure.[/yellow]\n"
                     )
                     continue
-                console.print("\n  [dim]Reflexion en cours (multi-loop self-critique)...[/dim]")
-                answer = await self.orchestrator.ask(user_input)
+                live_trace = self._env_enabled("GABRIEL_LIVE_TRACE", default=True)
+                cinematic = self._env_enabled("GABRIEL_CINEMATIC", default=True)
+                verbose_trace = self._env_enabled("GABRIEL_TRACE_VERBOSE", default=True)
+
+                if not live_trace:
+                    console.print("\n  [dim]Reflexion en cours (multi-loop self-critique)...[/dim]")
+                    answer = await self.orchestrator.ask(user_input)
+                else:
+                    progress_state: dict[str, object] = {
+                        "phase": "Initialisation",
+                        "detail": "Preparation de la requete",
+                        "iteration": 0,
+                        "max_iterations": 0,
+                        "best_score": None,
+                        "verbose_trace": verbose_trace,
+                        "assumptions": [],
+                        "options": [],
+                        "recent_events": [],
+                    }
+                    live_handle: list[Live | None] = [None]
+                    progress_cb = self._make_progress_callback(
+                        progress_state,
+                        live_handle,
+                        cinematic=cinematic,
+                        verbose_trace=verbose_trace,
+                    )
+                    with Live(
+                        self._render_live_progress_panel(progress_state),
+                        console=console,
+                        refresh_per_second=8,
+                        transient=True,
+                    ) as live:
+                        live_handle[0] = live
+                        answer = await self.orchestrator.ask(
+                            user_input,
+                            progress_cb=progress_cb,
+                        )
                 self._display_answer(answer)
             except Exception as exc:
                 logger.error("Erreur traitement : %s", exc, exc_info=True)

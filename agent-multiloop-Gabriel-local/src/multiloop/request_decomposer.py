@@ -319,6 +319,8 @@ class RequestDecomposer:
           3) "(7,11,23) (29,31,17,53,2)"                  (parentheses seules)
           4) "{7,11,23} {29,31,17,53,2}"                  (accolades seules)
           5) Formats mixtes acceptes : "Bloc A= {7,11,23} Bloc B= (29,31,17,53,2)"
+                    6) Labels sans delimiters : "A=7,11,23 B=29,31,17,53,2"
+                         (accepte aussi "Bloc A= ... et Bloc B= ...")
 
         CORRECTION : capture aussi les nombres NEGATIFS.
 
@@ -338,6 +340,21 @@ class RequestDecomposer:
         if m_a and m_b:
             a_nums = re.findall(r"-?\d+", m_a.group(1))
             b_nums = re.findall(r"-?\d+", m_b.group(1))
+            if a_nums and b_nums:
+                return [[int(n) for n in a_nums], [int(n) for n in b_nums]]
+
+        # v3.31 : labels explicites sans accolades/parentheses.
+        # Exemples:
+        #   "A=7,11,23 B=29,31,17,53,2"
+        #   "Bloc A= 7,11,23 et Bloc B= 29,31,17,53,2"
+        m_plain = re.search(
+            r"(?:bloc\s*)?a\s*=\s*([\d\s,;\-]+?)\s*(?:et|and|,|;)?\s*(?:bloc\s*)?b\s*=\s*([\d\s,;\-]+)",
+            text,
+            re.IGNORECASE,
+        )
+        if m_plain:
+            a_nums = re.findall(r"-?\d+", m_plain.group(1))
+            b_nums = re.findall(r"-?\d+", m_plain.group(2))
             if a_nums and b_nums:
                 return [[int(n) for n in a_nums], [int(n) for n in b_nums]]
 

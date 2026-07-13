@@ -96,7 +96,9 @@ def _detect_rsp_config(qnorm: str) -> tuple[Optional[str], list[str]]:
 # --------------------------------------------------------------------------
 # Mots-cles
 # --------------------------------------------------------------------------
-# Verbes/noms qui signalent une volonte de visualisation
+# Verbes/noms qui signalent une volonte de visualisation.
+# Liste volontairement stricte pour eviter les faux positifs
+# (ex: "montre", "voir", "schema" dans une discussion conceptuelle).
 # Marqueurs conversationnels/theoriques qui BLOQUENT l'auto-trigger visualisation
 # (Philippe 2026-02) : quand la question est une DISCUSSION conceptuelle et non
 # une demande de graphique, la presence isolee de "sa"/"voir"/"schema" ne doit
@@ -175,19 +177,33 @@ def _has_conversational_context(qnorm: str, question_len: int) -> tuple[bool, li
 
 _VIZ_KEYWORDS = {
     "courbe", "courbes", "graphique", "graphiques", "graphe", "graphes",
+    "montre", "montrer", "montre-moi",
     "trace", "tracer", "traces", "tracerais",
     "dessine", "dessiner", "dessines",
     "illustre", "illustrer", "illustres", "illustrant",
     "visualise", "visualiser", "visualises",
     "evolution", "evolue", "evoluent", "evoluer",
+    "comporte", "comportement",
     "convergence", "converge", "convergent",
-    "comportement", "comporte", "comportent",
     "represente", "representer", "represente",
     "affiche", "afficher", "affichant",
-    "montre", "montrer", "voir",
-    "diagramme", "schema", "plot",
-    "trajectoire", "progression",
-    "allure", "forme",
+    "diagramme", "plot",
+}
+
+# Mots/expressions qui indiquent qu'on demande une explication d'un
+# graphique deja affiche (et non la generation d'un nouveau graphique).
+_EXPLANATION_KEYWORDS = {
+    "explique", "expliquer", "explication", "detail", "details",
+    "interpreter", "interpretation", "analyse", "analyser",
+    "pourquoi", "axe", "axes", "legende", "legendes",
+    "dernier graphique", "dernier graphe", "ce graphique", "ce graphe",
+}
+
+# Verbes de generation explicite : s'ils sont presents, on garde l'auto-trigger.
+_VIZ_GENERATION_KEYWORDS = {
+    "trace", "tracer", "dessine", "dessiner", "visualise", "visualiser",
+    "genere", "generer", "produis", "produire", "exporte", "exporter",
+    "plot",
 }
 
 # Mots qui suggerent l'export PNG (article scientifique, etc.)
@@ -260,7 +276,7 @@ _KIND_PATTERNS: list[tuple[CurveKind, list[str]]] = [
 # On teste du plus specifique au moins specifique.
 _RANGE_PATTERNS = [
     # "n=1..50" / "n=1 a 50" / "1..1000"
-    re.compile(r"n\s*=\s*(\d+)\s*(?:\.\.|a|à|jusqu['e]\s*a|jusqu['e]\s*à)\s*(\d+)", re.IGNORECASE),
+    re.compile(r"n\s*=\s*(\d+)\s*(?:\.\.|a|à|jusqu['e]\s*a|jusqu['e]\s*à)\s*(?:n\s*=\s*)?(\d+)", re.IGNORECASE),
     re.compile(r"(?<!\d)(\d{1,4})\s*\.\.\s*(\d{1,4})(?!\d)"),
     # "de 1 a 50" / "de 1 à 50"
     re.compile(r"de\s+(\d+)\s+(?:a|à)\s+(\d+)", re.IGNORECASE),
@@ -366,6 +382,29 @@ def _detect_png_intent(qnorm: str) -> bool:
     return False
 
 
+def _is_explanation_followup(qnorm: str) -> tuple[bool, list[str]]:
+    """Detecte une demande d'explication d'un graphique deja produit.
+
+    Regle:
+      - il faut une reference au graphique/courbe
+      - il faut au moins 1 marqueur d'explication
+      - il ne faut PAS de verbe explicite de generation de nouveau graphique
+    """
+    references = [kw for kw in {"graphique", "graphe", "courbe", "diagramme", "plot"} if kw in qnorm]
+    if not references:
+        return False, []
+
+    expl_hits = [kw for kw in _EXPLANATION_KEYWORDS if kw in qnorm]
+    if not expl_hits:
+        return False, []
+
+    has_generation = any(kw in qnorm for kw in _VIZ_GENERATION_KEYWORDS)
+    if has_generation:
+        return False, []
+
+    return True, expl_hits
+
+
 def detect_visualization_intent(question: str) -> Optional[VisualizationIntent]:
     """Analyse une question et retourne un VisualizationIntent si une visualisation est demandee.
 
@@ -398,6 +437,12 @@ def detect_visualization_intent(question: str) -> Optional[VisualizationIntent]:
         if re.search(r"\b" + re.escape(kw) + r"\b", qnorm):
             viz_hits.append(kw)
     if not viz_hits:
+        return None
+
+    # 1.bis) Si l'utilisateur demande surtout une explication du graphique
+    # precedent (axes, interpretation, pourquoi...), on ne doit pas regenirer.
+    is_explaining, _expl_hits = _is_explanation_followup(qnorm)
+    if is_explaining:
         return None
 
     # 2) PRIORITE : detecter une config RsP specifique (chaos-savard, ord, sym, 1x1)

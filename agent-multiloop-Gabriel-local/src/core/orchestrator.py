@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Callable
 
 from .pipeline import Pipeline
 from .pipeline_with_gap_detection import PipelineWithGapDetection
@@ -30,8 +30,12 @@ class Orchestrator:
         (utilisée pour introspection CLI et pour la commande `reset`)."""
         return self.pipeline.llm.conversation_memory
 
-    async def ask(self, question: str) -> FinalAnswer:
-        result = await self.pipeline.process(question)
+    async def ask(
+        self,
+        question: str,
+        progress_cb: Callable[[dict[str, Any]], None] | None = None,
+    ) -> FinalAnswer:
+        result = await self.pipeline.process(question, progress_cb=progress_cb)
         # Journal léger (backward-compatible)
         self.memory.append({"role": "user", "content": question})
         self.memory.append({"role": "assistant", "content": result.answer_text})

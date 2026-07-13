@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from typing import Any, Optional
+from typing import Any, Optional, Callable
 
 from ..core.types import FinalAnswer, QuestionContext
 from ..spectral.composite_absurdity_prover import (
@@ -101,6 +101,7 @@ class PipelineWithGapDetection:
         self,
         question: str,
         previous_answer: Optional[FinalAnswer] = None,
+        progress_cb: Callable[[dict[str, Any]], None] | None = None,
     ) -> FinalAnswer:
         """
         Processus amélioré :
@@ -110,10 +111,14 @@ class PipelineWithGapDetection:
           3. Sinon : pipeline standard
         """
         qid = uuid.uuid4().hex[:8]
+        if progress_cb:
+            progress_cb({"event": "wrapper_start", "qid": qid})
 
         # --- 0) AUTO-TRIGGER VISUALISATION ---
         viz_answer = self._try_visualization(qid, question)
         if viz_answer is not None:
+            if progress_cb:
+                progress_cb({"event": "wrapper_done", "qid": qid, "mode": "visualization"})
             return viz_answer
 
         # --- 1) ÉCART (GAP) ---
@@ -121,6 +126,8 @@ class PipelineWithGapDetection:
 
         if is_gap and gap_type and len(numbers) >= 2:
             logger.info(f"Q[{qid}] ÉCART DÉTECTÉ : {gap_type}")
+            if progress_cb:
+                progress_cb({"event": "gap_detected", "qid": qid, "gap_type": gap_type})
 
             p1, p2 = numbers[0], numbers[1]
 
@@ -140,6 +147,8 @@ class PipelineWithGapDetection:
                 answer = self._build_composite_rejection_answer(
                     qid, question, rejections, p1, p2
                 )
+                if progress_cb:
+                    progress_cb({"event": "wrapper_done", "qid": qid, "mode": "composite_rejection"})
                 return answer
 
             gap_result = self.gap_solver.solve_gap(p1, p2)
@@ -147,13 +156,17 @@ class PipelineWithGapDetection:
             if gap_result is not None:
                 logger.info(f"Q[{qid}] Écart résolu : {gap_result.gap_count} nombres")
                 answer = self._build_gap_answer(qid, question, gap_result)
+                if progress_cb:
+                    progress_cb({"event": "wrapper_done", "qid": qid, "mode": "gap"})
                 return answer
             else:
                 logger.error(f"Q[{qid}] GapSolver échoué pour {gap_type}")
 
         # --- 2) PIPELINE STANDARD ---
         logger.info(f"Q[{qid}] Pas d'écart détecté, pipeline standard")
-        result = await self.pipeline.process(question)
+        if progress_cb:
+            progress_cb({"event": "wrapper_delegate_pipeline", "qid": qid})
+        result = await self.pipeline.process(question, progress_cb=progress_cb)
 
         # --- 3) AUTO-GRAPHIQUES POST-RECONSTRUCTION (Q2, Q1.x, Q3.x) ---
         # Si le pipeline standard vient de repondre a une question canonique,
@@ -164,6 +177,8 @@ class PipelineWithGapDetection:
         except Exception as exc:
             logger.warning(f"Q[{qid}] auto-graphs post-pipeline echec : {exc}")
 
+        if progress_cb:
+            progress_cb({"event": "wrapper_done", "qid": qid, "mode": "standard"})
         return result
 
     def _maybe_attach_question_graphs(
@@ -178,9 +193,16 @@ class PipelineWithGapDetection:
 
         Le path PNG est appendu a la fin de answer_text avec un panneau lisible.
         """
+        from ..visualization import detect_visualization_intent
         from ..engines.question_graphs import (
             generate_graphs_for_question, detect_gap_question, detect_rsp_question,
         )
+
+        # Garde-fou: pas d'auto-graphes post-reponse si la question d'origine
+        # n'exprimait pas explicitement une demande de visualisation.
+        viz_intent = detect_visualization_intent(question)
+        if viz_intent is None:
+            return result
 
         data = result.structured_data or {}
         qcode: Optional[str] = None
@@ -209,6 +231,12 @@ class PipelineWithGapDetection:
                 qcode = "Q3.b"
             else:
                 qcode = "Q3.c"
+
+        # Si la question canonique est une RsP (Q1.x), on propage n_max detecte
+        # par l'intent viz. Cela permet d'honorer explicitement "n=1 a n=100"
+        # au lieu d'imposer le fallback de la map (ex: Q1.c = 1..15).
+        if qcode in {"Q1.a", "Q1.b", "Q1.c", "Q1.d"}:
+            params["k_max"] = int(viz_intent.n_max)
 
         if qcode is None:
             return result

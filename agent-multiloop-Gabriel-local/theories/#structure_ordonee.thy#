@@ -1,0 +1,70 @@
+theory structure_ordonee
+  imports "HOL-Analysis.Analysis"
+begin
+
+(* Configuration asymétrique ordonnée *)
+definition asymetrique_ordonnee :: "nat list \<Rightarrow> nat list \<Rightarrow> bool" where
+  "asymetrique_ordonnee A B \<equiv>
+     length B = length A + 1 \<and>
+     sorted A \<and> sorted B \<and>
+     (\<forall>a\<in>set A. \<forall>b\<in>set B. a < b) \<and>
+     (\<forall>p\<in>set A. prime p) \<and>
+     (\<forall>p\<in>set B. prime p)"
+
+(* Constantes et fonctions spectrales (placeholders) *)
+consts
+  SA :: "nat \<Rightarrow> real"
+  SB :: "nat \<Rightarrow> real"
+  offset_A :: real
+  offset_B :: real
+  K :: real
+  primes :: "nat list"
+
+definition RsP_bloc :: "nat list \<Rightarrow> nat list \<Rightarrow> real" where
+  "RsP_bloc A B =
+     (sum_list (map SA A) - sum_list (map SA B)) /
+     (sum_list (map SB A) - sum_list (map SB B))"
+
+definition ecart_spectral :: "nat list \<Rightarrow> nat list \<Rightarrow> real" where
+  "ecart_spectral A B = abs (RsP_bloc A B - 1/2)"
+
+(* Théorème principal : convergence géométrique *)
+theorem convergence_asymetrique_geometrique:
+  fixes n :: nat
+  assumes "n \<ge> 2"
+  assumes "asymetrique_ordonnee A B"
+  assumes "length A = n"
+  shows "\<exists>C \<lambda>. 0 < \<lambda> \<and> \<lambda> < 1 \<and> ecart_spectral A B \<le> C * \<lambda>^n"
+proof -
+  (* Ici viendra la vraie preuve asymptotique *)
+  sorry
+qed
+
+(* Lemme 1 : croissance exponentielle des sommes SA *)
+lemma SA_sum_exponential:
+  "sum_list (map SA [1..n]) = (13/8) * (2^(n+1) - 2) - 2*n"
+  sorry
+
+(* Lemme 1 bis : croissance exponentielle des sommes SB *)
+lemma SB_sum_exponential:
+  "sum_list (map SB [1..n]) = (13/4) * (2^(n+1) - 2) - 66*n"
+  sorry
+
+(* Lemme 2 : borne supérieure de l'écart spectral *)
+lemma ecart_upper_bound:
+  assumes "n \<ge> 3"
+  shows "ecart_spectral A B \<le> 132 / 2^n"
+proof -
+  (* Structure conforme à ton idée : borne en 1/2^n *)
+  sorry
+qed
+
+(* Lemme 3 : convergence de RsP_bloc vers 1/2 *)
+lemma RsP_bloc_limit:
+  "(\<lambda>n. RsP_bloc (take n primes) (take (n+1) (drop n primes))) \<longrightarrow> 1/2"
+proof -
+  (* Utilisation possible de ecart_upper_bound + tendsto_sandwich *)
+  sorry
+qed
+
+end

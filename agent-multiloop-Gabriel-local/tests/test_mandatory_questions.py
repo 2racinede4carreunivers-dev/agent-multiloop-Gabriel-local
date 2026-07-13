@@ -116,6 +116,15 @@ def test_ratio_asymmetric_chaotic_modele_1_2():
     assert r["configuration"] == AsymmetryKind.ASYM_CHAOTIC.value
 
 
+def test_ratio_asymmetric_chaotic_reported_case_positions_near_half():
+    """Regression Philippe: cas chaotique attendu proche de 1/2 via differences de blocs."""
+    # Primes A={7,11,2} -> positions [4,5,1]
+    # Primes B={23,17,43,31,29} -> positions [9,7,14,11,10]
+    r = compute_spectral_ratio([4, 5, 1], [9, 7, 14, 11, 10], "1/2")
+    assert r["configuration"] == AsymmetryKind.ASYM_CHAOTIC.value
+    assert abs(r["ratio_float"] - 0.5) < 0.01
+
+
 def test_ratio_modele_1_3_egal_1_sur_3():
     r = compute_spectral_ratio([3], [7], "1/3")
     assert r["ratio"] == Fraction(1, 3)

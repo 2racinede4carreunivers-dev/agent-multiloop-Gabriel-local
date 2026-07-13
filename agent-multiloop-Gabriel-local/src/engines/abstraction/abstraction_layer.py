@@ -66,9 +66,111 @@ def _detect_model(text: str) -> SpectralModel | None:
     return None
 
 
+def _is_explicit_request(text: str) -> bool:
+    """Retourne True si la phrase contient une demande actionnable explicite."""
+    t = text.lower()
+
+    # Question explicite ou numerotation de sous-questions (2.1, 3.2, ...)
+    if "?" in text or re.search(r"\b\d+\.\d+\b", t):
+        return True
+
+    request_patterns = [
+        r"\b(?:determine|détermine|calcul|calcule|calcules|trouve|trouver|reconstrui|reconstruis|reconstitue|montre|donne|fournis|genere|génère|trace|dessine|visualise)\b",
+        r"\b(?:peux[-\s]?tu|pourrais[-\s]?tu|pouvez[-\s]?vous|merci\s+de|j[' ]aimerais\s+que\s+tu)\b",
+        r"\b(?:quel|quelle|quels|quelles|combien)\b",
+    ]
+    return any(re.search(pat, t) for pat in request_patterns)
+
+
+def _is_contextual_statement(text: str) -> bool:
+    """Retourne True si la phrase est surtout descriptive/conceptuelle."""
+    t = text.lower()
+    contextual_patterns = [
+        r"\best\s+une\b",
+        r"\bpermet\s+de\b",
+        r"\bconsiste\s+en\b",
+        r"\bd[ée]finition\b",
+        r"\bcontexte\b",
+        r"\bsens\s+de\s+la\s+question\b",
+        r"\bparle\s+de\b",
+    ]
+    return any(re.search(pat, t) for pat in contextual_patterns)
+
+
+def _extract_numbers(text: str) -> list[int]:
+    """Extrait les entiers pertinents d'un segment (hors fractions usuelles)."""
+    cleaned = re.sub(r'\b1\s*/\s*[0-9]+\b', ' ', text)
+    cleaned = re.sub(r'\brapport\s+[0-9]+\s*/\s*[0-9]+\b', ' ', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'modele?\s+\d+\s*/\s*\d+', ' ', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\b13\s*/\s*\d+\b', ' ', cleaned)
+    cleaned = re.sub(r'\b3\.25\s*/\s*\d+\b', ' ', cleaned)
+    cleaned = re.sub(r'\b6\.5\s*/\s*\d+\b', ' ', cleaned)
+    return [int(m) for m in re.findall(r'(?<![\d.])-?\d+(?![\d.])', cleaned)]
+
+
+def _split_objective_chunks(text: str) -> list[str]:
+    """Decoupe une requete en chunks d'objectifs potentiels, dans l'ordre."""
+    q = text.strip()
+    if not q:
+        return []
+
+    # Cas prioritaire: sous-questions numerotees (2.1, 2.2, ...)
+    numbered = list(re.finditer(r'\b\d+\.\d+\b', q))
+    if numbered:
+        chunks: list[str] = []
+        starts = [m.start() for m in numbered] + [len(q)]
+        for i in range(len(starts) - 1):
+            chunk = q[starts[i]:starts[i + 1]].strip(" .;:\n\t")
+            if chunk:
+                chunks.append(chunk)
+        return chunks
+
+    # Sinon: separateurs conversationnels standards (puis/ensuite/;/. + espace)
+    separators = r'\s+(?:puis|ensuite|et\s+apres|et\s+puis)\s+|[;\n]+'
+    rough = [c.strip(" .;:\n\t") for c in re.split(separators, q) if c.strip(" .;:\n\t")]
+    if len(rough) <= 1:
+        rough = [c.strip(" .;:\n\t") for c in re.split(r'(?<=[\?\.])\s+', q) if c.strip(" .;:\n\t")]
+    return rough
+
+
+def _extract_objectives(raw_question: str) -> tuple[str, list[dict[str, Any]]]:
+    """Extrait un preambule contextuel et des objectifs explicites ordonnes."""
+    chunks = _split_objective_chunks(raw_question)
+    objectives: list[dict[str, Any]] = []
+    contextual_prefix_parts: list[str] = []
+
+    for i, chunk in enumerate(chunks, start=1):
+        explicit = _is_explicit_request(chunk)
+        intent = _detect_intent(chunk)
+        numbers = _extract_numbers(chunk)
+        entry: dict[str, Any] = {
+            "index": i,
+            "text": chunk,
+            "explicit": explicit,
+            "intent": intent,
+            "numbers": numbers,
+        }
+        if explicit:
+            objectives.append(entry)
+        else:
+            contextual_prefix_parts.append(chunk)
+
+    contextual_prefix = " ".join(contextual_prefix_parts).strip()
+    return contextual_prefix, objectives
+
+
 def _detect_intent(text: str) -> str:
     """Categorise l'intention : reconstruction / ratio / gap / autre."""
     t = text.lower()
+
+    # Garde-fou majeur : ne pas traiter une description de contexte comme une
+    # demande de calcul. Si ce n'est pas une demande explicite, on route vers
+    # conversation/general meme si des mots techniques sont presents.
+    explicit_request = _is_explicit_request(text)
+    contextual_statement = _is_contextual_statement(text)
+    if contextual_statement and not explicit_request:
+        return "conversation"
+
     if re.search(r"reconstr|p-?i[èe]me|p\s+i[èe]me|determine.*digamma", t):
         return "reconstruction"
     if re.search(r"rapport|ratio|asym[ée]trique|sym[ée]trique|chaotique", t):
@@ -110,19 +212,23 @@ class AbstractionLayer:
         concepts = self.extractor.extract(raw_question)
         model = _detect_model(raw_question)
         intent = _detect_intent(raw_question)
+        explicit_request = _is_explicit_request(raw_question)
+        contextual_statement = _is_contextual_statement(raw_question)
+        contextual_prefix, objectives = _extract_objectives(raw_question)
+
+        # Intent primaire = premier objectif explicite technique, sinon intent global.
+        primary_obj = next(
+            (o for o in objectives if o.get("intent") in {"reconstruction", "ratio", "gap"}),
+            None,
+        )
+        if primary_obj is not None:
+            intent = str(primary_obj.get("intent", intent))
         domain = "methode_spectrale_savard" if concepts else "general"
 
         # Extraction des nombres mentionnes (p, n, indices)
         # On retire d'abord les motifs de rapport 1/2, 1/3, 1/4, 1/k pour ne pas les capter
-        cleaned = re.sub(r'\b1\s*/\s*[0-9]+\b', ' ', raw_question)
-        cleaned = re.sub(r'\brapport\s+[0-9]+\s*/\s*[0-9]+\b', ' ', cleaned, flags=re.IGNORECASE)
-        cleaned = re.sub(r'modele?\s+\d+\s*/\s*\d+', ' ', cleaned, flags=re.IGNORECASE)
-        # On retire les fractions du type 13/4, 13/8, etc. (constantes du corpus)
-        cleaned = re.sub(r'\b13\s*/\s*\d+\b', ' ', cleaned)
-        cleaned = re.sub(r'\b3\.25\s*/\s*\d+\b', ' ', cleaned)
-        cleaned = re.sub(r'\b6\.5\s*/\s*\d+\b', ' ', cleaned)
-        # Extraction (pas \b qui rate "26ième" - on prend tous les entiers non collés à un point/digit)
-        numbers = [int(m) for m in re.findall(r'(?<![\d.])\d+(?![\d.])', cleaned)]
+        primary_text = str(primary_obj.get("text")) if primary_obj else raw_question
+        numbers = _extract_numbers(primary_text)
 
         ctx = QuestionContext(
             question_id=question_id,
@@ -132,6 +238,12 @@ class AbstractionLayer:
             concepts=concepts,
             metadata={
                 "intent": intent,
+                "explicit_request": explicit_request,
+                "contextual_statement": contextual_statement,
+                "contextual_prefix": contextual_prefix,
+                "objectives": objectives,
+                "primary_objective": primary_obj,
+                "has_multiple_objectives": len(objectives) > 1,
                 "numbers_mentioned": numbers,
                 "language": "fr",
             },

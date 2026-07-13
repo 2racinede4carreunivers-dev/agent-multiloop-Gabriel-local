@@ -83,6 +83,9 @@ def test_detect_negative(question: str):
     ("Trace la courbe de SA pour les 100 premiers", (1, 100)),
     # Accents
     ("Trace SA de 1 à 50", (1, 50)),
+    # Forme frequente en NL : n=1 a n=100
+    ("Trace le rapport spectral asymetrique chaotique pour n=1 a n=100", (1, 100)),
+    ("Trace le digamma pour n=1 à n=100", (1, 100)),
     # Inversion auto
     ("Trace SA de 50 a 10", (10, 50)),
     # Bornage automatique
@@ -145,3 +148,37 @@ def test_intent_has_reasoning():
     assert "ratio" in intent.reasoning.lower() or "rapport" in intent.reasoning.lower()
     assert intent.matched_keywords
     assert intent.confidence > 0.0
+
+
+# --------------------------------------------------------------------------
+# Regressions : ne pas regenerer un graphique quand on demande une explication
+# --------------------------------------------------------------------------
+@pytest.mark.parametrize("question", [
+    "Peux-tu expliquer plus en detail le dernier graphique ?",
+    "Peux-tu identifier les axes de ce graphique et expliquer pourquoi ?",
+    "Analyse ce graphe et explique la legende",
+])
+def test_explanation_followup_does_not_trigger_visualization(question: str):
+    intent = detect_visualization_intent(question)
+    assert intent is None, "Une demande d'explication ne doit pas relancer un auto-graphique"
+
+
+def test_user_exact_three_prompt_sequence_regression():
+    """Reproduit les 3 prompts exacts rapportes par l'utilisateur."""
+    q1 = "Détermine le rapport spectral asymétrique chaotique sous forme d'un graphique pour n=1 a n=100?"
+    q2 = "Détermine un graphique du digamma pour n=1 à n=100"
+    q3 = "Peux-tu expliquer le dernier graphique, identifier les axes et pourquoi la valeur converge?"
+
+    i1 = detect_visualization_intent(q1)
+    assert i1 is not None
+    assert i1.kind == CurveKind.RATIO_SA_SB
+    assert i1.rsp_config == "chaos-savard"
+    assert (i1.n_min, i1.n_max) == (1, 100)
+
+    i2 = detect_visualization_intent(q2)
+    assert i2 is not None
+    assert i2.kind == CurveKind.DIGAMMA
+    assert (i2.n_min, i2.n_max) == (1, 100)
+
+    i3 = detect_visualization_intent(q3)
+    assert i3 is None

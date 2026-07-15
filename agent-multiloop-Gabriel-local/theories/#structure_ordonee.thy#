@@ -1,5 +1,5 @@
 theory structure_ordonee
-  imports "HOL-Analysis.Analysis"
+  imports "HOL-Analysis"
 begin
 
 (* Configuration asymétrique ordonnée *)

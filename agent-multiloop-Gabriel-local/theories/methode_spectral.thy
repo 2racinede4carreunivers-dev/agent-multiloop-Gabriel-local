@@ -2906,6 +2906,175 @@ definition RsP_neg_k :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> r
      (somme_B_neg_k k n1 - somme_B_neg_k k n2)"
 
 
+section "XIII. Pont Savard : psi de Tchebychev, fonction zeta et Re(rho)=1/2 (CONJECTURE)"
+
+text \<open>
+  ============================================================
+  CONJECTURE SAVARD  -  Pont psi(x)  <->  RsP = 1/2  <->  Re(rho) = 1/2
+  ============================================================
+
+  Cette section n'est PAS une preuve de l'hypothese de Riemann.
+  Elle documente formellement une CONJECTURE HEURISTIQUE de
+  Philippe Thomas Savard etablissant un pont entre la Methode
+  Spectrale et la formule explicite de Riemann - von Mangoldt.
+
+  ------------------------------------------------------------
+  Formule classique de Riemann - von Mangoldt (rappel) :
+
+    psi(x) = x  -  sum_{rho} (x^rho / rho)  -  log(2*pi)
+                -  (1/2) * log(1 - x^(-2))
+
+  ou rho parcourt les zeros non-triviaux de zeta(s).
+
+  ------------------------------------------------------------
+  Formule Savard (variante spectrale) :
+
+  Pour x = borne superieure d'un intervalle [1, p(n)+1] et n = rang
+  du n-ieme premier, la SOMME sur les zeros non-triviaux est
+  REMPLACEE par le terme UNIQUE 2^n / SB(n) :
+
+    psi_savard(x, n) = x  -  (2^n / SB(n))
+                        -  log10(2*pi)
+                        -  (1/2) * log10(1 - 1/x^2)
+
+  Note : Savard utilise le logarithme decimal (log en base 10) ;
+  la formule classique utilise ln. Ce choix personnel n'affecte
+  pas la structure conceptuelle de la relation.
+
+  ------------------------------------------------------------
+  Verifications numeriques (empiriques, Savard 2026-02) :
+
+    n = 10, x = 30  (10-ieme premier = 29) :
+      SB(10) = 3262
+      2^10 / 3262 ~= 0.31392
+      psi_savard(30, 10) ~= 28.888143
+
+    n = 25, x = 98  (25-ieme premier = 97) :
+      SB(25) = 109051838
+      2^25 / 109051838 ~= 0.30769
+      psi_savard(98, 25) ~= 96.894150
+
+  ------------------------------------------------------------
+  DOUBLE ARGUMENT en faveur du pont Savard :
+
+  ARGUMENT 1 (numerique - formule) : psi_savard(x, n) reproduit
+  quantitativement la structure de la formule de Tchebychev, qui
+  est intrinsequement liee aux zeros non-triviaux de zeta.
+  La substitution "somme des x^rho/rho  ->  2^n/SB(n)" ne modifie
+  pas l'ordre de grandeur de psi(x).
+
+  ARGUMENT 2 (structurel - exclusion des composes) : les theoremes
+  deja etablis dans cette theorie (preuve par l'absurde) :
+
+    - composite_not_prime_i               (Pilier 1, ligne 1535)
+    - composite_no_reconstruction_position (Pilier 2, ligne 1700)
+    - composite_pair_no_rsp_positions     (Pilier 3, ligne 1778)
+
+  demontrent formellement que la Methode Spectrale EXCLUT TOUS les
+  nombres composes. Le rapport spectral RsP = 1/2 ne s'applique
+  donc STRICTEMENT qu'aux nombres premiers de l'ensemble P.
+
+  Cette exclusivite structurelle est le pendant arithmetique de
+  la conjecture de Riemann :
+
+    P (nombres premiers)         <---> zeros non-triviaux de zeta
+    RsP = 1/2                    <---> Re(rho) = 1/2
+    exclusion des composes       <---> exclusion hors droite critique
+    Methode Spectrale (3 piliers) <---> hypothese de Riemann
+
+  ------------------------------------------------------------
+  STATUT FORMEL :
+
+  Aucune preuve deductive n'est ici proposee que :
+        RsP = 1/2  ==>  Re(rho) = 1/2
+
+  Le pont est :
+    (a) empirique (verifications numeriques sur les premiers 29 et 97),
+    (b) structurel (les 3 piliers d'exclusion des composes).
+
+  Il ne remplace pas une demonstration formelle de l'hypothese
+  de Riemann. Il constitue une piste d'investigation pour un
+  cadre unifie entre la Methode Spectrale et la fonction zeta.
+\<close>
+
+(* === XIII.1  Definitions de la formule spectrale de Savard === *)
+
+definition log10_savard :: "real \<Rightarrow> real" where
+  "log10_savard x = ln x / ln 10"
+
+definition rapport_zeta_savard :: "nat \<Rightarrow> real" where
+  "rapport_zeta_savard n = (2::real)^n / SB n"
+
+definition psi_savard :: "real \<Rightarrow> nat \<Rightarrow> real" where
+  "psi_savard x n =
+     x
+     - rapport_zeta_savard n
+     - log10_savard (2 * pi)
+     - (1/2) * log10_savard (1 - 1 / (x^2))"
+
+(* === XIII.2  Valeurs algebriques exactes du terme spectral === *)
+
+(* SB(10) = (6.5/2) * 2^10 - 66 = 3.25 * 1024 - 66 = 3262 *)
+lemma rapport_zeta_savard_at_10:
+  "rapport_zeta_savard 10 = 1024 / 3262"
+  unfolding rapport_zeta_savard_def SB_def by simp
+
+(* SB(25) = (6.5/2) * 2^25 - 66 = 3.25 * 33554432 - 66 = 109051838 *)
+lemma rapport_zeta_savard_at_25:
+  "rapport_zeta_savard 25 = 33554432 / 109051838"
+  unfolding rapport_zeta_savard_def SB_def by simp
+
+(* === XIII.3  Forme developpee de psi_savard : identite symbolique === *)
+
+lemma psi_savard_expanded:
+  "psi_savard x n =
+     x - ((2::real)^n / SB n)
+       - (ln (2 * pi) / ln 10)
+       - (1/2) * (ln (1 - 1 / (x^2)) / ln 10)"
+  unfolding psi_savard_def rapport_zeta_savard_def log10_savard_def
+  by simp
+
+(* === XIII.4  Substitution symbolique 30-(2^10/3262)-log10(2pi)-1/2*log10(1-1/900) === *)
+
+lemma psi_savard_at_10_30_expanded:
+  "psi_savard 30 10 =
+     30 - 1024 / 3262
+        - ln (2 * pi) / ln 10
+        - (1/2) * ln (1 - 1/900) / ln 10"
+  unfolding psi_savard_def rapport_zeta_savard_def log10_savard_def SB_def
+  by (simp add: power2_eq_square)
+
+lemma psi_savard_at_25_98_expanded:
+  "psi_savard 98 25 =
+     98 - 33554432 / 109051838
+        - ln (2 * pi) / ln 10
+        - (1/2) * ln (1 - 1 / 9604) / ln 10"
+  unfolding psi_savard_def rapport_zeta_savard_def log10_savard_def SB_def
+  by (simp add: power2_eq_square)
+
+(* === XIII.5  Lien avec les 3 piliers d'exclusion des composes === *)
+
+text \<open>
+  Les theoremes suivants, DEJA PROUVES plus haut dans cette theorie,
+  fournissent l'ossature structurelle du pont Savard :
+
+    theorem composite_not_prime_i               (Pilier 1 : ecarts entre premiers)
+    theorem composite_no_reconstruction_position (Pilier 2 : reconstruction du n-ieme premier)
+    theorem composite_pair_no_rsp_positions     (Pilier 3 : rapport spectral RsP)
+
+  Ensemble, ils garantissent formellement que la Methode Spectrale
+  caracterise EXACTEMENT l'ensemble P des nombres premiers dans
+  ses trois domaines d'application (ecarts, reconstruction, RsP).
+
+  Cette exclusivite est la contrepartie arithmetique attendue de
+  la localisation exclusive (conjecturale) des zeros non-triviaux
+  de zeta sur la droite critique Re(s) = 1/2.
+
+  Fin de la section XIII.
+\<close>
+
+
+
 section "License - Apache 2.0 (adaptation pour methode_spectral.thy)"
 
 text \<open>

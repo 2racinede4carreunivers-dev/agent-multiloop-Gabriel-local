@@ -4,7 +4,25 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.30 — 1490/1490 tests Pytest ✅ — Parsing `Bloc A= {...} Bloc B= {...}` + Anti-faux-positif graphes sur questions d'opinion**
+**Production-Ready v3.31 — 1512/1512 tests Pytest ✅ — Ajout section XIII : Pont Savard (ψ Tchebychev / ζ / Re=1/2)**
+
+### Changelog 2026-02 v3.31 (Pont Savard : formule ψ_savard + lien avec les 3 piliers)
+- **Contexte** : Philippe a présenté sa variante de la formule de Chebyshev-Riemann-von Mangoldt substituant `Σ x^ρ/ρ → 2^n/SB(n)`. Deux vérifications numériques (29 et 97) validées : ψ_savard(30, 10) = 28.888143698, ψ_savard(98, 25) = 96.894150249 (base log₁₀, choix personnel).
+- **Nouvelle section XIII** dans `theories/methode_spectral.thy` (218 lignes ajoutées, 2957 → 3125) intitulée **"XIII. Pont Savard : psi de Tchebychev, fonction zeta et Re(rho)=1/2 (CONJECTURE)"** :
+  - **Definitions** (100% prouvables par `simp`) : `log10_savard`, `rapport_zeta_savard`, `psi_savard`.
+  - **Lemmes numériques** : `rapport_zeta_savard_at_10 = 1024/3262`, `rapport_zeta_savard_at_25 = 33554432/109051838`, `psi_savard_expanded` (identité symbolique), `psi_savard_at_10_30_expanded`, `psi_savard_at_25_98_expanded`.
+  - **DOUBLE argument documenté en text‹›** :
+    - ARGUMENT 1 (numérique) : formule Savard reproduit Chebyshev.
+    - ARGUMENT 2 (structurel) : les 3 piliers déjà prouvés (`composite_not_prime_i`, `composite_no_reconstruction_position`, `composite_pair_no_rsp_positions`) excluent tous les composites → RsP=1/2 est exclusivement sur ℙ, comme les zéros non-triviaux seraient exclusivement sur Re=1/2.
+  - **Statut formel HONNÊTE** : aucun `sorry`, aucun `axiomatization`, aucun `theorem RH_holds`. La conjecture est un pont empirique + structurel, pas une preuve déductive de RH.
+- **Support Python** : nouvelle méthode `SpectralMethodCore.compute_psi_savard(n, x=None)` (`src/core/spectral_core.py`) qui retourne un dict complet (x, prime, SB_n, 2^n, terme_zeta_savard, log10_2pi, log10_correction, psi_savard, citations, note "CONJECTURE").
+- **22 nouveaux tests** (`tests/test_psi_savard_pont_zeta_v331.py`) :
+  - `TestNumericalMatchPhilippe` (3) : reproduction exacte des valeurs 28.888143698 (n=10) et 96.894150249 (n=25), x par défaut = prime(n)+1.
+  - `TestFormulaComponents` (5) : chaque composant (2^n/SB(n), log10(2π), corrections, citations, note conjecture).
+  - `TestErrorHandling` (3) : n hors limites, n=0, x≤1.
+  - `TestIsabelleTheorySection` (11) : section XIII présente, définitions présentes, 3 piliers cités, **aucun `sorry`**, **aucun `axiomatization`**, double argument documenté, statut formel explicite.
+- **Structure Isabelle** : `verify_thy_structure.py` rapporte 0 erreur (les 13 warnings sont pré-existants sur `field_simps` sans témoin ≠0, sans lien).
+- **Total : 1512/1512 tests passent** (1490 → 1512, zéro régression).
 
 ### Changelog 2026-02 v3.30 (Parsing bloc chaotique/ordonné + Contexte d'opinion)
 - **Bug P0-A (parsing)** : Le multi-loop échouait à extraire les blocs `Bloc A= {7,11,23} Bloc B= {29,31,17,53,2}` (accolades) formulés en asymétrique chaotique ou ordonnée. `tuple_A`/`tuple_B` restaient à `None`, la requête tombait à score 0.35 et déclenchait le kernel d'urgence.

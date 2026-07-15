@@ -636,6 +636,94 @@ class SpectralMethodCore:
         result["expected_ratio"] = "1/2"
         return result
 
+    def compute_psi_savard(self, n: int, x: Optional[float] = None) -> Dict:
+        """
+        Formule spectrale de Savard (variante de Chebyshev-Riemann-von Mangoldt).
+
+        Pour n = rang d'un nombre premier et x = borne superieure de l'intervalle
+        (typiquement prime(n) + 1), calcule :
+
+            psi_savard(x, n) = x  -  (2^n / SB(n))
+                                -  log10(2*pi)
+                                -  (1/2) * log10(1 - 1/x^2)
+
+        Ou SB(n) est la somme spectrale B pour le rapport 1/2 (definition
+        officielle Savard : SB(n) = (13/4)*2^n - 66).
+
+        CONJECTURE SAVARD : la SOMME sur les zeros non-triviaux de zeta,
+        sum_{rho}(x^rho/rho), est remplacee par le terme UNIQUE 2^n/SB(n).
+        Cette substitution suggere un pont vers Re(rho) = 1/2. Le pont est
+        empirique (formule) et structurel (les 3 piliers d'exclusion des
+        composes, deja prouves formellement dans methode_spectral.thy).
+
+        Args:
+            n: rang du n-ieme premier (1 <= n <= 1000).
+            x: borne superieure de l'intervalle. Par defaut prime(n) + 1.
+
+        Returns:
+            dict avec x, n, prime, SB_n, terme_zeta_savard (2^n/SB(n)),
+            log10_2pi, log10_correction, psi_savard (valeur finale),
+            citations, note.
+        """
+        if not (1 <= n <= len(self.prime_list)):
+            return {
+                "error": f"position n={n} hors limites (1..{len(self.prime_list)})",
+                "n": n,
+            }
+        prime = self.prime_list[n - 1]
+        if x is None:
+            x = float(prime + 1)
+        else:
+            x = float(x)
+        if x <= 1:
+            return {
+                "error": f"x doit etre > 1 (recu x={x}) pour que log10(1 - 1/x^2) soit defini",
+                "x": x, "n": n,
+            }
+
+        sb_n = self._SB_int(n)
+        # SB(n) doit etre non nul (verifie via SB_def : (13/4)*2^n - 66,
+        # positif pour n >= 5 et jamais nul dans le domaine utile).
+        if sb_n == 0:
+            return {
+                "error": f"SB(n={n}) = 0 : denominateur nul dans le terme 2^n/SB(n)",
+                "n": n,
+            }
+
+        terme_zeta_savard = (2.0 ** n) / sb_n
+        log10_2pi = math.log10(2.0 * math.pi)
+        # Terme correctif -(1/2) * log10(1 - 1/x^2). Valide pour x > 1.
+        log10_correction = 0.5 * math.log10(1.0 - 1.0 / (x * x))
+        psi_savard = x - terme_zeta_savard - log10_2pi - log10_correction
+
+        return {
+            "n": n,
+            "prime": prime,
+            "x": x,
+            "SB_n": sb_n,
+            "power_2_n": 2 ** n,
+            "terme_zeta_savard": terme_zeta_savard,
+            "log10_2pi": log10_2pi,
+            "log10_correction": log10_correction,
+            "psi_savard": psi_savard,
+            "formula": (
+                "psi_savard(x, n) = x - 2^n/SB(n) - log10(2*pi) "
+                "- (1/2)*log10(1 - 1/x^2)"
+            ),
+            "citations": [
+                "methode_spectral.thy::psi_savard (section XIII)",
+                "methode_spectral.thy::rapport_zeta_savard",
+                "methode_spectral.thy::composite_pair_no_rsp_positions "
+                "(exclusion des composes, pilier 3)",
+                "Formule classique Riemann-von Mangoldt (base ln)",
+            ],
+            "note": (
+                "CONJECTURE Savard : substitution sum_{rho}(x^rho/rho) -> 2^n/SB(n). "
+                "Non demontree formellement. Verification numerique empirique."
+            ),
+        }
+
+
 class AntiHallucinationValidator:
     def __init__(self):
         self.core = SpectralMethodCore()

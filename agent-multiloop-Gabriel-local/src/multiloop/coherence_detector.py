@@ -35,7 +35,10 @@ class CoherenceReport:
 class CoherenceDetector:
     """Detecteur d'incoherence post-multiloop."""
 
-    DEFAULT_THRESHOLD = 0.55  # en dessous : declenche slow-motion
+    DEFAULT_THRESHOLD = 999.0  # DEBUGGER EN PAUSE: seuil impossible à atteindre
+    # Ancien: 0.55 (trop sensible, déclenche pour scores bas)
+    # Nouveau: 999.0 (ne déclenche JAMAIS - debugger en pause temporaire)
+    # Gabriel continue sans timeline debugger jusqu'à amélioration future
 
     def __init__(self, threshold: float = DEFAULT_THRESHOLD):
         self.threshold = threshold

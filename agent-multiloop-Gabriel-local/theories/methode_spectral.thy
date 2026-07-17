@@ -1,4 +1,4 @@
-﻿theory methode_spectral
+theory methode_spectral
   imports Complex_Main "HOL-Computational_Algebra.Primes"
 begin
 (****************************************************************)

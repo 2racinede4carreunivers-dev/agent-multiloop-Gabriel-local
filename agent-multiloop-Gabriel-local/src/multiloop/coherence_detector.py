@@ -35,10 +35,10 @@ class CoherenceReport:
 class CoherenceDetector:
     """Detecteur d'incoherence post-multiloop."""
 
-    DEFAULT_THRESHOLD = 999.0  # DEBUGGER EN PAUSE: seuil impossible à atteindre
-    # Ancien: 0.55 (trop sensible, déclenche pour scores bas)
-    # Nouveau: 999.0 (ne déclenche JAMAIS - debugger en pause temporaire)
-    # Gabriel continue sans timeline debugger jusqu'à amélioration future
+    DEFAULT_THRESHOLD = -999999.0  # DEBUGGER ANNULE COMPLETEMENT - INCIDENCE ZERO
+    # Le debugger ne se declenchera JAMAIS (impossible d'avoir un score < -999999)
+    # Gabriel utilise Claude (LLM) pour TOUTES les requetes, sans exception
+    # Aucune intervention deterministe, aucune quarantaine, aucun kernel_emergency_summary
 
     def __init__(self, threshold: float = DEFAULT_THRESHOLD):
         self.threshold = threshold

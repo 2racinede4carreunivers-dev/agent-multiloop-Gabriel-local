@@ -1,226 +1,81 @@
-name: Build Isabelle Minimal + Attestation Spécifique
+name: Certification de provenance – Méthode Spectrale
 
+# Workflow de validation Isabelle et d’attestation de provenance
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
-  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   id-token: write
   attestations: write
 
 jobs:
-  build_and_verify:
+  validation-institutionnelle:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Install SSL certificates
+      - name: Install Isabelle
         run: |
+          set -e
           sudo apt-get update
-          sudo apt-get install -y ca-certificates curl
-          sudo update-ca-certificates
+          sudo apt-get install -y wget tar bzip2 libgmp-dev
+          mkdir -p /tmp/isabelle
+          cd /tmp/isabelle
+          wget -O isabelle.tar.gz https://github.com/isabelle-prover/isabelle/releases/download/2024-1/isabelle2024-1_linux.tar.gz
+          tar -xzf isabelle.tar.gz
+          ls -1
+          echo "/tmp/isabelle/Isabelle2024-1/bin" >> "$GITHUB_PATH"
+          /tmp/isabelle/Isabelle2024-1/bin/isabelle version
 
-      # ================================================================
-      # Cache Isabelle heap (HOL-Computational_Algebra + dependances).
-      # Cle basee sur le contenu du fichier ROOT + .thy pour invalider
-      # automatiquement le cache si la theorie change.
-      # ================================================================
-      - name: Cache Isabelle heap (HOL-Computational_Algebra + Methode_Spectral)
-        uses: actions/cache@v4
-        id: cache-isabelle-heap
+      - name: Show repository layout
+        run: |
+          pwd
+          ls -la
+          find . -maxdepth 3 \( -name ROOT -o -name 'methode_spectral.thy' \) | sort
+
+      - name: Build Isabelle session
+        working-directory: agent-multiloop-Gabriel-local
+        run: |
+          isabelle build -v -D .
+
+      - name: Create explicit attestation payload
+        if: success()
+        run: |
+          cat > attestation_payload.json <<'EOF'
+          {
+            "schemaVersion": 1,
+            "subject": "agent-multiloop-Gabriel-local/theories/methode_spectral.thy",
+            "author": "Philippe Thomas Savard",
+            "coAuthors": [
+              "Emergent.sh E1",
+              "Gordon Docker Desktop",
+              "Copilot Microsoft"
+            ],
+            "statement": "These assistants contributed remarkably and their contribution is invaluable for Philippe Thomas Savard."
+          }
+          EOF
+
+      - name: Generate explicit attestation
+        if: success()
+        uses: actions/attest@v2
         with:
+          subject-path: agent-multiloop-Gabriel-local/theories/methode_spectral.thy
+          predicate-type: 'https://example.com/attestations/methode-spectral/v1'
+          predicate: '{"schemaVersion":1,"subject":"agent-multiloop-Gabriel-local/theories/methode_spectral.thy","author":"Philippe Thomas Savard","coAuthors":["Emergent.sh E1","Gordon Docker Desktop","Copilot Microsoft"],"statement":"These assistants contributed remarkably and their contribution is invaluable for Philippe Thomas Savard."}'
+
+      - name: Upload attestation payload artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: methode-spectral-attestation-payload
           path: |
-            ~/.isabelle/Isabelle2024/heaps
-            isabelle
-          key: isabelle2024-minimal-${{ hashFiles('agent-multiloop-Gabriel-local/theories/ROOT', 'agent-multiloop-Gabriel-local/theories/methode_spectral.thy') }}
-          restore-keys: |
-            isabelle2024-minimal-
-
-      - name: Install Isabelle 2024 (installation minimale + multi-miroirs fallback)
-        if: steps.cache-isabelle-heap.outputs.cache-hit != 'true'
-        run: |
-          echo "=== Telechargement Isabelle 2024 (strategie multi-miroirs) ==="
-
-          # Liste de miroirs officiels + alternatives, ordonnee par
-          # fiabilite historique sur GitHub Actions.
-          # Le premier qui repond est utilise.
-          MIRRORS=(
-            "https://mirror.clarkson.edu/isabelle/dist/Isabelle2024_linux.tar.gz"
-            "https://ftp.gwdg.de/pub/misc/isabelle/dist/Isabelle2024_linux.tar.gz"
-            "https://ftp.hu-berlin.de/isabelle/dist/Isabelle2024_linux.tar.gz"
-            "https://mirror.cse.unsw.edu.au/pub/isabelle/dist/Isabelle2024_linux.tar.gz"
-            "https://isabelle.in.tum.de/website-Isabelle2024/dist/Isabelle2024_linux.tar.gz"
-            "https://isabelle.in.tum.de/dist/Isabelle2024_linux.tar.gz"
-          )
-
-          SUCCESS=0
-          for URL in "${MIRRORS[@]}"; do
-            echo ""
-            echo "--- Essai miroir : $URL ---"
-            if curl -L --fail --retry 2 --retry-delay 5 --connect-timeout 30 \
-                    --max-time 300 -o Isabelle2024_linux.tar.gz "$URL"; then
-              SIZE=$(stat -c%s Isabelle2024_linux.tar.gz 2>/dev/null || echo 0)
-              # Isabelle 2024 fait ~500 MB. Rejeter les fichiers < 100 MB (page d'erreur).
-              if [ "$SIZE" -gt 100000000 ]; then
-                echo "[SUCCES] Telecharge depuis $URL ($((SIZE/1024/1024)) MB)"
-                SUCCESS=1
-                break
-              else
-                echo "[WARN] Fichier suspect ($((SIZE/1024/1024)) MB), rejete"
-                rm -f Isabelle2024_linux.tar.gz
-              fi
-            else
-              echo "[ECHEC] $URL"
-              rm -f Isabelle2024_linux.tar.gz 2>/dev/null || true
-            fi
-          done
-
-          if [ "$SUCCESS" -eq 0 ]; then
-            echo ""
-            echo "!!! ECHEC de tous les miroirs — fallback GitHub Release !!!"
-            # Fallback ultime : mirror archive sur SourceForge / archive.org
-            curl -L --fail --retry 3 --retry-delay 10 --max-time 600 \
-                 -o Isabelle2024_linux.tar.gz \
-                 "https://sourceforge.net/projects/isabelle/files/Isabelle2024/Isabelle2024_linux.tar.gz/download" || \
-            (echo "!!! Tous les miroirs et fallbacks ont echoue !!!" && exit 1)
-          fi
-
-          echo ""
-          echo "=== Verification integrite archive ==="
-          ls -lh Isabelle2024_linux.tar.gz
-          file Isabelle2024_linux.tar.gz || true
-          # Verification basique : doit etre un gzip valide
-          gzip -t Isabelle2024_linux.tar.gz || (echo "Archive corrompue" && exit 1)
-
-          echo ""
-          echo "=== Extraction ==="
-          tar -xzf Isabelle2024_linux.tar.gz
-          mv Isabelle2024 isabelle
-          rm -f Isabelle2024_linux.tar.gz
-          echo "Taille initiale de l'installation :"
-          du -sh isabelle/
-
-          # ========================================================
-          # SUPPRESSION ULTRA-PRUDENTE : uniquement doc/ (200 MB PDFs)
-          # ========================================================
-          echo "Suppression du composant safe (doc/)..."
-          rm -rf isabelle/doc/ 2>/dev/null || true
-          echo "Taille apres nettoyage :"
-          du -sh isabelle/
-
-          echo "$PWD/isabelle/bin" >> $GITHUB_PATH
-
-      - name: Vérification préalable Isabelle (settings)
-        if: steps.cache-isabelle-heap.outputs.cache-hit != 'true'
-        run: |
-          echo "=== Verification des variables d'environnement Isabelle ==="
-          "$PWD/isabelle/bin/isabelle" getenv ISABELLE_HOME
-          "$PWD/isabelle/bin/isabelle" getenv ISABELLE_FONTS || true
-          "$PWD/isabelle/bin/isabelle" getenv ML_HOME
-
-      - name: Restore Isabelle PATH (cache hit)
-        if: steps.cache-isabelle-heap.outputs.cache-hit == 'true'
-        run: |
-          echo "Cache heap Isabelle restaure, aucune reinstallation necessaire."
-          echo "$PWD/isabelle/bin" >> $GITHUB_PATH
-          du -sh isabelle/ 2>/dev/null || echo "(taille non disponible)"
-
-      - name: Vérification et Compilation de methode_spectral.thy
-        id: isabelle-build
-        run: |
-         echo "Compilation via session Isabelle 'Methode_Spectral' (fichier ROOT)..."
-         cd agent-multiloop-Gabriel-local/theories
-         # -v : verbose, -o show_question_marks=false : affiche mieux les erreurs
-         isabelle build -v -D . 2>&1 | tee build_output.log
-         BUILD_EXIT=${PIPESTATUS[0]}
-         echo "Exit code Isabelle : $BUILD_EXIT"
-         exit $BUILD_EXIT
-
-      - name: Affichage detaille des erreurs (si echec)
-        if: failure() && steps.isabelle-build.outcome == 'failure'
-        run: |
-          echo "=================================================================="
-          echo "ISABELLE BUILD FAILED - Diagnostic detaille"
-          echo "=================================================================="
-          cd agent-multiloop-Gabriel-local/theories
-          # Extraction des erreurs avec numeros de ligne
-          echo ""
-          echo "=== Erreurs Isabelle (avec ligne et fichier) ==="
-          isabelle build_log -H Error Methode_Spectral 2>&1 || true
-          echo ""
-          echo "=== Erreurs Isabelle (via build_log -H Warning) ==="
-          isabelle build_log -H Warning Methode_Spectral 2>&1 | head -50 || true
-          echo ""
-          echo "=== Extrait build_output.log (50 dernieres lignes) ==="
-          tail -50 build_output.log || true
-          echo ""
-          echo "=== Grep '***' dans build_output.log (erreurs Isabelle) ==="
-          grep -n '\*\*\*' build_output.log || echo "(aucune ligne avec *** trouvee)"
-          echo ""
-          echo "=== Grep 'line' dans build_output.log ==="
-          grep -in 'line [0-9]' build_output.log || echo "(aucune reference a une ligne)"
-
-      - name: Generate attestation report (SHA-256 de la théorie)
-        run: |
-          mkdir -p output_report
-          THY_PATH="agent-multiloop-Gabriel-local/theories/methode_spectral.thy"
-          if [ -f "$THY_PATH" ]; then
-            sha256sum "$THY_PATH" > output_report/attestation_report.txt
-            echo "" >> output_report/attestation_report.txt
-            echo "# Attestation de compilation Isabelle" >> output_report/attestation_report.txt
-            echo "# Commit  : ${{ github.sha }}" >> output_report/attestation_report.txt
-            echo "# Run     : ${{ github.run_id }}" >> output_report/attestation_report.txt
-            echo "# Date UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> output_report/attestation_report.txt
-            echo "# Author  : Philippe Thomas Savard" >> output_report/attestation_report.txt
-            echo "# License : Apache-2.0" >> output_report/attestation_report.txt
-            cat output_report/attestation_report.txt
-          else
-            echo "Fichier methode_spectral.thy introuvable a $THY_PATH." > output_report/attestation_report.txt
-            exit 1
-          fi
-
-      - name: Generate build metadata
-        run: |
-          echo "Build provenance minimale" > output_report/build_metadata.txt
-          echo "Commit SHA : $(git rev-parse HEAD)" >> output_report/build_metadata.txt
-          echo "Branche : $(git rev-parse --abbrev-ref HEAD)" >> output_report/build_metadata.txt
-          echo "Date : $(date -u)" >> output_report/build_metadata.txt
-          echo "" >> output_report/build_metadata.txt
-          echo "SHA-256 du fichier vérifié :" >> output_report/build_metadata.txt
-          cat output_report/attestation_report.txt >> output_report/build_metadata.txt
-
-      - name: Upload HOL Theory Artifact (methode_spectral.thy)
-        uses: actions/upload-artifact@v4
-        with:
-          name: methode-spectral-theory
-          path: agent-multiloop-Gabriel-local/theories/methode_spectral.thy
-
-      - name: Upload attestation report
-        uses: actions/upload-artifact@v4
-        with:
-          name: attestation-report-spectral
-          path: output_report/attestation_report.txt
-
-      - name: Upload build metadata
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-metadata-spectral
-          path: output_report/build_metadata.txt
-
-      - name: Generate build provenance (SLSA v1 - Certification officielle)
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        uses: actions/attest-build-provenance@v1
-        with:
-          subject-path: |
+            attestation_payload.json
             agent-multiloop-Gabriel-local/theories/methode_spectral.thy
-            output_report/attestation_report.txt
+          retention-days: 30
+
+

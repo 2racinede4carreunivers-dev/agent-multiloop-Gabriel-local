@@ -78,7 +78,12 @@ class TestRootFileExists:
     def test_ROOT_declares_methode_spectral_session(self):
         root = LOCAL_ROOT / "theories" / "ROOT"
         content = root.read_text(encoding="utf-8")
-        assert "session \"Methode_Spectral\"" in content
+        # v3.32 : la session peut etre declaree avec ou sans guillemets
+        # (syntaxe Isabelle valide dans les deux cas).
+        assert (
+            "session \"Methode_Spectral\"" in content
+            or "session Methode_Spectral" in content
+        )
         assert "methode_spectral" in content
         assert "HOL-Computational_Algebra" in content
 
@@ -112,10 +117,11 @@ class TestBuildWorkflowUsesIsabelleBuild:
         )
 
 
-class TestMinimalIsabelleInstallation:
-    """v3.25.b : verifie l'installation MINIMALE + CACHE (option Philippe c).
-    Objectifs : reduire taille disque ~450 MB + accelerer builds suivants
-    via cache heap GitHub Actions."""
+class TestGithubReleaseInstallation:
+    """v3.32 (design Philippe 2026-06) : le workflow telecharge Isabelle
+    2024-1 directement depuis les GitHub Releases officielles
+    (github.com/isabelle-prover/isabelle) — source fiable qui remplace
+    l'ancienne strategie multi-miroirs + cache, supprimee volontairement."""
 
     @pytest.fixture(scope="class")
     def build_content(self):
@@ -124,44 +130,22 @@ class TestMinimalIsabelleInstallation:
             pytest.skip(f"{build} n'existe pas")
         return build.read_text(encoding="utf-8")
 
-    def test_cache_action_present(self, build_content):
-        """Un actions/cache@v4 doit etre configure sur ~/.isabelle/heaps."""
-        assert "actions/cache@v4" in build_content, (
-            "Le workflow doit utiliser actions/cache@v4 pour la heap Isabelle"
-        )
-        assert "~/.isabelle/Isabelle2024/heaps" in build_content, (
-            "Le chemin de cache doit inclure ~/.isabelle/Isabelle2024/heaps"
+    def test_download_from_github_releases(self, build_content):
+        assert "github.com/isabelle-prover/isabelle/releases" in build_content, (
+            "Le workflow doit telecharger Isabelle depuis les GitHub Releases "
+            "officielles (source fiable, remplace les miroirs universitaires)."
         )
 
-    def test_cache_key_uses_hashfiles_on_thy(self, build_content):
-        """La cle de cache doit dependre du contenu de methode_spectral.thy
-        pour invalider automatiquement le cache si la theorie change."""
-        assert "hashFiles" in build_content
-        assert "methode_spectral.thy" in build_content
-        assert "ROOT" in build_content
+    def test_isabelle_2024_1_version(self, build_content):
+        assert "Isabelle2024-1" in build_content
 
-    def test_cache_hit_skips_install(self, build_content):
-        """Si le cache est present, l'installation Isabelle est skippee."""
-        # 'if: steps.cache-isabelle-heap.outputs.cache-hit != true'
-        assert "cache-isabelle-heap.outputs.cache-hit != 'true'" in build_content, (
-            "L'etape d'install Isabelle doit etre conditionnee au cache miss"
-        )
-        # Une etape de restore PATH doit exister pour cache-hit=true
-        assert "cache-isabelle-heap.outputs.cache-hit == 'true'" in build_content, (
-            "Une etape doit restaurer le PATH quand le cache hit"
-        )
+    def test_isabelle_version_verified_after_install(self, build_content):
+        """L'installation se termine par `isabelle version` (sanity check)."""
+        assert "isabelle version" in build_content
 
-    @pytest.mark.parametrize("removed_component", [
-        "isabelle/doc/",                # Documentation PDF ~200 MB (SEUL safe)
-    ])
-    def test_minimal_removes_unused_components(self, build_content, removed_component):
-        """L'installation minimale ULTRA-prudente supprime UNIQUEMENT doc/
-        (les PDFs finaux). Tous les autres composants sont references dans
-        les settings/build.props/env vars d'Isabelle et cassent le build
-        si supprimes."""
-        assert removed_component in build_content, (
-            f"L'installation minimale doit supprimer `{removed_component}`"
-        )
+    def test_path_registered(self, build_content):
+        """Le binaire Isabelle doit etre ajoute au GITHUB_PATH."""
+        assert "GITHUB_PATH" in build_content
 
     def test_no_removal_of_referenced_components(self, build_content):
         """CRITIQUE : ne PAS supprimer les composants references dans
@@ -186,11 +170,9 @@ class TestMinimalIsabelleInstallation:
             )
 
 
-class TestMultiMirrorFallback:
-    """v3.27 : le workflow doit avoir une strategie multi-miroirs pour
-    telecharger Isabelle 2024. Le miroir officiel `isabelle.in.tum.de`
-    est parfois bloque depuis GitHub Actions (Connection reset by peer).
-    """
+class TestProvenanceAttestation:
+    """v3.32 : le workflow certifie la provenance de methode_spectral.thy
+    via actions/attest (attestation signee GitHub)."""
 
     @pytest.fixture(scope="class")
     def build_content(self):
@@ -199,40 +181,29 @@ class TestMultiMirrorFallback:
             pytest.skip(f"{build} n'existe pas")
         return build.read_text(encoding="utf-8")
 
-    @pytest.mark.parametrize("mirror", [
-        "mirror.clarkson.edu",
-        "ftp.gwdg.de",
-        "ftp.hu-berlin.de",
-        "isabelle.in.tum.de",
-    ])
-    def test_at_least_4_mirrors_configured(self, build_content, mirror):
-        """Au moins 4 miroirs alternatifs pour maximiser les chances."""
-        assert mirror in build_content, (
-            f"Miroir manquant : {mirror}"
+    def test_attest_action_present(self, build_content):
+        assert "actions/attest@" in build_content, (
+            "Le workflow doit generer une attestation de provenance signee"
         )
 
-    def test_sourceforge_fallback_present(self, build_content):
-        """Un fallback SourceForge doit exister au cas ou tous les miroirs
-        HTTP officiels sont bloques."""
-        assert "sourceforge.net/projects/isabelle" in build_content
+    def test_attestation_permissions(self, build_content):
+        """Les permissions id-token + attestations sont requises par attest."""
+        assert "id-token: write" in build_content
+        assert "attestations: write" in build_content
 
-    def test_integrity_check(self, build_content):
-        """Verification gzip -t sur l'archive avant extraction."""
-        assert "gzip -t Isabelle2024_linux.tar.gz" in build_content
+    def test_attestation_subject_is_thy_file(self, build_content):
+        assert "theories/methode_spectral.thy" in build_content
 
-    def test_size_sanity_check(self, build_content):
-        """Rejet des fichiers < 100 MB (pages d'erreur HTTP)."""
-        assert "100000000" in build_content or "100 MB" in build_content
+    def test_author_credited(self, build_content):
+        assert "Philippe Thomas Savard" in build_content
 
-    def test_loop_over_mirrors(self, build_content):
-        """La boucle bash 'for URL in MIRRORS' doit exister."""
-        assert "for URL in" in build_content
-        assert "MIRRORS=(" in build_content
+    def test_artifact_uploaded(self, build_content):
+        assert "actions/upload-artifact@" in build_content
 
 
-class TestDetailedErrorReporting:
-    """v3.26 : le workflow doit afficher les erreurs Isabelle detaillees
-    (numeros de ligne, type d'erreur) via isabelle build_log."""
+class TestBuildStep:
+    """v3.32 : la compilation utilise `isabelle build -v -D .` depuis le
+    dossier agent-multiloop-Gabriel-local (ou se trouve le ROOT)."""
 
     @pytest.fixture(scope="class")
     def build_content(self):
@@ -241,31 +212,15 @@ class TestDetailedErrorReporting:
             pytest.skip(f"{build} n'existe pas")
         return build.read_text(encoding="utf-8")
 
-    def test_build_log_error_command(self, build_content):
-        """Sur echec, isabelle build_log -H Error doit etre invoque."""
-        assert "isabelle build_log -H Error Methode_Spectral" in build_content, (
-            "Le workflow doit invoquer 'isabelle build_log -H Error' "
-            "pour afficher les erreurs Isabelle detaillees en cas d'echec"
-        )
+    def test_build_command(self, build_content):
+        assert "isabelle build" in build_content
 
-    def test_failure_step_conditional(self, build_content):
-        """L'etape 'Affichage detaille des erreurs' doit etre conditionnee
-        au fait que le build a echoue (if: failure())."""
-        assert "if: failure()" in build_content or "if: ${{ failure()" in build_content
-
-    def test_build_output_log_captured(self, build_content):
-        """La sortie doit etre capturee dans build_output.log via tee."""
-        assert "tee build_output.log" in build_content
-
-    def test_env_vars_verification_step(self, build_content):
-        """Une etape de verification des variables env Isabelle doit exister
-        pour diagnostiquer les problemes d'ISABELLE_FONTS, ML_HOME, etc."""
-        assert "isabelle getenv" in build_content or "getenv ISABELLE_HOME" in build_content
+    def test_working_directory_correct(self, build_content):
+        assert "agent-multiloop-Gabriel-local" in build_content
 
     def test_polyml_and_jdk_preserved(self, build_content):
         """CRITIQUE : polyml (moteur ML) et jdk (JVM) NE doivent PAS
         etre supprimes — Isabelle en depend imperativement."""
-        # On verifie qu'aucune ligne `rm -rf ...polyml*` n'existe
         import re
         assert not re.search(r"rm\s+-rf\s+.*polyml-", build_content), (
             "polyml est requis par Isabelle. Ne JAMAIS le supprimer."

@@ -665,23 +665,34 @@ class SpectralMethodCore:
             log10_2pi, log10_correction, psi_savard (valeur finale),
             citations, note.
         """
-        if not (1 <= n <= len(self.prime_list)):
+        if n == 0 or abs(n) > len(self.prime_list):
             return {
-                "error": f"position n={n} hors limites (1..{len(self.prime_list)})",
+                "error": (
+                    f"position n={n} hors limites "
+                    f"(1..{len(self.prime_list)}, rang negatif autorise pour le regime negatif)"
+                ),
                 "n": n,
             }
-        prime = self.prime_list[n - 1]
+        rank = abs(n)
+        prime = self.prime_list[rank - 1]
+        if n < 0:
+            prime = -prime
         if x is None:
             x = float(prime + 1)
         else:
             x = float(x)
-        if x <= 1:
+        if x * x <= 1:
             return {
-                "error": f"x doit etre > 1 (recu x={x}) pour que log10(1 - 1/x^2) soit defini",
+                "error": f"|x| doit etre > 1 (recu x={x}) pour que log10(1 - 1/x^2) soit defini",
                 "x": x, "n": n,
             }
 
-        sb_n = self._SB_int(n)
+        if n >= 1:
+            sb_n = self._SB_int(n)
+        else:
+            # Regime negatif (exemple Philippe x=-100, n=-26) :
+            # SB reel = 3.25 * 2^n - 66, qui tend vers -66 quand n -> -inf.
+            sb_n = 3.25 * (2.0 ** n) - 66.0
         # SB(n) doit etre non nul (verifie via SB_def : (13/4)*2^n - 66,
         # positif pour n >= 5 et jamais nul dans le domaine utile).
         if sb_n == 0:
@@ -700,6 +711,7 @@ class SpectralMethodCore:
             "n": n,
             "prime": prime,
             "x": x,
+            "regime": "negatif" if n < 0 else "positif",
             "SB_n": sb_n,
             "power_2_n": 2 ** n,
             "terme_zeta_savard": terme_zeta_savard,

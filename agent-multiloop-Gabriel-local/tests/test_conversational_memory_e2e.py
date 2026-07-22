@@ -162,7 +162,7 @@ def test_e2e_orchestrator_auto_records_and_injects():
 
     turn_count = {"n": 0}
 
-    async def fake_process(question):
+    async def fake_process(question, progress_cb=None):
         turn_count["n"] += 1
         answer = MagicMock()
         answer.answer_text = f"REPONSE_ORCH_{turn_count['n']}"

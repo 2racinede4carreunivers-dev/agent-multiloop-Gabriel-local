@@ -264,7 +264,7 @@ class TestOrchestratorRecordsConversation:
         mock_pipeline = MagicMock()
         mock_pipeline.llm.conversation_memory = ConversationalMemory(max_turns=3)
 
-        async def fake_process(question):
+        async def fake_process(question, progress_cb=None):
             answer = MagicMock()
             answer.answer_text = f"RÉPONSE_À: {question}"
             return answer

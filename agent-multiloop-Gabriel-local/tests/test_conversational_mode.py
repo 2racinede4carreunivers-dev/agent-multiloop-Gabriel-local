@@ -115,12 +115,16 @@ class TestConversationalBypassInPipeline:
         assert "coherence.score >= 0.30" in pipeline_src
 
     def test_slow_motion_still_activates_for_incoherent(self):
-        """Le Slow-Motion doit RESTER actif pour les vraies incoherences.
-        On verifie qu'il n'est bypass qu'avec 'and not conversational_bypass'."""
+        """v3.32 : Philippe a mis le debugger Slow-Motion EN PAUSE volontaire
+        (commit 'PAUSE debugger timeline', voir GABRIEL_DEBUGGER_PAUSE_STATUS.md).
+        Le pipeline ne declenche plus le kernel d'urgence : Claude repond a
+        toutes les requetes. Ce test sentinelle verifie que la PAUSE est
+        explicitement documentee dans le code (pas une suppression muette)."""
         pipeline_src = Path(ROOT / "src" / "core" / "pipeline.py").read_text()
-        assert "coherence.incoherent and not conversational_bypass" in pipeline_src, (
-            "Le Slow-Motion doit s'activer meme en mode conversationnel "
-            "si coherence.incoherent et conversational_bypass=False"
+        assert "DEBUGGER ANNULE COMPLETEMENT" in pipeline_src, (
+            "La pause du debugger doit rester explicitement documentee dans "
+            "pipeline.py. Si le Slow-Motion est reactive, restaurer l'assertion "
+            "'coherence.incoherent and not conversational_bypass'."
         )
 
 

@@ -4,7 +4,22 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.31 — 1512/1512 tests Pytest ✅ — Ajout section XIII : Pont Savard (ψ Tchebychev / ζ / Re=1/2)**
+**Production-Ready v3.32 — 1538/1538 tests Pytest ✅ — Section XIII professionnelle : Le Pont Savard (locale cohérent, satisfaisabilité prouvée)**
+
+### Changelog 2026-06 v3.32 (Section XIII professionnelle + sync GitHub Philippe)
+- **Sync GitHub** : merge de `github/main` (8 commits Philippe : nouvelle Section XIII "Pont Logique", refonte `build.yml` (téléchargement Isabelle 2024-1 depuis GitHub Releases, attestation actions/attest@v2), PAUSE volontaire du debugger Slow-Motion, ROOT session non-quotée). Conflit `.thy` résolu en faveur de la version Philippe.
+- **Réécriture professionnelle de la Section XIII** (`theories/methode_spectral.thy`) à la demande de Philippe :
+  - **Problème détecté et corrigé** : l'axiomatisation AX1-AX11 ("Validation conceptuelle Savard") était logiquement CONTRADICTOIRE (AX1: E=1 vs AX8: E=3 → 1=3, rendant tout prouvable). Remplacée par un **locale `ensemble_savard`** (hypothèses cohérentes : `hypothese_critique`, `pont_fonctionnel`, `rapport_un_demi`) + **théorème de satisfaisabilité** `ensemble_savard_satisfaisable` (témoin concret `RsP 1 2 = 1/2` via `RsP_un_demi_general`).
+  - **Structure** : XIII.1 Définitions (psi_savard UNIFIÉE — doublon `Psi_savard`/`Sb_n` non définie supprimé, `log10_savard`, `rapport_zeta_savard`), XIII.2 Validations numériques (30/n=10, 98/n=25, **NOUVEAU 228/n=49**, note régime négatif **-100/n=-26**), XIII.3 Premier Pont (unicité fonctionnelle, `concerne_fonction_zeta` en HYPOTHÈSE, plus d'axiome), XIII.4 Deuxième Pont (exclusivité sur P, 3 piliers), XIII.5 Théorème de l'Ensemble (nomenclature Philippe y1..y3/t/ms1..ms3 documentée + correspondance professionnelle zeta_tchebychev/zeta_critique/zeta_positions/tau_savard/ms_reconstruction/ms_exclusion/ms_rapport), XIII.6 Conclusion (`pont_spectral_direct_final`, `synthese_pont_savard` : RsP = Re = 1/2).
+  - Théorèmes du locale en style `theorem (in ensemble_savard)` : `alignement_central` (1/ms3 = 1/y2), `alignement_inverse`, `conclusion_ensemble`.
+  - **Fix structurel** : section License déplacée AVANT le `end` final (du contenu après `end` est invalide en Isabelle ; corrige aussi `isabelle_static_check`).
+- **Python `compute_psi_savard`** (`src/core/spectral_core.py`) : support du **régime négatif** (n<0 → premier négatif, SB réel = 3.25·2^n − 66 → limite −66), validation |x|>1, champ `regime`. Valeurs Philippe reproduites exactement : ψ(228,49)=226.894132001, ψ(−100,−26)=−100.798158152.
+- **Tests alignés sur les changements intentionnels de Philippe** (25 échecs hérités du merge, tous corrigés) :
+  - `test_workflow_isabelle_syntax.py` : classes miroirs/cache/error-reporting obsolètes remplacées par `TestGithubReleaseInstallation`, `TestProvenanceAttestation`, `TestBuildStep` (design GitHub Releases + attest@v2).
+  - `test_conversational_memory*.py` : mocks `fake_process` acceptent `progress_cb` (nouvelle signature orchestrator).
+  - `test_conversational_mode.py` : sentinelle adaptée à la PAUSE volontaire du debugger (documentée, réversible).
+- **26 nouveaux tests** (`tests/test_section_xiii_professionnelle_v332.py`) : nouveaux cas numériques (227/49, régime négatif), structure professionnelle XIII (locale, symboles, théorèmes, satisfaisabilité, nomenclature auteur, AUCUNE axiomatisation, AX1-AX11 supprimés, doublon supprimé, aucun sorry, statut honnête).
+- **Validation** : `verify_thy_structure.py` → 0 erreur (13 warnings pré-existants) ; `isabelle_static_check.py` → PASS 0 erreur 0 warning ; **1538/1538 pytests**.
 
 ### Changelog 2026-02 v3.31 (Pont Savard : formule ψ_savard + lien avec les 3 piliers)
 - **Contexte** : Philippe a présenté sa variante de la formule de Chebyshev-Riemann-von Mangoldt substituant `Σ x^ρ/ρ → 2^n/SB(n)`. Deux vérifications numériques (29 et 97) validées : ψ_savard(30, 10) = 28.888143698, ψ_savard(98, 25) = 96.894150249 (base log₁₀, choix personnel).

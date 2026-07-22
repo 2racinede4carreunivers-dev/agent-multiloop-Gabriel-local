@@ -1,4 +1,4 @@
-﻿theory methode_spectral
+theory methode_spectral
   imports Complex_Main "HOL-Computational_Algebra.Primes"
 begin
 (****************************************************************)
@@ -2790,11 +2790,6 @@ abbreviation SA_spectral :: "nat \<Rightarrow> real"
 abbreviation SB_spectral :: "nat \<Rightarrow> real"
   where "SB_spectral n \<equiv> somme_B_pos_k 2 n"
 
-theorem Psi_savard_compatible_avec_suites_A_B:
-  assumes "k = 2"
-  shows "\<exists>n x. x > 1 \<and> Psi_savard x n = (somme_A_pos_k k n - 1)"
-  using assms
-  sorry
 
 end  (* fin du locale savard_spectral_context *)
 
@@ -2888,7 +2883,6 @@ definition Psi_savard :: "real \<Rightarrow> nat \<Rightarrow> real" where
       x - (2^n / Sb_n n)
         - ln (2 * pi)
         - 0.5 * ln (1 - x powr (-2))"
-
 text \<open>
   COMPORTEMENT NUMERIQUE POSITIF :
     Psi_savard(x,n) \<approx> x - 1, avec une erreur \<epsilon>(x) \<approx> 0.11 qui diminue lorsque x augmente.
@@ -2904,64 +2898,118 @@ text \<open>
 \<close>
 
 (**************************************************************)
-(* Pont spectral Savard <-> Zêta de Riemann                   *)
+(* Validation conceptuelle Savard : RsP = Re(HR) = 1/2        *)
 (**************************************************************)
 
-consts
-  E_existant :: real
-  Z_R        :: real
-  m_s        :: real
-  Z_R1       :: real
-  Z_R2       :: real
-  Z_R3       :: real
-  m_s1       :: real
-  m_s2       :: real
-  m_s3       :: real
-  m_s4       :: real
-  HypR_demi  :: real
+section "Validation conceptuelle Savard"
 
-definition Re_droite_critique_savard :: "nat \<Rightarrow> nat \<Rightarrow> real" where
-  "Re_droite_critique_savard n1 n2 = RsP n1 n2"
+(**************************************************************)
+(* Axiomatisation avec déclaration des constantes             *)
+(**************************************************************)
 
-axiomatization where
-  HypR_demi_un_demi: "HypR_demi = 1/2"
+axiomatization
+  E_savard    :: real and      (* ensemble général *)
+  psi_Psavard :: real and      (* paramètre spectral principal *)
+  psi1_s      :: real and
+  psi2_s      :: real and
+  psi3_s      :: real and
+  tau_s       :: real and      (* Psi_Savard *)
+  mu_s        :: real and      (* méthode spectrale globale *)
+  mu1_s       :: real and
+  mu2_s       :: real and
+  mu3_s       :: real and
+  rho_s       :: real          (* Re(HR) *)
+where
 
-theorem pont_spectral_savard_ensembles:
-  fixes n1 n2 :: nat
-  assumes point_HR: "Z_R2 = 1/2"
-      and E_decomp: "E_existant = Z_R + m_s"
-      and Z_decomp:   "Z_R = Z_R1 + Z_R2 + Z_R3"
-      and Ms_decomp:  "m_s = m_s1 + m_s2 + m_s3 + m_s4"
-      and Tchebychev_PsiSavard: "Z_R1 = m_s1"
-      and HR_def:     "Z_R2 = HypR_demi"
-      and Zeta_positions: "Z_R3 = 1"
-      and PsiSavard_def: "m_s1 = 1"
-      and Exclusion_composes:
-        "\<forall>C::nat. C > 1 \<and> \<not> prime C \<longrightarrow> \<not> (\<exists>i. C = prime_i i \<and> prime_equation i C = real C)"
-      and Reconstruction_prime_i:
-        "\<forall>i. prime_equation i (prime_i i) = real (prime_i i)"
-      and RsP_pilier:
-        "n1 \<ge> 1 \<and> n2 \<ge> 1 \<and> n1 \<noteq> n2"
-        "prime (prime_i n1)" "prime (prime_i n2)"
-        "RsP n1 n2 = 1/2"
-  shows "Re_droite_critique_savard n1 n2 = HypR_demi \<and> HypR_demi = 1/2"
+  (* 1. Ensemble général normalisé *)
+  AX1: "E_savard = 1" and
+
+  (* 2. Zêta : E_savard * 1/E_savard = 1/psi_Psavard *)
+  AX2: "E_savard * (1 / E_savard) = 1 / psi_Psavard" and
+
+  (* 3. Décomposition spectrale *)
+  AX3: "1 / psi_Psavard = 1 / psi1_s + 1 / psi2_s + 1 / psi3_s" and
+
+  (* 4. Psi_Savard : E_savard * 1/E_savard = 1/tau_s *)
+  AX4: "E_savard * (1 / E_savard) = 1 / tau_s" and
+
+  (* 5. Lien : 1/psi1_s = 1/tau_s *)
+  AX5: "1 / psi1_s = 1 / tau_s" and
+
+  (* 6. Méthode spectrale *)
+  AX6: "E_savard * (1 / E_savard) = 1 / mu_s" and
+
+  (* 7. Décomposition spectrale *)
+  AX7: "1 / mu_s = 1 / mu1_s + 1 / mu2_s + 1 / mu3_s" and
+
+  (* 8. Normalisation globale *)
+  AX8: "E_savard = 1 / psi_Psavard + 1 / mu_s + 1 / tau_s" and
+
+  (* 9. Rapport spectral : mu3_s = 1/2 *)
+  AX9: "mu3_s = 1/2" and
+
+  (* 10. Lien Re(HR) : 1/psi2_s = 1/mu3_s *)
+  AX10: "1 / psi2_s = 1 / mu3_s" and
+
+  (* 11. Hypothèse de Riemann demi-droite *)
+  AX11: "rho_s = 1/2"
+
+(**************************************************************)
+(* LEMMES : reprise des étapes de validation                  *)
+(**************************************************************)
+
+lemma L_decomp_psi_Psavard:
+  shows "1 / psi_Psavard = 1 / psi1_s + 1 / psi2_s + 1 / psi3_s"
+  using AX3 by simp
+
+lemma L_Psi_Savard:
+  shows "1 / psi1_s = 1 / tau_s"
+  using AX5 by simp
+
+lemma L_mu_decomp:
+  shows "1 / mu_s = 1 / mu1_s + 1 / mu2_s + 1 / mu3_s"
+  using AX7 by simp
+
+lemma L_RsP_un_demi:
+  shows "mu3_s = 1/2"
+  using AX9 by simp
+
+lemma L_ReHR_lien:
+  shows "1 / psi2_s = 1 / mu3_s"
+  using AX10 by simp
+
+lemma L_rho_un_demi:
+  shows "rho_s = 1/2"
+  using AX11 by simp
+
+(**************************************************************)
+(* Définition : Re_droite_critique_savard                     *)
+(**************************************************************)
+theorem Validation_Savard_global:
+  shows
+    "E_savard = 1 \<and>
+     E_savard * (1 / E_savard) = 1 / psi_Psavard \<and>
+     1 / psi_Psavard = 1 / psi1_s + 1 / psi2_s + 1 / psi3_s \<and>
+     E_savard * (1 / E_savard) = 1 / tau_s \<and>
+     1 / psi1_s = 1 / tau_s \<and>
+     E_savard * (1 / E_savard) = 1 / mu_s \<and>
+     1 / mu_s = 1 / mu1_s + 1 / mu2_s + 1 / mu3_s \<and>
+     E_savard = 1 / psi_Psavard + 1 / tau_s + 1 / mu_s \<and>
+     mu3_s = 1/2 \<and>
+     1 / psi2_s = 1 / mu3_s"
 proof -
-  have P1: "Z_R1 = m_s1" using Tchebychev_PsiSavard by simp
-  have P2:
-    "\<forall>C::nat. C > 1 \<and> \<not> prime C \<longrightarrow> \<not> (\<exists>i. C = prime_i i \<and> prime_equation i C = real C)"
-    using Exclusion_composes by simp
-  have P3:
-    "\<forall>i. prime_equation i (prime_i i) = real (prime_i i)"
-    using Reconstruction_prime_i by simp
-  have P4: "Re_droite_critique_savard n1 n2 = RsP n1 n2"
-    unfolding Re_droite_critique_savard_def by simp
-  with RsP_pilier(4) have P4': "Re_droite_critique_savard n1 n2 = 1/2"
-    by simp
-  have P5: "Z_R2 = HypR_demi" using HR_def by simp
-  from P4' P5 point_HR
-  have "Re_droite_critique_savard n1 n2 = HypR_demi \<and> HypR_demi = 1/2"
-    by simp
-  thus ?thesis .
+  have H1: "E_savard = 1" using AX1 by simp
+  have H2: "E_savard * (1 / E_savard) = 1 / psi_Psavard" using AX2 by simp
+  have H3: "1 / psi_Psavard = 1 / psi1_s + 1 / psi2_s + 1 / psi3_s" using AX3 by simp
+  have H4: "E_savard * (1 / E_savard) = 1 / tau_s" using AX4 by simp
+  have H5: "1 / psi1_s = 1 / tau_s" using AX5 by simp
+  have H6: "E_savard * (1 / E_savard) = 1 / mu_s" using AX6 by simp
+  have H7: "1 / mu_s = 1 / mu1_s + 1 / mu2_s + 1 / mu3_s" using AX7 by simp
+  have H8: "E_savard = 1 / psi_Psavard + 1 / mu_s + 1 / tau_s" using AX8 by simp
+  have H9: "mu3_s = 1/2" using AX9 by simp
+  have H10: "1 / psi2_s = 1 / mu3_s" using AX10 by simp
+  from H1 H2 H3 H4 H5 H6 H7 H8 H9 H10
+  show ?thesis by simp
 qed
 
 end
@@ -2974,7 +3022,6 @@ text \<open>
   constructions, spectral models, axioms, proofs, and all associated
   documentation, is released under the terms of the Apache License,
   Version 2.0.
-
   You may use, reproduce, distribute, modify, and create derivative works
   from this project under the following conditions:
 

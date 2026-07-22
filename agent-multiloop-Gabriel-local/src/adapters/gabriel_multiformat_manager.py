@@ -16,7 +16,7 @@ from typing import Optional, Dict, Tuple
 class GabrielMultiFormatManager:
     """Gestionnaire de projets multi-format pour Gabriel"""
     
-    def __init__(self, projects_dir="/theories/projects"):
+    def __init__(self, projects_dir="/home/agent/app/theories/projects"):
         self.projects_dir = Path(projects_dir)
         self.thy_dir = self.projects_dir
         self.txt_dir = self.projects_dir / "txt"

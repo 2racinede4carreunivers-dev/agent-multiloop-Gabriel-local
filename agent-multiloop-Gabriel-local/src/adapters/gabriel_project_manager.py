@@ -14,7 +14,7 @@ from typing import Optional, Tuple
 class GabrielProjectManager:
     """Gestionnaire de projets Isabelle pour Gabriel"""
     
-    def __init__(self, projects_dir="/theories/projects"):
+    def __init__(self, projects_dir="/home/agent/app/theories/projects"):
         self.projects_dir = Path(projects_dir)
         self.generated_dir = self.projects_dir.parent / "generated"
         self.generated_dir.mkdir(parents=True, exist_ok=True)

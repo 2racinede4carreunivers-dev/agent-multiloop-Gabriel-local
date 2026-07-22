@@ -12,7 +12,7 @@ Chaque regime est une entite ontologique compose de :
   - exemples_valides    : exemples numeriques verifies
   - ratio_attendu       : rapport spectral cible (Fraction ou None)
 
-Total : 10 regimes (9 documentes officiellement + 'suites_finies').
+Total : 13 regimes (9 documentes officiellement + 'suites_finies' + XI/XII + Pont Savard XIII).
 """
 from __future__ import annotations
 
@@ -622,6 +622,76 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
             "k=2 negatif, n=15 : -262131/131072 ~ -1.9999 (premier -47)",
         ],
         ratio_attendu=None,  # depend de k
+    ),
+
+    # --------------------------------------------------------------------
+    "regime_pont_savard": Regime(
+        nom="regime_pont_savard",
+        titre="Pont Savard (Section XIII : psi_savard / zeta / Re=1/2)",
+        concepts_cles=[
+            "psi_savard", "Tchebychev", "Chebyshev", "fonction zeta",
+            "Riemann", "droite critique", "Re=1/2", "pont Savard",
+            "theoreme de l'Ensemble", "rapport_zeta_savard",
+        ],
+        patterns_detection=[
+            r"psi[_\s-]?savard", r"\btch?[e\u00e9]bychev\b", r"\bchebyshev\b",
+            r"\bz[e\u00ea]ta\b", r"\briemann\b", r"\bdroite\s+critique\b",
+            r"\bre\s*\(?\s*rho\s*\)?\s*=\s*1/2", r"\bre\s*=\s*1/2",
+            r"pont\s+savard", r"pont\s+logique", r"pont\s+spectral",
+            r"th[e\u00e9]or[e\u00e8]me\s+de\s+l'?ensemble",
+            r"rapport_zeta_savard", r"ensemble_savard",
+            r"z[e\u00e9]ros?\s+non[\s-]triviaux",
+        ],
+        definitions_hol={
+            "psi_savard": (
+                "psi_savard x n = x - rapport_zeta_savard n - log10_savard(2*pi) "
+                "- (1/2)*log10_savard(1 - 1/x^2)"
+            ),
+            "rapport_zeta_savard": "rapport_zeta_savard n = (2^n) / (SB n)",
+            "log10_savard": "log10_savard y = ln y / ln 10",
+            "Re_droite_critique": "Re_droite_critique n1 n2 = RsP n1 n2",
+            "locale_ensemble_savard": (
+                "fixes zeta_tchebychev zeta_critique zeta_positions tau_savard "
+                "ms_reconstruction ms_exclusion ms_rapport :: real ; "
+                "assumes zeta_critique = 1/2, tau_savard = zeta_tchebychev, "
+                "ms_rapport = 1/2"
+            ),
+            "nomenclature_savard": (
+                "1/y1=Tchebychev, 1/y2=Re=1/2, 1/y3=positions P ; 1/t=psi_savard "
+                "(1/y1=1/t) ; 1/ms1=reconstruction, 1/ms2=composes exclus, "
+                "1/ms3=RsP=1/2 ; conclusion 1/ms3 = 1/y2"
+            ),
+        },
+        lemmes_certifies=[
+            "rapport_zeta_savard_at_10: rapport_zeta_savard 10 = 1024/3262",
+            "rapport_zeta_savard_at_25: rapport_zeta_savard 25 = 33554432/109051838",
+            "rapport_zeta_savard_at_49: rapport_zeta_savard 49 = 562949953421312/1829587348619198",
+            "psi_savard_expanded: identite symbolique complete (base log10)",
+            "methode_spectrale_exclusivite_P: not prime C ==> forall i. C != prime_i i",
+            "alignement_central (in ensemble_savard): ms_rapport = zeta_critique (1/ms3 = 1/y2)",
+            "ensemble_savard_satisfaisable: hypotheses realisees par le temoin RsP 1 2 = 1/2",
+            "pont_spectral_direct_final: Re_droite_critique n1 n2 = 1/2 sous les 2 ponts",
+            "synthese_pont_savard: Re_droite_critique = RsP = 1/2 pour n1,n2 >= 1, n1 != n2",
+        ],
+        regles_cognitives=[
+            "Base logarithmique log10 (choix de Philippe), PAS ln, pour les valeurs numeriques",
+            "Par defaut x = prime(n) + 1 ; regime negatif : n < 0, SB reel -> -66",
+            "La somme sur les zeros sum_{rho}(x^rho/rho) est substituee par 2^n/SB(n)",
+            "Le Theoreme de l'Ensemble repose sur un LOCALE coherent (satisfaisabilite prouvee), JAMAIS sur une axiomatisation contradictoire",
+            "TOUJOURS presenter le resultat comme un pont constructif / conjecture, JAMAIS comme une preuve de l'hypothese de Riemann",
+        ],
+        avertissements=[
+            "La Section XIII N'EST PAS une preuve deductive de RH : pont constructif uniquement",
+            "psi_savard(x, n) ~ x - 1 avec erreur ~0.11 decroissante ; ne pas confondre avec prime(n) exact",
+            "|x| doit etre > 1 sinon log10(1 - 1/x^2) est indefini",
+        ],
+        exemples_valides=[
+            "psi_savard(30, 10) = 28.888143698 (premier vise 29, SB(10)=3262)",
+            "psi_savard(98, 25) = 96.894150249 (premier vise 97, SB(25)=109051838)",
+            "psi_savard(228, 49) = 226.894132001 (premier vise 227, SB(49)=1829587348619198)",
+            "psi_savard(-100, -26) = -100.798158152 (premier vise -101, regime negatif)",
+        ],
+        ratio_attendu=Fraction(1, 2),
     ),
 
 }

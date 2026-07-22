@@ -52,11 +52,12 @@ class TestIntegrateurMemoire:
         from integrateur_memoire import IntegrateurMemoireGabriel
         im = IntegrateurMemoireGabriel()
         info = im.info()
-        # 12 regimes (10 historiques + 2 nouveaux XI/XII)
-        assert info["regimes"] == 12
+        # 13 regimes (10 historiques + XI/XII + Pont Savard XIII v3.33)
+        assert info["regimes"] == 13
         assert info["lemmes_certifies"] >= 30
         assert "methode_spectral_section_XI" in info["sections_extra"]
         assert "methode_spectral_section_XII" in info["sections_extra"]
+        assert "methode_spectral_section_XIII" in info["sections_extra"]
 
     def test_augmentation_prompt_avec_regimes(self):
         import sys

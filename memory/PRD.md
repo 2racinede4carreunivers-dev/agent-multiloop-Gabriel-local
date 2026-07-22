@@ -4,7 +4,18 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.32 — 1538/1538 tests Pytest ✅ — Section XIII professionnelle : Le Pont Savard (locale cohérent, satisfaisabilité prouvée)**
+**Production-Ready v3.33 — 1568/1568 tests Pytest ✅ — Gabriel a APPRIS la Section XIII (régime RAG Pont Savard)**
+
+### Changelog 2026-06 v3.33 (Apprentissage Section XIII par Gabriel)
+- **Nouveau module mémoire** `memory/methode_spectral_section_XIII.py` (~230 lignes, patron identique Section XII) :
+  - 7 règles RAG (XIII.1 équation psi_savard, XIII.2 validations canoniques, XIII.3 premier pont, XIII.4 deuxième pont/3 piliers, XIII.5 théorème de l'Ensemble + nomenclature, XIII.6 conclusion RsP=Re=1/2, XIII.7 statut épistémologique honnête).
+  - Helpers : `psi_savard(x, n)` (log10, régime négatif supporté), `rapport_zeta_savard(n)`, `sb_reel(n)`, `verifier_validations_canoniques()` (rejoue les 4 valeurs Philippe : 30, 98, 228, −100 → toutes OK à 1e-9).
+  - `NOMENCLATURE_ENSEMBLE` : mapping y1..y3/t/ms1..ms3 → symboles formels du locale.
+- **13e régime dans le Dictionnaire Spectral** (`memory/dictionnaire_spectral.py`) : `regime_pont_savard` — 14 patterns de détection (psi_savard, Tchebychev/Chebyshev, zêta, Riemann, droite critique, Re=1/2, pont Savard, ensemble_savard, zéros non-triviaux…), 6 définitions HOL, 9 lemmes certifiés (dont `alignement_central`, `ensemble_savard_satisfaisable`, `synthese_pont_savard`), 5 règles cognitives (log10 obligatoire, JAMAIS présenter comme preuve de RH…), 4 exemples numériques exacts. ratio_attendu = 1/2.
+- **Câblage complet** : `src/core/integrateur_memoire.py` charge la section XIII (sections_extra) ; `scripts/sync_theory_to_agent.py` vérifie module + régime + 4 validations numériques (`SYNCHRONISATION OK`). Dès qu'une requête touche Tchebychev/zêta/Riemann/psi_savard, le RAG injecte automatiquement le contexte Pont Savard dans le prompt Claude.
+- **30 nouveaux tests** (`tests/test_section_xiii_rag_v333.py`) : module (7 règles, entrées RAG, nomenclature), helpers (4 validations paramétrées, erreurs), régime (lemmes, HOL, statut honnête, exemples), détection RAG (6 requêtes naturelles → régime détecté, requête générique → non détecté, contexte injecté), intégrateur (sections_extra, prompt augmenté).
+- Tests mis à jour : `test_dictionnaire_rag.py` (12→13 régimes), `test_ui_pro_banner_and_memoire.py` (13 régimes + section XIII).
+- **Total : 1568/1568 tests passent** (1538 → 1568, zéro régression).
 
 ### Changelog 2026-06 v3.32 (Section XIII professionnelle + sync GitHub Philippe)
 - **Sync GitHub** : merge de `github/main` (8 commits Philippe : nouvelle Section XIII "Pont Logique", refonte `build.yml` (téléchargement Isabelle 2024-1 depuis GitHub Releases, attestation actions/attest@v2), PAUSE volontaire du debugger Slow-Motion, ROOT session non-quotée). Conflit `.thy` résolu en faveur de la version Philippe.

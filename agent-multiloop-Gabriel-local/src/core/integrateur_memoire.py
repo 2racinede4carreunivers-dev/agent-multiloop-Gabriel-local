@@ -47,7 +47,11 @@ class IntegrateurMemoireGabriel:
 
         # Optionnel : charger les sections XI et XII si presentes
         self._sections_extra = []
-        for sec_name in ("methode_spectral_section_XI", "methode_spectral_section_XII"):
+        for sec_name in (
+            "methode_spectral_section_XI",
+            "methode_spectral_section_XII",
+            "methode_spectral_section_XIII",
+        ):
             try:
                 module = __import__(f"memory.{sec_name}", fromlist=["*"])
                 self._sections_extra.append(sec_name)
@@ -55,6 +59,8 @@ class IntegrateurMemoireGabriel:
                     self._n_entries_XI = len(module.get_section_XI_entries())
                 if hasattr(module, "get_section_XII_entries"):
                     self._n_entries_XII = len(module.get_section_XII_entries())
+                if hasattr(module, "get_section_XIII_entries"):
+                    self._n_entries_XIII = len(module.get_section_XIII_entries())
             except ImportError:
                 logger.debug("Section optionnelle %s non chargee", sec_name)
 

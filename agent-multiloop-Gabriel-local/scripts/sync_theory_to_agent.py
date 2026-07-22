@@ -58,6 +58,7 @@ def check_memory_modules() -> tuple[bool, list[str]]:
         "memory.adaptateur_cognitif_rag",
         "memory.methode_spectral_section_XI",
         "memory.methode_spectral_section_XII",
+        "memory.methode_spectral_section_XIII",
     ]:
         try:
             mod = importlib.import_module(mod_name)
@@ -69,10 +70,14 @@ def check_memory_modules() -> tuple[bool, list[str]]:
 
 
 def check_new_regimes_registered() -> tuple[bool, list[str]]:
-    """Verifie que les 2 nouveaux regimes (XI/XII) sont dans le dictionnaire."""
+    """Verifie que les 3 nouveaux regimes (XI/XII/XIII) sont dans le dictionnaire."""
     from memory.dictionnaire_spectral import DICTIONNAIRE_SPECTRAL, list_regimes
     msgs = [f"  Total regimes : {len(DICTIONNAIRE_SPECTRAL)}"]
-    expected_new = ["regime_construction_termes", "regime_parametrique_1_k"]
+    expected_new = [
+        "regime_construction_termes",
+        "regime_parametrique_1_k",
+        "regime_pont_savard",
+    ]
     all_ok = True
     for r in expected_new:
         if r in DICTIONNAIRE_SPECTRAL:
@@ -126,6 +131,27 @@ def check_section_modules() -> tuple[bool, list[str]]:
             all_ok = False
     except Exception as exc:
         msgs.append(f"  [FAIL] Section XII : {exc}")
+        all_ok = False
+
+    try:
+        from memory.methode_spectral_section_XIII import (
+            get_section_XIII_entries,
+            verifier_validations_canoniques,
+        )
+        entries_xiii = get_section_XIII_entries()
+        msgs.append(f"  [OK] Section XIII : {len(entries_xiii)} entrees RAG")
+        verdicts = verifier_validations_canoniques()
+        if all(v["ok"] for v in verdicts):
+            msgs.append(
+                f"  [OK] Section XIII : {len(verdicts)}/{len(verdicts)} validations "
+                f"canoniques psi_savard (30, 98, 228, -100)"
+            )
+        else:
+            fails = [v for v in verdicts if not v["ok"]]
+            msgs.append(f"  [FAIL] Section XIII : validations echouees : {fails}")
+            all_ok = False
+    except Exception as exc:
+        msgs.append(f"  [FAIL] Section XIII : {exc}")
         all_ok = False
 
     return all_ok, msgs

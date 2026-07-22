@@ -81,6 +81,14 @@ def test_analyze_spectral_ratio_asym_chaotique():
     assert result["near_half"] or abs(result["RsP_decimal"] - 0.5) < 0.01
 
 
+def test_analyze_spectral_ratio_philippe_reported_case():
+    """Cas reporte: A={7,11,2}, B={23,17,43,31,29} doit etre chaotique proche de 1/2."""
+    c = SpectralMethodCore()
+    result = c.analyze_spectral_ratio([7, 11, 2], [23, 17, 43, 31, 29])
+    assert result["configuration"] == "asym_chaotique"
+    assert abs(result["RsP_decimal"] - 0.5) < 0.01
+
+
 # ============================================================
 # RequestDecomposer : detection ratio_spectral_nxn
 # ============================================================
@@ -107,6 +115,13 @@ def test_decomposer_extract_tuples():
 def test_decomposer_extract_tuples_single():
     tuples = RequestDecomposer._extract_tuples("foo (42) bar")
     assert tuples == [[42]]
+
+
+def test_decomposer_extract_tuples_plain_labels():
+    tuples = RequestDecomposer._extract_tuples(
+        "asymetrique chaotique A=7,11,2 B=23,17,43,31,29"
+    )
+    assert tuples == [[7, 11, 2], [23, 17, 43, 31, 29]]
 
 
 def test_decomposer_empty_tuples():

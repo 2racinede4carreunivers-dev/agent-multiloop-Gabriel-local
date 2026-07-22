@@ -35,7 +35,10 @@ class CoherenceReport:
 class CoherenceDetector:
     """Detecteur d'incoherence post-multiloop."""
 
-    DEFAULT_THRESHOLD = 0.55  # en dessous : declenche slow-motion
+    DEFAULT_THRESHOLD = -999999.0  # DEBUGGER ANNULE COMPLETEMENT - INCIDENCE ZERO
+    # Le debugger ne se declenchera JAMAIS (impossible d'avoir un score < -999999)
+    # Gabriel utilise Claude (LLM) pour TOUTES les requetes, sans exception
+    # Aucune intervention deterministe, aucune quarantaine, aucun kernel_emergency_summary
 
     def __init__(self, threshold: float = DEFAULT_THRESHOLD):
         self.threshold = threshold

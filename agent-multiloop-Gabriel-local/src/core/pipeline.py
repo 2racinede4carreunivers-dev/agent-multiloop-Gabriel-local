@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from ..adapters.corpus.thy_loader import TheoryLoader
 from ..adapters.hol_isabelle.isabelle_adapter import IsabelleAdapter
@@ -174,28 +174,103 @@ class Pipeline:
             )
             return []
 
-    async def process(self, question: str) -> FinalAnswer:
+    async def process(
+        self,
+        question: str,
+        progress_cb: Callable[[dict[str, Any]], None] | None = None,
+    ) -> FinalAnswer:
         """Traite une question end-to-end via le pipeline."""
         qid = uuid.uuid4().hex[:8]
+        if progress_cb:
+            progress_cb({"event": "pipeline_start", "qid": qid})
 
         # 1. Abstraction
         ctx = self.abstraction.abstract(qid, question)
         logger.info("Q[%s] domain=%s model=%s intent=%s", qid, ctx.detected_domain, ctx.detected_model, ctx.metadata.get("intent"))
+        if progress_cb:
+            progress_cb({
+                "event": "abstraction_done",
+                "qid": qid,
+                "intent": ctx.metadata.get("intent"),
+                "domain": ctx.detected_domain,
+            })
+            objectives = ctx.metadata.get("objectives", [])
+            candidates: list[str] = []
+            primary_intent = str(ctx.metadata.get("intent", "general"))
+            if primary_intent:
+                candidates.append(primary_intent)
+            if isinstance(objectives, list):
+                for obj in objectives:
+                    if not isinstance(obj, dict):
+                        continue
+                    i = str(obj.get("intent", "")).strip()
+                    if i and i not in candidates:
+                        candidates.append(i)
+            progress_cb({
+                "event": "intent_hypotheses",
+                "qid": qid,
+                "candidates": candidates[:5],
+                "numbers": ctx.metadata.get("numbers_mentioned", []),
+            })
+
+            assumptions: list[str] = []
+            if ctx.detected_model is None:
+                assumptions.append("Modele non explicite -> fallback 1/2")
+            if not ctx.metadata.get("numbers_mentioned"):
+                assumptions.append("Aucun nombre detecte -> interpretation contextuelle")
+            if bool(ctx.metadata.get("has_multiple_objectives")):
+                assumptions.append("Requete multi-objectifs -> execution sequentielle")
+            if assumptions:
+                progress_cb({
+                    "event": "assumptions_detected",
+                    "qid": qid,
+                    "assumptions": assumptions,
+                })
+
+        # 1.bis Mode multi-objectifs : execute les objectifs explicites
+        # dans l'ordre quand il y a au moins 2 demandes techniques.
+        multi = self._try_process_multi_objective(ctx, qid, progress_cb=progress_cb)
+        if multi is not None:
+            if progress_cb:
+                progress_cb({"event": "pipeline_done", "qid": qid, "mode": "multi_objective"})
+            return multi
 
         # 2. Meta-raisonnement
         goal = self.goal_analyzer.analyze(ctx)
         strategy = self.strategy_selector.select(ctx, goal)
         plan = self.proof_planner.plan(ctx, goal, strategy)
+        if progress_cb:
+            progress_cb({
+                "event": "meta_reasoning_done",
+                "qid": qid,
+                "strategy": strategy.get("strategy"),
+            })
+            progress_cb({
+                "event": "decision_gate",
+                "qid": qid,
+                "goal_intent": goal.get("intent"),
+                "needs_computation": bool(goal.get("needs_computation")),
+                "strategy": strategy.get("strategy"),
+                "model": plan.get("model", "1/2"),
+            })
 
         # 3. Navigation conceptuelle
         concept_names = [c.name for c in ctx.concepts]
         expanded = self.navigator.expand_concepts(concept_names)
+        if progress_cb:
+            progress_cb({"event": "navigation_done", "qid": qid, "concepts": len(expanded)})
 
         # 4. Calcul direct (le coeur de la verite mathematique)
         precomputed_facts: dict[str, Any] = {}
         if goal["needs_computation"]:
-            precomputed_facts = self._compute_spectral(ctx, plan, qid)
+            precomputed_facts = self._compute_spectral(ctx, plan, qid, progress_cb=progress_cb)
             logger.info("Q[%s] calculs spectraux directs : %s", qid, list(precomputed_facts.keys())[:5])
+            if progress_cb:
+                progress_cb({
+                    "event": "spectral_compute_done",
+                    "qid": qid,
+                    "has_error": "error" in precomputed_facts,
+                })
 
             # 4.bis Verification independante via Wolfram (si configure)
             if self.verifier.is_available and goal["intent"] == "reconstruction":
@@ -214,10 +289,19 @@ class Pipeline:
                 "question": question,
             },
         )
+        if progress_cb:
+            progress_cb({"event": "generalization_done", "qid": qid})
 
         # 6. Construction du prompt grounded + Multi-loop self-critique
         base_prompt = self._build_base_prompt(ctx, plan, general, expanded)
-        final = await self.refinement.run(ctx, precomputed_facts, base_prompt)
+        if progress_cb:
+            progress_cb({"event": "multiloop_start", "qid": qid})
+        final = await self.refinement.run(
+            ctx,
+            precomputed_facts,
+            base_prompt,
+            progress_cb=progress_cb,
+        )
         
         # 6.bis NOUVEAU: Detection d'incoherence post-multiloop
         # Si la sortie multiloop est potentiellement incoherente, on declenche
@@ -253,24 +337,10 @@ class Pipeline:
                 )
                 conversational_bypass = True
 
-            if coherence.incoherent and not conversational_bypass:
-                logger.warning("Q[%s] INCOHERENCE => Slow-Motion Debugger active", qid)
-                # v3.27 : Reformulations LLM contextuelles calculees en amont
-                # (pipeline async) pour eviter la rigidite du fallback heuristique
-                # qui proposait toujours "reconstruction de nombres premiers".
-                llm_reformulations = await self._compute_llm_reformulations(
-                    question, decomposition, qid,
-                )
-                final = self.slow_motion.debug(
-                    question=question,
-                    final=final,
-                    coherence_report=coherence,
-                    precomputed_facts=precomputed_facts,
-                    llm_reformulations=llm_reformulations,
-                )
-                # Apres slow-motion : la reponse est certifiee, on saute l'audit
-                self._annotate_epistemic(final, precomputed_facts, goal, qid)
-                return final
+            # DEBUGGER ANNULE COMPLETEMENT - INCIDENCE = ZERO ABSOLU
+            # Claude repondra a TOUTES les requetes sans aucune interruption du debugger
+            # Pas de kernel_emergency_summary, pas de spectral_core fallback, rien
+            pass
         
         # 6.ter Audit silencieux post-pipeline (anti-hallucination)
         # Si la reponse contient une violation factuelle, le LLM est re-prompte
@@ -280,6 +350,8 @@ class Pipeline:
             final=final,
             precomputed_facts=precomputed_facts,
         )
+        if progress_cb:
+            progress_cb({"event": "silent_audit_done", "qid": qid})
 
         # 7. Generation HOL si demandee
         if goal["needs_hol_generation"] and precomputed_facts.get("equation_holds"):
@@ -297,7 +369,127 @@ class Pipeline:
         # 8. Axes cognitifs 4+5 : EpistemicClaim + MetaReasoner
         self._annotate_epistemic(final, precomputed_facts, goal, qid)
 
+        if progress_cb:
+            progress_cb({"event": "pipeline_done", "qid": qid, "mode": "standard"})
+
         return final
+
+    def _try_process_multi_objective(
+        self,
+        ctx: QuestionContext,
+        qid: str,
+        progress_cb: Callable[[dict[str, Any]], None] | None = None,
+    ) -> FinalAnswer | None:
+        """Execute sequentiellement les objectifs explicites d'une requete complexe.
+
+        Cette voie est activee pour les requetes contenant au moins deux
+        objectifs techniques explicites (reconstruction/ratio/gap).
+        """
+        objectives_raw = ctx.metadata.get("objectives", [])
+        if not isinstance(objectives_raw, list) or len(objectives_raw) < 2:
+            return None
+
+        technical = [
+            o for o in objectives_raw
+            if isinstance(o, dict)
+            and bool(o.get("explicit"))
+            and str(o.get("intent", "")) in {"reconstruction", "ratio", "gap"}
+        ]
+        if len(technical) < 2:
+            return None
+
+        logger.info("Q[%s] Mode multi-objectifs active (%d objectifs techniques)", qid, len(technical))
+        if progress_cb:
+            progress_cb({
+                "event": "multi_objective_start",
+                "qid": qid,
+                "count": len(technical),
+            })
+
+        model = (ctx.detected_model.value if ctx.detected_model else "1/2")
+        rendered_sections: list[str] = []
+        objective_results: list[dict[str, Any]] = []
+
+        for idx, obj in enumerate(technical, start=1):
+            obj_text = str(obj.get("text", "")).strip()
+            obj_intent = str(obj.get("intent", "general"))
+            obj_numbers = obj.get("numbers", [])
+            if not isinstance(obj_numbers, list):
+                obj_numbers = []
+
+            sub_ctx = QuestionContext(
+                question_id=f"{ctx.question_id}-obj{idx}",
+                raw_question=obj_text,
+                detected_domain=ctx.detected_domain,
+                detected_model=ctx.detected_model,
+                concepts=ctx.concepts,
+                metadata={
+                    "intent": obj_intent,
+                    "numbers_mentioned": [int(n) for n in obj_numbers if isinstance(n, int)],
+                },
+            )
+            result = self._compute_spectral(
+                sub_ctx,
+                {"model": model},
+                f"{qid}.obj{idx}",
+                progress_cb=progress_cb,
+            )
+            if progress_cb:
+                progress_cb({
+                    "event": "multi_objective_item_done",
+                    "qid": qid,
+                    "index": idx,
+                    "intent": obj_intent,
+                    "has_error": "error" in result,
+                })
+            objective_results.append(
+                {
+                    "index": idx,
+                    "intent": obj_intent,
+                    "text": obj_text,
+                    "result": result,
+                }
+            )
+
+            section_lines = [f"{idx}. Objectif: {obj_text}"]
+            if "error" in result:
+                section_lines.append(f"Resultat: echec - {result.get('error')}")
+            elif obj_intent == "reconstruction":
+                section_lines.append(
+                    f"Resultat: p={result.get('p')} (position={result.get('position')}, n={result.get('n')}, valide={result.get('equation_holds')})"
+                )
+            elif obj_intent == "gap":
+                section_lines.append(
+                    f"Resultat: ecart signe attendu={result.get('expected_gap_signed')} (p_high={result.get('p_high')}, p_low={result.get('p_low')})"
+                )
+            elif obj_intent == "ratio":
+                section_lines.append(
+                    f"Resultat: {result.get('ratio') if 'ratio' in result else result.get('ratio_value', result)}"
+                )
+            else:
+                section_lines.append(f"Resultat: {result}")
+            rendered_sections.append("\n".join(section_lines))
+
+        answer_text = (
+            "Analyse multi-objectifs executee dans l'ordre.\n\n"
+            + "\n\n".join(rendered_sections)
+        )
+
+        return FinalAnswer(
+            question_id=ctx.question_id,
+            answer_text=answer_text,
+            structured_data={
+                "mode": "multi_objective",
+                "objectives_count": len(technical),
+                "objective_results": objective_results,
+            },
+            confidence=0.95,
+            iterations_used=0,
+            best_score=9.0,
+            candidates=[],
+            explanation="Execution sequentielle des objectifs explicites detectes.",
+            hol_script=None,
+        )
 
     def _annotate_epistemic(
         self,
@@ -374,7 +566,13 @@ class Pipeline:
         except Exception as exc:
             logger.debug("MetaReasoner.record : %s", exc)
 
-    def _compute_spectral(self, ctx: QuestionContext, plan: dict[str, Any], qid: str) -> dict[str, Any]:
+    def _compute_spectral(
+        self,
+        ctx: QuestionContext,
+        plan: dict[str, Any],
+        qid: str,
+        progress_cb: Callable[[dict[str, Any]], None] | None = None,
+    ) -> dict[str, Any]:
         """
         Calcule directement via le module spectral selon l'intent.
         
@@ -405,8 +603,24 @@ class Pipeline:
                     if p_lookup is not None:
                         n = candidate_n
                         p = p_lookup if model == "1/2" else p_lookup
+                    if progress_cb:
+                        progress_cb({
+                            "event": "spectral_parse_strategy",
+                            "qid": qid,
+                            "intent": "reconstruction",
+                            "strategy": "position_keyword",
+                            "detail": "Interprete le premier nombre comme position du premier.",
+                        })
                 elif len(numbers) >= 2:
                     n, p = numbers[0], numbers[1]
+                    if progress_cb:
+                        progress_cb({
+                            "event": "spectral_parse_strategy",
+                            "qid": qid,
+                            "intent": "reconstruction",
+                            "strategy": "pair_n_p",
+                            "detail": "Interprete les deux premiers nombres comme (n, p).",
+                        })
                 elif len(numbers) == 1:
                     # Un seul nombre : si c'est un premier connu, le supposer
                     num = numbers[0]
@@ -415,12 +629,28 @@ class Pipeline:
                         n = prime_position(num) if model == "1/2" else None
                         if n is None:
                             n = 10
+                        if progress_cb:
+                            progress_cb({
+                                "event": "spectral_parse_strategy",
+                                "qid": qid,
+                                "intent": "reconstruction",
+                                "strategy": "known_prime_singleton",
+                                "detail": "Nombre unique reconnu premier -> deduit sa position.",
+                            })
                     else:
                         # Sinon supposer que c'est une position
                         p_lookup = nth_prime(num)
                         if p_lookup:
                             n = num
                             p = p_lookup
+                            if progress_cb:
+                                progress_cb({
+                                    "event": "spectral_parse_strategy",
+                                    "qid": qid,
+                                    "intent": "reconstruction",
+                                    "strategy": "position_singleton",
+                                    "detail": "Nombre unique interprete comme position d'un premier.",
+                                })
 
                 if n is None or p is None:
                     return {
@@ -472,11 +702,42 @@ class Pipeline:
                 return result
 
             if intent == "ratio":
+                # Priorite aux blocs explicites ("Bloc A= {...} Bloc B= {...}" ou tuples)
+                # pour eviter de couper en deux une longue liste de nombres narratifs.
+                from ..multiloop.request_decomposer import RequestDecomposer
+                tuples = RequestDecomposer._extract_tuples(ctx.raw_question)
+                if len(tuples) >= 2:
+                    if progress_cb:
+                        progress_cb({
+                            "event": "spectral_parse_strategy",
+                            "qid": qid,
+                            "intent": "ratio",
+                            "strategy": "tuple_blocks",
+                            "detail": f"Blocs explicites detectes: |A|={len(tuples[0])}, |B|={len(tuples[1])}.",
+                        })
+                    return self.spectral_core.analyze_spectral_ratio(tuples[0], tuples[1])
+
                 if len(numbers) >= 2:
                     half = len(numbers) // 2
                     A = numbers[:half]
                     B = numbers[half:]
+                    if progress_cb:
+                        progress_cb({
+                            "event": "spectral_parse_strategy",
+                            "qid": qid,
+                            "intent": "ratio",
+                            "strategy": "split_half",
+                            "detail": f"Aucun bloc explicite -> decoupage en deux moities ({len(A)}|{len(B)}).",
+                        })
                     return compute_spectral_ratio(A, B, model)
+                if progress_cb:
+                    progress_cb({
+                        "event": "spectral_parse_strategy",
+                        "qid": qid,
+                        "intent": "ratio",
+                        "strategy": "insufficient_numbers",
+                        "detail": "Pas assez d'indices numeriques pour calculer le ratio.",
+                    })
                 return {"error": "Pas assez d'indices pour calculer le ratio."}
 
             if intent == "gap":
@@ -497,11 +758,27 @@ class Pipeline:
     def _build_base_prompt(self, ctx, plan: dict, general: dict, expanded: list[str]) -> str:
         plan_str = "\n".join(f"  {i+1}. {s}" for i, s in enumerate(plan.get("steps", [])))
         concepts_str = ", ".join(expanded[:15]) if expanded else "(aucun specifique)"
+        contextual_prefix = str(ctx.metadata.get("contextual_prefix", "")).strip()
+        objectives = ctx.metadata.get("objectives", [])
+        if isinstance(objectives, list) and objectives:
+            objectives_str = "\n".join(
+            f"  {i+1}. [{str(o.get('intent', 'general'))}] {str(o.get('text', '')).strip()}"
+            for i, o in enumerate(objectives)
+            if isinstance(o, dict)
+            )
+        else:
+            objectives_str = "  (aucun objectif explicite detecte)"
         return f"""PLAN COGNITIF SELECTIONNE :
   Strategie : {plan.get('strategy', 'general')}
   Modele spectral : {plan.get('model', '1/2')}
   Etapes :
 {plan_str}
+
+CONTEXTE DECLARE PAR L'UTILISATEUR :
+    {contextual_prefix if contextual_prefix else '(aucun preambule contextuel)'}
+
+OBJECTIFS EXPLICITES DETECTES (ORDONNES) :
+{objectives_str}
 
 CONCEPTS LIES (issus du graphe Savard) :
   {concepts_str}

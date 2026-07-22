@@ -144,11 +144,11 @@ def _build_rsp_curve_data(
     }
     formulas = {
         "1x1":           "RsP = (SA(n+1)-SA(n)) / (SB(n+1)-SB(n))",
-        "sym":           "RsP = sum_SA(A) / sum_SB(B)  avec |A|=|B|=k",
+        "sym":           "RsP = (sum_SA(A)-sum_SA(B)) / (sum_SB(A)-sum_SB(B))  avec |A|=|B|=k",
         "chaos-savard":  "RsP = (alt_SA(A)-alt_SA(B)) / (alt_SB(A)-alt_SB(B)) "
                          "avec A=[p_{k+1}..p_{2k}], B=[p_{2k+1},p_1..p_k]",
-        "ord":           "RsP = sum_SA(A) / sum_SB(B)  asymetrie ordonnee |B|=|A|+1",
-        "chaos":         "RsP = sum_SA(A) / sum_SB(B)  chaotique simple",
+        "ord":           "RsP = (sum_SA(A)-sum_SA(B)) / (sum_SB(A)-sum_SB(B))  asymetrie ordonnee |B|=|A|+1",
+        "chaos":         "RsP = (sum_SA(A)-sum_SA(B)) / (sum_SB(A)-sum_SB(B))  chaotique simple",
     }
     return CurveData(
         kind=CurveKind.RATIO_SA_SB,   # reutilise le rendu ratio

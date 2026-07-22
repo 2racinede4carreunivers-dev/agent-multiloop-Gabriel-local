@@ -67,7 +67,6 @@ logs/
 **/logs/
 
 # ---------- Theories HOL (montees en volume) ----------
-theories/
 
 # ---------- Tests, docs, examples (pas necessaires au runtime) ----------
 tests/

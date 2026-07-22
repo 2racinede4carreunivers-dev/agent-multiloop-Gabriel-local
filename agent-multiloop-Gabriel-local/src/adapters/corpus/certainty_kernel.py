@@ -57,7 +57,7 @@ class CertaintyKernel:
       - emergency_summary(domain) : resume minimal certifie d'un domaine
     """
 
-    def __init__(self, theories_dir: str | Path = "/app/agent-multiloop-Gabriel-local/theories"):
+    def __init__(self, theories_dir: str | Path = "/home/agent/app/theories"):
         self.theories_dir = Path(theories_dir)
         self.certainties: dict[str, Certainty] = {}
         self._build_kernel()

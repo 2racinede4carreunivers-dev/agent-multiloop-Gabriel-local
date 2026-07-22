@@ -74,6 +74,18 @@ class TestBlocAccoladeParsing:
         assert dec.tuple_A == [7, 11, 23]
         assert dec.tuple_B == [29, 31, 17]
 
+    def test_labels_sans_delimiters(self, decomposer):
+        q = "rapport spectral asymetrique chaotique A=7,11,2 B=23,17,43,31,29"
+        dec = decomposer.decompose(q)
+        assert dec.tuple_A == [7, 11, 2]
+        assert dec.tuple_B == [23, 17, 43, 31, 29]
+
+    def test_labels_sans_delimiters_avec_et(self, decomposer):
+        q = "Bloc A= 7,11,2 et Bloc B= 23,17,43,31,29"
+        dec = decomposer.decompose(q)
+        assert dec.tuple_A == [7, 11, 2]
+        assert dec.tuple_B == [23, 17, 43, 31, 29]
+
 
 class TestIntentDetection:
     """Detection d'intent pour asymetrique chaotique / ordonnee."""

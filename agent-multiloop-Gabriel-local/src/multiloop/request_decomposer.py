@@ -1,4 +1,4 @@
-"""
+﻿"""
 RequestDecomposer CORRECTED — Decoupe une requete utilisateur en segments logiques.
 
 CORRECTION MAJEURE : Capturer les nombres NÉGATIFS
@@ -73,6 +73,18 @@ class RequestDecomposer:
 
     # Detecteurs de l'intention
     INTENT_PATTERNS = {
+        "theoretical_advanced": [
+            r"section\s+13", r"pont\s+(?:logique|direct)",
+            r"psi\s*[-_]?savard", r"psi\s*\(\s*savard",
+            r"chebyshev|tchebychev", r"Ã©quation\s+psi",
+            r"premiers\s+nÃ©gatifs", r"nombres\s+premiers\s+nÃ©gatifs",
+            r"psi\s*\(\s*-",
+            r"Ã©cart\s+minimal", r"Ã©cart\s+comme\s+pour",
+            r"Ã©quation\s+\s*=\s*0\.5\s*\*\s*it",
+            r"rÃ©soudre\s+l'Ã©quation",
+            r"zÃ©ros?\s+(?:de\s+)?zÃªta", r"droite\s+critique",
+            r"hypothÃ¨se\s+de\s+riemann", r"\briemann\b",
+        ],
         "reconstruction": [
             r"reconstrui[rs]", r"reconstituer", r"retrouve[rz]",
             r"\d+\s*(?:eme|ieme|ième|ème|e|th)\s*(?:nombre\s+)?(?:premier|prime)",
@@ -319,6 +331,8 @@ class RequestDecomposer:
           3) "(7,11,23) (29,31,17,53,2)"                  (parentheses seules)
           4) "{7,11,23} {29,31,17,53,2}"                  (accolades seules)
           5) Formats mixtes acceptes : "Bloc A= {7,11,23} Bloc B= (29,31,17,53,2)"
+                    6) Labels sans delimiters : "A=7,11,23 B=29,31,17,53,2"
+                         (accepte aussi "Bloc A= ... et Bloc B= ...")
 
         CORRECTION : capture aussi les nombres NEGATIFS.
 
@@ -338,6 +352,21 @@ class RequestDecomposer:
         if m_a and m_b:
             a_nums = re.findall(r"-?\d+", m_a.group(1))
             b_nums = re.findall(r"-?\d+", m_b.group(1))
+            if a_nums and b_nums:
+                return [[int(n) for n in a_nums], [int(n) for n in b_nums]]
+
+        # v3.31 : labels explicites sans accolades/parentheses.
+        # Exemples:
+        #   "A=7,11,23 B=29,31,17,53,2"
+        #   "Bloc A= 7,11,23 et Bloc B= 29,31,17,53,2"
+        m_plain = re.search(
+            r"(?:bloc\s*)?a\s*=\s*([\d\s,;\-]+?)\s*(?:et|and|,|;)?\s*(?:bloc\s*)?b\s*=\s*([\d\s,;\-]+)",
+            text,
+            re.IGNORECASE,
+        )
+        if m_plain:
+            a_nums = re.findall(r"-?\d+", m_plain.group(1))
+            b_nums = re.findall(r"-?\d+", m_plain.group(2))
             if a_nums and b_nums:
                 return [[int(n) for n in a_nums], [int(n) for n in b_nums]]
 
@@ -392,3 +421,4 @@ class RequestDecomposer:
             kind="number", text=str(num), value=num,
             coherent=True,
         )
+

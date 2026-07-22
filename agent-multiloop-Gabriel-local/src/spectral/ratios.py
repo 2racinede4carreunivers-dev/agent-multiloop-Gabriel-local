@@ -40,6 +40,23 @@ def ratio_nxn(A_indices: list[int], B_indices: list[int], model: str = "1/2") ->
     return sum_a / sum_b
 
 
+def ratio_block_difference(A_indices: list[int], B_indices: list[int], model: str = "1/2") -> Fraction:
+    """Rapport par differences de blocs.
+
+    Formule Savard (asymetrique) :
+      (sum_A(A) - sum_A(B)) / (sum_B(A) - sum_B(B))
+    """
+    fns = get_suite_functions(model)
+    sum_a_A = fns["sumA"](A_indices)
+    sum_a_B = fns["sumA"](B_indices)
+    sum_b_A = fns["sumB"](A_indices)
+    sum_b_B = fns["sumB"](B_indices)
+    den = sum_b_A - sum_b_B
+    if den == 0:
+        raise ValueError("Denominateur nul : (sum_B(A) - sum_B(B)) = 0.")
+    return (sum_a_A - sum_a_B) / den
+
+
 # =============================================================
 # 3. Asymetrique ordonnee
 # =============================================================
@@ -61,13 +78,13 @@ def is_asymmetric_ordered(A_indices: list[int], B_indices: list[int]) -> bool:
 
 
 def ratio_asymmetric_ordered(A_indices: list[int], B_indices: list[int], model: str = "1/2") -> Fraction:
-    """Rapport asymetrique ordonne (utilise sommes de blocs A et B)."""
+    """Rapport asymetrique ordonne (utilise differences de blocs)."""
     if not is_asymmetric_ordered(A_indices, B_indices):
         raise ValueError(
             "Configuration non asymetrique ordonnee. Exige : indices > 0, strictement croissants, "
             "last(A) < hd(B), len(B) = len(A) + 1."
         )
-    return ratio_nxn(A_indices, B_indices, model)
+    return ratio_block_difference(A_indices, B_indices, model)
 
 
 # =============================================================
@@ -89,12 +106,12 @@ def is_asymmetric_chaotic(A_indices: list[int], B_indices: list[int]) -> bool:
 
 
 def ratio_asymmetric_chaotic(A_indices: list[int], B_indices: list[int], model: str = "1/2") -> Fraction:
-    """Rapport asymetrique chaotique (utilise sommes de blocs A et B)."""
+    """Rapport asymetrique chaotique (utilise differences de blocs)."""
     if not is_asymmetric_chaotic(A_indices, B_indices):
         raise ValueError(
             "Configuration non asymetrique chaotique. Exige : longueurs differentes et configuration desordonnee."
         )
-    return ratio_nxn(A_indices, B_indices, model)
+    return ratio_block_difference(A_indices, B_indices, model)
 
 
 # =============================================================

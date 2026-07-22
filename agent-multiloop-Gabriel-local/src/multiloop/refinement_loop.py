@@ -9,7 +9,7 @@ Boucle de raffinement multi-loop :
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Callable
 
 from ..core.llm_manager import LLMManager
 from ..core.types import CandidateAnswer, FinalAnswer, QuestionContext
@@ -50,6 +50,7 @@ class RefinementLoop:
         ctx: QuestionContext,
         precomputed_facts: dict[str, Any] | None = None,
         base_prompt: str | None = None,
+        progress_cb: Callable[[dict[str, Any]], None] | None = None,
     ) -> FinalAnswer:
         """Execute la boucle multi-loop et retourne la meilleure reponse."""
         all_candidates: list[CandidateAnswer] = []
@@ -58,6 +59,12 @@ class RefinementLoop:
 
         for iteration in range(1, self.max_iterations + 1):
             logger.info("=== Multi-loop iteration %d/%d ===", iteration, self.max_iterations)
+            if progress_cb:
+                progress_cb({
+                    "event": "multiloop_iteration_start",
+                    "iteration": iteration,
+                    "max_iterations": self.max_iterations,
+                })
             round_candidates = []
             for cand_idx in range(self.num_candidates):
                 prompt = self._build_prompt(ctx, precomputed_facts, base_prompt, last_critique, iteration)
@@ -78,6 +85,14 @@ class RefinementLoop:
                 cand = await self.critic.critique(cand, ctx, precomputed_facts)
                 round_candidates.append(cand)
                 all_candidates.append(cand)
+                if progress_cb:
+                    progress_cb({
+                        "event": "multiloop_candidate_scored",
+                        "iteration": iteration,
+                        "candidate": cand_idx + 1,
+                        "num_candidates": self.num_candidates,
+                        "score": cand.score,
+                    })
 
             # Selection du meilleur du tour
             round_best = max(round_candidates, key=lambda c: c.score)
@@ -85,9 +100,23 @@ class RefinementLoop:
                 best = round_best
             last_critique = round_best.critique
 
+            if progress_cb:
+                progress_cb({
+                    "event": "multiloop_iteration_end",
+                    "iteration": iteration,
+                    "best_score": best.score if best else 0.0,
+                })
+
             # Arret si score suffisant
             if best.score >= self.min_score:
                 logger.info("Score suffisant (%.1f >= %.1f). Arret.", best.score, self.min_score)
+                if progress_cb:
+                    progress_cb({
+                        "event": "multiloop_early_stop",
+                        "iteration": iteration,
+                        "best_score": best.score,
+                        "threshold": self.min_score,
+                    })
                 break
 
         assert best is not None

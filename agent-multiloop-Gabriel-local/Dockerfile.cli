@@ -8,6 +8,7 @@
 #   - User non-root cree tot
 #   - Cache pip optimise (requirements.txt copie en premier)
 #   - .dockerignore strict garantit un contexte < 5 Mo
+#   - methode_spectral.thy inclus dans l'image
 #
 # Taille image attendue : ~250-400 Mo (au lieu de 4+ Go avec Isabelle inclus)
 # =============================================================================
@@ -41,12 +42,13 @@ RUN pip install --no-cache-dir -r requirements.txt \
 # Code applicatif (apres pip pour bon caching)
 COPY --chown=agent:agent main.py main_cli.py config.yaml ./
 COPY --chown=agent:agent src/ ./src/
+COPY --chown=agent:agent theories/ ./theories/
 
-# Dossiers runtime (theories, data, logs montes via volumes)
-RUN mkdir -p data logs theories && chown -R agent:agent .
+# Dossiers runtime (data, logs montes via volumes)
+RUN mkdir -p data logs && chown -R agent:agent .
 
 USER agent
 
-VOLUME ["/home/agent/app/data", "/home/agent/app/logs", "/theories"]
+VOLUME ["/home/agent/app/data", "/home/agent/app/logs"]
 
 CMD ["python", "main_cli.py"]

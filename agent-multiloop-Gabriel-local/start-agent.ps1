@@ -1,5 +1,5 @@
 # =============================================================================
-#  start-agent.ps1  |  Auteur : Philippe Thomas Savard  |  Version : v6.2
+#  start-agent.ps1  |  Auteur : Philippe Thomas Savard  |  Version : v4.0
 #  Multi-Loop Math Agent (Methode Spectrale Savard + Isabelle/HOL + Ollama/OpenAI)
 #
 #  Inspire de poweshell_ise_ouvertur.ps1 v4.0

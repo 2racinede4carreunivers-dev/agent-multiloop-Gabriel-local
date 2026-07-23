@@ -193,14 +193,26 @@ class TestIsabelleTheorySection:
         assert "96.894" in section_xiii or "96,894" in section_xiii
 
     def test_statut_formel_explicite(self, thy_content):
-        """Le statut CONJECTURE (non-preuve) doit etre clairement documente."""
+        """v3.34 : Le statut affirmatif (theoreme du locale) doit etre documente.
+
+        A la demande de Philippe (2026-02) la Section XIII n'est plus presentee
+        comme une conjecture : dans le cadre du locale `ensemble_savard`, dont
+        la SATISFAISABILITE est demontree (theoreme
+        `ensemble_savard_satisfaisable`), l'egalite RsP = Re = 1/2 est un
+        THEOREME (alignement_central, conclusion_ensemble, synthese_pont_savard).
+
+        La vision structurelle Ensemble = 1/x + 1/t + 1/ms avec ses trois
+        concordances (Tchebychev = psi_savard, zeros non-triviaux = positions,
+        Re = 1/2 = RsP) doit etre presente.
+        """
         idx = thy_content.find("section \"XIII.")
         end = thy_content.find("section \"License", idx)
         section_xiii = thy_content[idx:end] if end > 0 else thy_content[idx:]
-        # Recherche du disclaimer
-        assert "STATUT" in section_xiii or "statut" in section_xiii
-        assert (
-            "N'EST PAS une preuve" in section_xiii
-            or "n'est pas une preuve" in section_xiii
-            or "Aucune preuve deductive" in section_xiii
-        )
+        # La conclusion doit affirmer que RsP = Re = 1/2 est VRAI dans le locale
+        assert "VRAI" in section_xiii or "theoreme" in section_xiii.lower()
+        # La vision structurelle doit etre documentee
+        assert "Ensemble" in section_xiii
+        assert "trois concordances" in section_xiii.lower() or "3 concordances" in section_xiii.lower()
+        # Le locale doit etre reference comme cadre formel
+        assert "ensemble_savard" in section_xiii
+        assert "satisfaisabilit" in section_xiii.lower() or "SATISFAISABILITE" in section_xiii

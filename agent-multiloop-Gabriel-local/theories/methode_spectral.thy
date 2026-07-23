@@ -208,7 +208,7 @@ text \<open>
 subsection "Foundations.4 - La regle Savard (Ensemble = 1)"
 
 text \<open>
-  Principe unificateur (nomenclature Philippe Savard) :
+  Principe unificateur (nomenclature Philippe Thomas Savard) :
 
     Ensemble = 1
             = 1/x  +  1/t  +  1/ms

@@ -3497,15 +3497,25 @@ text \<open>
   rapport spectral RsP 1 2, dont l'egalite a 1/2 est un THEOREME
   (RsP_un_demi_general) et non une hypothese. Ceci demontre que le
   Theoreme de l'Ensemble repose sur une base logiquement coherente.
+
+  NOTE TECHNIQUE (v3.35, correction Philippe) : le locale ensemble_savard
+  a 7 fixes mais seuls 4 apparaissent dans les assumes
+  (zeta_tchebychev, zeta_critique, tau_savard, ms_rapport). Isabelle
+  genere donc un predicat a 4 arguments dans l'ordre de declaration des
+  fixes, soit :
+    ensemble_savard zeta_tchebychev zeta_critique tau_savard ms_rapport
+  Les trois fixes non utilises (zeta_positions, ms_reconstruction,
+  ms_exclusion) restent des parametres du locale mais n'apparaissent
+  pas dans son predicat generique.
 \<close>
 
 theorem ensemble_savard_satisfaisable:
-  "ensemble_savard 0 (1 / 2) 0 0 0 0 (RsP 1 2)"
+  "ensemble_savard 0 (1 / 2) 0 (RsP 1 2)"
 proof (unfold_locales)
   show "(1::real) / 2 = 1 / 2" by simp
   show "(0::real) = 0" by simp
   show "RsP 1 2 = 1 / 2"
-    by (rule RsP_un_demi_general) simp_all
+    using RsP_un_demi_general[of 1 2] by simp
 qed
 
 subsection "XIII.6 Conclusion : l'alignement direct RsP = Re = 1/2"

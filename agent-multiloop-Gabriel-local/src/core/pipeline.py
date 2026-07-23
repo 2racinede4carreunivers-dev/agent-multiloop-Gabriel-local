@@ -36,6 +36,9 @@ from ..multiloop import (
     CoherenceDetector,
     SlowMotionDebugger,
     AutomaticVerificationLoop,
+    PreReasoner,
+    ReasoningPlan,
+    RequestMode,
 )
 from ..adapters.corpus.certainty_kernel import CertaintyKernel
 from ..audit import AuditStore
@@ -126,6 +129,11 @@ class Pipeline:
             spectral_core=self.spectral_core,
             audit_store=self.audit_store,
         )
+        # NOUVEAU (v3.34) : PreReasoner - decide dynamiquement du nombre
+        # d'iterations et des etages a court-circuiter selon la nature de
+        # la requete (verbal Isabelle / calcul simple / configuration nxn /
+        # theorie avancee / message instantane).
+        self.pre_reasoner = PreReasoner()
         logger.info("✓ Pipeline initialized with SpectralMethodCore (INVARIANT: n=position=num_termes)")
         logger.info("✓ Silent Audit Loop enabled: %s (max_retries=%d)",
                     self.silent_audit.enabled, self.silent_audit.max_retries)
@@ -178,11 +186,57 @@ class Pipeline:
         self,
         question: str,
         progress_cb: Callable[[dict[str, Any]], None] | None = None,
+        force_mode: RequestMode | None = None,
     ) -> FinalAnswer:
-        """Traite une question end-to-end via le pipeline."""
+        """Traite une question end-to-end via le pipeline.
+
+        v3.34 : Le PreReasoner decide du plan de raisonnement en T0. Si
+        ``force_mode`` est fourni (via commande CLI /rapide, /standard,
+        /approfondi, /complet), le plan force ce mode ; sinon la detection
+        automatique choisit entre INSTANTANE, RAPIDE, STANDARD, APPROFONDI
+        ou TRES_COMPLEXE.
+        """
         qid = uuid.uuid4().hex[:8]
         if progress_cb:
             progress_cb({"event": "pipeline_start", "qid": qid})
+
+        # 0. Pre-raisonnement : decide du plan (mode + iterations + bypasses)
+        pre_plan = self.pre_reasoner.plan(question, force_mode=force_mode)
+        logger.info(
+            "Q[%s] PreReasoner: mode=%s iter=%d skip_spectral=%s skip_slow=%s eta=%ds reason=%s",
+            qid, pre_plan.mode.value, pre_plan.n_iterations,
+            pre_plan.skip_spectral_compute, pre_plan.skip_slowmotion,
+            pre_plan.estimated_duration_sec, pre_plan.reason,
+        )
+        if progress_cb:
+            progress_cb({
+                "event": "pre_reasoning_done",
+                "qid": qid,
+                "mode": pre_plan.mode.value,
+                "n_iterations": pre_plan.n_iterations,
+                "estimated_duration_sec": pre_plan.estimated_duration_sec,
+                "reason": pre_plan.reason,
+                "categories": pre_plan.detected_categories,
+                "is_forced": pre_plan.is_forced,
+                "skip_spectral_compute": pre_plan.skip_spectral_compute,
+                "skip_slowmotion": pre_plan.skip_slowmotion,
+                "skip_silent_audit": pre_plan.skip_silent_audit,
+                "skip_hol_generation": pre_plan.skip_hol_generation,
+            })
+
+        # 0.bis Mode INSTANTANE : reponse template sans LLM ni pipeline
+        if pre_plan.mode == RequestMode.INSTANTANE and pre_plan.template_response:
+            if progress_cb:
+                progress_cb({"event": "pipeline_done", "qid": qid, "mode": "instantane"})
+            return FinalAnswer(
+                question_id=qid,
+                answer_text=pre_plan.template_response,
+                structured_data={"pre_reasoning": pre_plan.as_dict()},
+                confidence=1.0,
+                iterations_used=0,
+                best_score=10.0,
+                candidates=[],
+            )
 
         # 1. Abstraction
         ctx = self.abstraction.abstract(qid, question)
@@ -262,7 +316,9 @@ class Pipeline:
 
         # 4. Calcul direct (le coeur de la verite mathematique)
         precomputed_facts: dict[str, Any] = {}
-        if goal["needs_computation"]:
+        # v3.34 : PreReasoner peut sauter le calcul spectral pour les requetes
+        # verbales / discursives (Section XIII, comparaison, resume...).
+        if goal["needs_computation"] and not pre_plan.skip_spectral_compute:
             precomputed_facts = self._compute_spectral(ctx, plan, qid, progress_cb=progress_cb)
             logger.info("Q[%s] calculs spectraux directs : %s", qid, list(precomputed_facts.keys())[:5])
             if progress_cb:
@@ -279,6 +335,9 @@ class Pipeline:
                     wolfram_check = await self.verifier.verify_prime(p_val)
                     precomputed_facts["wolfram_verification"] = wolfram_check
                     logger.info("Q[%s] Wolfram check: %s", qid, wolfram_check.get("outcome"))
+        elif pre_plan.skip_spectral_compute and goal["needs_computation"]:
+            logger.info("Q[%s] Calcul spectral court-circuite par PreReasoner (mode=%s)",
+                        qid, pre_plan.mode.value)
 
         # 5. Generalisation
         general = self.generalizer.generalize(
@@ -295,19 +354,27 @@ class Pipeline:
         # 6. Construction du prompt grounded + Multi-loop self-critique
         base_prompt = self._build_base_prompt(ctx, plan, general, expanded)
         if progress_cb:
-            progress_cb({"event": "multiloop_start", "qid": qid})
+            progress_cb({
+                "event": "multiloop_start",
+                "qid": qid,
+                "planned_iterations": pre_plan.n_iterations,
+                "mode": pre_plan.mode.value,
+            })
+        # v3.34 : le PreReasoner impose le nombre d'iterations effectif
         final = await self.refinement.run(
             ctx,
             precomputed_facts,
             base_prompt,
             progress_cb=progress_cb,
+            max_iterations_override=pre_plan.n_iterations if pre_plan.n_iterations >= 1 else None,
         )
         
         # 6.bis NOUVEAU: Detection d'incoherence post-multiloop
         # Si la sortie multiloop est potentiellement incoherente, on declenche
         # le Slow-Motion Debugger qui by-pass les segments problematiques et
         # se replie sur le CertaintyKernel. Sinon, audit silencieux classique.
-        if self.slowmo_enabled:
+        # v3.34 : PreReasoner peut sauter slow-motion (mode RAPIDE verbal).
+        if self.slowmo_enabled and not pre_plan.skip_slowmotion:
             coherence = self.coherence_detector.evaluate(
                 question=question,
                 candidates=final.candidates or [],
@@ -345,16 +412,24 @@ class Pipeline:
         # 6.ter Audit silencieux post-pipeline (anti-hallucination)
         # Si la reponse contient une violation factuelle, le LLM est re-prompte
         # silencieusement avec les valeurs correctes injectees, jusqu'a N tentatives.
-        final = await self.silent_audit.audit_and_correct(
-            question=question,
-            final=final,
-            precomputed_facts=precomputed_facts,
-        )
-        if progress_cb:
-            progress_cb({"event": "silent_audit_done", "qid": qid})
+        # v3.34 : PreReasoner peut sauter l'audit pour les modes verbaux.
+        if not pre_plan.skip_silent_audit:
+            final = await self.silent_audit.audit_and_correct(
+                question=question,
+                final=final,
+                precomputed_facts=precomputed_facts,
+            )
+            if progress_cb:
+                progress_cb({"event": "silent_audit_done", "qid": qid})
+        elif progress_cb:
+            progress_cb({"event": "silent_audit_skipped", "qid": qid, "reason": "pre_reasoner_bypass"})
 
         # 7. Generation HOL si demandee
-        if goal["needs_hol_generation"] and precomputed_facts.get("equation_holds"):
+        # v3.34 : PreReasoner peut sauter la generation HOL pour les modes
+        # verbaux ou instantanes.
+        if (goal["needs_hol_generation"]
+                and precomputed_facts.get("equation_holds")
+                and not pre_plan.skip_hol_generation):
             hol_script = self.isabelle.generate_verification_script(
                 theory_name=f"verif_p{precomputed_facts.get('p', 0)}_n{precomputed_facts.get('n', 0)}",
                 n=int(precomputed_facts.get("n", 0)),
@@ -369,8 +444,20 @@ class Pipeline:
         # 8. Axes cognitifs 4+5 : EpistemicClaim + MetaReasoner
         self._annotate_epistemic(final, precomputed_facts, goal, qid)
 
+        # v3.34 : annoter la reponse avec le plan de pre-raisonnement
+        try:
+            if isinstance(final.structured_data, dict):
+                final.structured_data.setdefault("pre_reasoning", pre_plan.as_dict())
+        except Exception:  # pragma: no cover
+            pass
+
         if progress_cb:
-            progress_cb({"event": "pipeline_done", "qid": qid, "mode": "standard"})
+            progress_cb({
+                "event": "pipeline_done",
+                "qid": qid,
+                "mode": pre_plan.mode.value,
+                "iterations_used": final.iterations_used,
+            })
 
         return final
 

@@ -8,6 +8,9 @@ from .slow_motion_debugger import SlowMotionDebugger, DebugTimeline
 from .verification_loop import (
     AutomaticVerificationLoop, VerificationLoopResult, StepReport,
 )
+from .pre_reasoner import (
+    PreReasoner, ReasoningPlan, RequestMode, parse_cli_force_mode,
+)
 
 __all__ = [
     "Critic",
@@ -23,4 +26,8 @@ __all__ = [
     "AutomaticVerificationLoop",
     "VerificationLoopResult",
     "StepReport",
+    "PreReasoner",
+    "ReasoningPlan",
+    "RequestMode",
+    "parse_cli_force_mode",
 ]

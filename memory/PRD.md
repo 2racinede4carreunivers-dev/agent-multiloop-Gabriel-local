@@ -4,7 +4,25 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.33 — 1568/1568 tests Pytest ✅ — Gabriel a APPRIS la Section XIII (régime RAG Pont Savard)**
+**Production-Ready v3.34 — 1647/1647 tests Pytest ✅ — Gabriel a un PréRaisonneur dynamique (5 modes) + timer temps réel**
+
+### Changelog 2026-02 v3.34 (PreReasoner, itérations dynamiques, timer live)
+- **Problème résolu** : Gabriel exécutait systématiquement les 4 itérations complètes du pipeline même pour des requêtes purement verbales sur Isabelle ("résume la Section XIII", "cette preuve tient-elle ?", "compare ces deux lemmes"). Le CLI n'affichait ni chronomètre, ni ETA, ni nombre d'itérations prévues. Le `ComplexityAnalyzer` et le `CinematicOrchestrator` existaient mais étaient **orphelins** — jamais branchés au pipeline principal. `FastModeBypass.FAST_PATTERNS` était de plus syntaxiquement cassé (dict mal formé).
+- **Nouveau moteur `PreReasoner`** (`src/multiloop/pre_reasoner.py`, ~330 lignes) — injecté en **T0 du Pipeline**, décide *avant* la chaîne mathématique lourde du plan de raisonnement optimal :
+  - **5 modes** : `INSTANTANE` (0 loop, template pré-compilé), `RAPIDE` (1 loop verbal Isabelle), `STANDARD` (2 loops calcul simple), `APPROFONDI` (3 loops configuration n×n / bloc A/B), `TRES_COMPLEXE` (4 loops théorie avancée / multi-objectifs / Pont Savard / Riemann).
+  - **`ReasoningPlan`** : `n_iterations`, `skip_spectral_compute`, `skip_slowmotion`, `skip_silent_audit`, `skip_hol_generation`, `estimated_duration_sec` (1/9/18/32/55 s), `reason` audit-lisible, `template_response`.
+  - **Détection** : 24 patterns verbaux (résume, compare, tient-elle, bien formatée, Section XIII, Pont Savard, "qui es-tu"…), 6 patterns théorie avancée (zêta, Riemann, Chebyshev, psi_savard, droite critique, multi-objectifs), 6 patterns configuration (symétrique/asymétrique n×n, bloc A/B, chaotique-ordonnée), 9 patterns calcul simple (RsP, gap, reconstruis, position, vérif+premier), 7 templates INSTANTANE (salutations, remerciements, oui/non, continue, ça va).
+- **`RefinementLoop.run(max_iterations_override=N)`** : accepte désormais un override dynamique (1/2/3/4) imposé par le PreReasoner, sans toucher à la config globale.
+- **`Pipeline.process(force_mode=RequestMode | None)`** : accepte un mode forcé via commandes CLI. Court-circuite `_compute_spectral`, `slow_motion`, `silent_audit`, `HOL_generation` selon le plan. Mode INSTANTANE retourne le template directement sans invoquer aucun LLM.
+- **Timer temps réel dans le mode cinématique** (`src/ui/cli.py`) — le panneau Live affiche désormais :
+  - **Plan** : mode détecté (majuscules) + `(forcé)` si override, itérations prévues.
+  - **⏱ Écoulé : MM:SS / ETA restant ~ MM:SS** actualisé à 2 Hz par une tâche asyncio en arrière-plan (le chrono ne fige plus entre 2 events pipeline).
+  - Phase + détail + score + hypothèses + journal (comportement pré-existant conservé).
+- **Commandes CLI d'override** (`parse_cli_force_mode`) : `/rapide <question>`, `/standard <question>`, `/approfondi <question>`, `/complet <question>` (alias `/tres_complexe`), `/instantane <question>`.
+- **Bug fix `FastModeBypass.FAST_PATTERNS`** : dict syntaxiquement invalide (séparateurs `,` au lieu de `:`) transformé en `list[tuple[pattern, response]]` fonctionnelle.
+- **79 nouveaux tests Pytest** (`tests/test_pre_reasoner_v334.py`) : couverture des 5 modes (INSTANTANE × 24 cas, RAPIDE × 18 cas, STANDARD × 7 cas, APPROFONDI × 5 cas, TRES_COMPLEXE × 5 cas), override utilisateur, parseur CLI, invariants du plan, protection contre les marqueurs de calcul.
+- **2 tests conversational_memory corrigés** : mocks `fake_process` acceptent le nouveau kwarg `force_mode`.
+- **Total : 1647/1647 tests passent** (1568 → 1647, zéro régression). Smoke test manuel sur 12 requêtes types + 4 overrides CLI validé (discrimination parfaite).
 
 ### Changelog 2026-06 v3.33 (Apprentissage Section XIII par Gabriel)
 - **Nouveau module mémoire** `memory/methode_spectral_section_XIII.py` (~230 lignes, patron identique Section XII) :

@@ -102,6 +102,7 @@ class PipelineWithGapDetection:
         question: str,
         previous_answer: Optional[FinalAnswer] = None,
         progress_cb: Callable[[dict[str, Any]], None] | None = None,
+        force_mode: Any = None,
     ) -> FinalAnswer:
         """
         Processus amélioré :
@@ -166,7 +167,7 @@ class PipelineWithGapDetection:
         logger.info(f"Q[{qid}] Pas d'écart détecté, pipeline standard")
         if progress_cb:
             progress_cb({"event": "wrapper_delegate_pipeline", "qid": qid})
-        result = await self.pipeline.process(question, progress_cb=progress_cb)
+        result = await self.pipeline.process(question, progress_cb=progress_cb, force_mode=force_mode)
 
         # --- 3) AUTO-GRAPHIQUES POST-RECONSTRUCTION (Q2, Q1.x, Q3.x) ---
         # Si le pipeline standard vient de repondre a une question canonique,

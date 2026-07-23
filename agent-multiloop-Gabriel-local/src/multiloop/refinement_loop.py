@@ -51,19 +51,32 @@ class RefinementLoop:
         precomputed_facts: dict[str, Any] | None = None,
         base_prompt: str | None = None,
         progress_cb: Callable[[dict[str, Any]], None] | None = None,
+        max_iterations_override: int | None = None,
     ) -> FinalAnswer:
-        """Execute la boucle multi-loop et retourne la meilleure reponse."""
+        """Execute la boucle multi-loop et retourne la meilleure reponse.
+
+        Si ``max_iterations_override`` est fourni (>=1), il remplace la valeur
+        configuree ``self.max_iterations`` uniquement pour cet appel. Cela
+        permet au PreReasoner d'imposer 1/2/3/4 iterations selon la nature
+        de la requete.
+        """
         all_candidates: list[CandidateAnswer] = []
         best: CandidateAnswer | None = None
         last_critique: str = ""
 
-        for iteration in range(1, self.max_iterations + 1):
-            logger.info("=== Multi-loop iteration %d/%d ===", iteration, self.max_iterations)
+        # Nombre d'iterations effectif (override du PreReasoner ou config)
+        if isinstance(max_iterations_override, int) and max_iterations_override >= 1:
+            effective_max = max_iterations_override
+        else:
+            effective_max = self.max_iterations
+
+        for iteration in range(1, effective_max + 1):
+            logger.info("=== Multi-loop iteration %d/%d ===", iteration, effective_max)
             if progress_cb:
                 progress_cb({
                     "event": "multiloop_iteration_start",
                     "iteration": iteration,
-                    "max_iterations": self.max_iterations,
+                    "max_iterations": effective_max,
                 })
             round_candidates = []
             for cand_idx in range(self.num_candidates):

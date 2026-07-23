@@ -157,34 +157,29 @@ class FastModeBypass:
       ```
     """
     
-    FAST_PATTERNS = {
-        r"\b(?:qu'est[- ]?ce que|c'est quoi)\s+(?:gabriel|la methode)", 
-            "Gabriel est un agent multiloop basé sur la Méthode Spectrale de Philippe Thomas Savard.",
-        
-        r"\b(?:le premier nombre premier|2)",
-            "Le premier nombre premier est 2.",
-        
-        r"\b(?:le (?:2|deuxième|deuxi[ème|e]me)\s+(?:nombre\s+)?premier)",
-            "Le deuxième nombre premier est 3.",
-        
-        r"\b(?:le (?:3|troisi[ème|e]me)\s+(?:nombre\s+)?premier)",
-            "Le troisième nombre premier est 5.",
-        
-        r"\b(?:qu'est[- ]?ce qu'une position)",
-            "La position est le rang d'un nombre premier dans la séquence ordonnée.",
-        
-        r"\b(?:quels? sont? (?:les )?(?:premiers|premiers nombres))",
-            "Les premiers nombres premiers sont: 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, ...",
-    }
-    
+    FAST_PATTERNS: list[tuple[str, str]] = [
+        (r"\b(?:qu'est[- ]?ce que|c'est quoi)\s+(?:gabriel|la methode)",
+         "Gabriel est un agent multiloop basé sur la Méthode Spectrale de Philippe Thomas Savard."),
+        (r"\b(?:le premier nombre premier|premier premier)\b",
+         "Le premier nombre premier est 2."),
+        (r"\b(?:le (?:2|deuxième|deuxi[eè]me)\s+(?:nombre\s+)?premier)\b",
+         "Le deuxième nombre premier est 3."),
+        (r"\b(?:le (?:3|troisi[eè]me)\s+(?:nombre\s+)?premier)\b",
+         "Le troisième nombre premier est 5."),
+        (r"\b(?:qu'est[- ]?ce qu'une position)\b",
+         "La position est le rang d'un nombre premier dans la séquence ordonnée."),
+        (r"\b(?:quels? sont? (?:les )?(?:premiers|premiers nombres))\b",
+         "Les premiers nombres premiers sont: 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, ..."),
+    ]
+
     @staticmethod
     def try_fast_response(question: str) -> Optional[str]:
         """Retourne une réponse rapide si le pattern correspond, sinon None."""
         import re
         q_low = question.lower()
-        
-        for pattern, response in FastModeBypass.FAST_PATTERNS.items():
+
+        for pattern, response in FastModeBypass.FAST_PATTERNS:
             if re.search(pattern, q_low):
                 return response
-        
+
         return None

@@ -34,8 +34,9 @@ class Orchestrator:
         self,
         question: str,
         progress_cb: Callable[[dict[str, Any]], None] | None = None,
+        force_mode: Any = None,
     ) -> FinalAnswer:
-        result = await self.pipeline.process(question, progress_cb=progress_cb)
+        result = await self.pipeline.process(question, progress_cb=progress_cb, force_mode=force_mode)
         # Journal léger (backward-compatible)
         self.memory.append({"role": "user", "content": question})
         self.memory.append({"role": "assistant", "content": result.answer_text})

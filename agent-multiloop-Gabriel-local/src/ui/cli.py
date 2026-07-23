@@ -4,7 +4,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
 from pathlib import Path
+from typing import Any
 
 from rich.align import Align
 from rich.console import Console, Group
@@ -2743,9 +2745,46 @@ class CLIInterface:
         options = state.get("options", [])
         recent_events = state.get("recent_events", [])
 
+        # v3.34 : Timer temps reel + ETA + itérations planifiées par PreReasoner
+        start_ts = state.get("start_ts")
+        eta_sec = state.get("eta_sec")
+        planned_iterations = state.get("planned_iterations")
+        pre_mode = state.get("pre_mode")
+        forced = bool(state.get("pre_forced", False))
+
+        elapsed_str = ""
+        eta_str = ""
+        if isinstance(start_ts, (int, float)):
+            elapsed = max(0.0, time.time() - float(start_ts))
+            mm, ss = divmod(int(elapsed), 60)
+            elapsed_str = f"{mm:02d}:{ss:02d}"
+            if isinstance(eta_sec, (int, float)) and eta_sec > 0:
+                remaining = max(0, int(float(eta_sec) - elapsed))
+                emm, ess = divmod(remaining, 60)
+                eta_str = f"{emm:02d}:{ess:02d}"
+
         body = Text()
         body.append(" Analyse en cours...\n", style="bold bright_cyan")
-        body.append("\n  Phase : ", style="bold yellow")
+
+        # Ligne dédiée PreReasoner : mode + iterations prévues + timer + ETA
+        if pre_mode or planned_iterations or elapsed_str:
+            body.append("\n  Plan : ", style="bold magenta")
+            if pre_mode:
+                label = str(pre_mode).upper()
+                if forced:
+                    label += " (forcé)"
+                body.append(label, style="bright_magenta")
+            if planned_iterations:
+                body.append(f"  •  itérations prévues : {planned_iterations}",
+                            style="bright_white")
+            if elapsed_str:
+                body.append(f"\n  ⏱ Écoulé : ", style="bold yellow")
+                body.append(elapsed_str, style="bright_white")
+                if eta_str:
+                    body.append(f"  /  ETA restant ~ ", style="dim")
+                    body.append(eta_str, style="bright_white")
+
+        body.append("\n\n  Phase : ", style="bold yellow")
         body.append(phase, style="white")
 
         if iteration and max_iterations:
@@ -2798,6 +2837,7 @@ class CLIInterface:
             "wrapper_start": "Preparation",
             "wrapper_delegate_pipeline": "Delegation pipeline",
             "pipeline_start": "Initialisation pipeline",
+            "pre_reasoning_done": "Pré-raisonnement (plan)",
             "abstraction_done": "Abstraction",
             "meta_reasoning_done": "Meta-raisonnement",
             "navigation_done": "Navigation conceptuelle",
@@ -2808,6 +2848,7 @@ class CLIInterface:
             "multiloop_iteration_end": "Selection du meilleur candidat",
             "multiloop_early_stop": "Arret anticipe (score suffisant)",
             "silent_audit_done": "Audit silencieux",
+            "silent_audit_skipped": "Audit silencieux (skip)",
             "pipeline_done": "Finalisation",
             "wrapper_done": "Termine",
             "multi_objective_start": "Mode multi-objectifs",
@@ -2832,6 +2873,17 @@ class CLIInterface:
             ev = str(event.get("event", ""))
             state["phase"] = phase_labels.get(ev, ev or "Traitement")
             state["verbose_trace"] = verbose_trace
+
+            # v3.34 : evenement du PreReasoner - alimente le timer + ETA + itérations
+            if ev == "pre_reasoning_done":
+                state["pre_mode"] = event.get("mode")
+                state["planned_iterations"] = event.get("n_iterations")
+                state["eta_sec"] = event.get("estimated_duration_sec")
+                state["pre_forced"] = bool(event.get("is_forced"))
+                reason = event.get("reason", "")
+                state["detail"] = f"plan={state['pre_mode']} · {reason}"
+                if verbose_trace:
+                    _push_list("options", f"PreReasoner: {state['pre_mode']} · {reason}", 8)
 
             if ev == "multiloop_iteration_start":
                 state["iteration"] = int(event.get("iteration", 0) or 0)
@@ -2976,6 +3028,16 @@ class CLIInterface:
             if await self._handle_special(user_input):
                 continue
 
+            # v3.34 : Parse commandes d'override /rapide /standard /approfondi /complet
+            from ..multiloop.pre_reasoner import parse_cli_force_mode
+            forced_mode, user_input = parse_cli_force_mode(user_input)
+            if not user_input:
+                console.print(
+                    "\n  [yellow]Mode forcé demandé sans question. "
+                    "Utilisez `/rapide <votre question>` par exemple.[/yellow]\n"
+                )
+                continue
+
             try:
                 # Limite de longueur pour eviter des requetes monstrueuses
                 # (compatible avec la limite du mode debug : 1600 + 400 = 2000)
@@ -2993,7 +3055,7 @@ class CLIInterface:
 
                 if not live_trace:
                     console.print("\n  [dim]Reflexion en cours (multi-loop self-critique)...[/dim]")
-                    answer = await self.orchestrator.ask(user_input)
+                    answer = await self.orchestrator.ask(user_input, force_mode=forced_mode)
                 else:
                     progress_state: dict[str, object] = {
                         "phase": "Initialisation",
@@ -3005,6 +3067,12 @@ class CLIInterface:
                         "assumptions": [],
                         "options": [],
                         "recent_events": [],
+                        # v3.34 : timer temps réel + ETA + itérations planifiées
+                        "start_ts": time.time(),
+                        "eta_sec": None,
+                        "planned_iterations": None,
+                        "pre_mode": None,
+                        "pre_forced": bool(forced_mode is not None),
                     }
                     live_handle: list[Live | None] = [None]
                     progress_cb = self._make_progress_callback(
@@ -3020,10 +3088,35 @@ class CLIInterface:
                         transient=True,
                     ) as live:
                         live_handle[0] = live
-                        answer = await self.orchestrator.ask(
-                            user_input,
-                            progress_cb=progress_cb,
-                        )
+
+                        # v3.34 : tache de rafraichissement du timer (2 Hz)
+                        # pour que le chrono avance meme entre 2 events pipeline
+                        stop_flag = {"stop": False}
+
+                        async def _tick_timer():
+                            while not stop_flag["stop"]:
+                                try:
+                                    live.update(
+                                        self._render_live_progress_panel(progress_state),
+                                        refresh=False,
+                                    )
+                                except Exception:
+                                    pass
+                                await asyncio.sleep(0.5)
+
+                        tick_task = asyncio.create_task(_tick_timer())
+                        try:
+                            answer = await self.orchestrator.ask(
+                                user_input,
+                                progress_cb=progress_cb,
+                                force_mode=forced_mode,
+                            )
+                        finally:
+                            stop_flag["stop"] = True
+                            try:
+                                await asyncio.wait_for(tick_task, timeout=1.0)
+                            except (asyncio.TimeoutError, Exception):
+                                tick_task.cancel()
                 self._display_answer(answer)
             except Exception as exc:
                 logger.error("Erreur traitement : %s", exc, exc_info=True)

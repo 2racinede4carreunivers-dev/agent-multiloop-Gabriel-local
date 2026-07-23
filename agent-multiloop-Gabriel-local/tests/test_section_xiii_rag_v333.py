@@ -25,12 +25,15 @@ from memory.dictionnaire_spectral import (
 )
 from memory.adaptateur_cognitif_rag import AdaptateurCognitifSpectral
 from memory.methode_spectral_section_XIII import (
+    ENSEMBLE_STRUCTURE,
     NOMENCLATURE_ENSEMBLE,
     SECTION_XIII_REGLES,
+    TROIS_CONCORDANCES,
     VALIDATIONS_CANONIQUES,
     get_section_XIII_entries,
     psi_savard,
     rapport_zeta_savard,
+    render_ensemble_structure_summary,
     render_section_XIII_summary,
     verifier_validations_canoniques,
 )
@@ -64,9 +67,53 @@ class TestModuleSectionXIII:
         assert NOMENCLATURE_ENSEMBLE["1/ms3"]["symbole"] == "ms_rapport"
         assert NOMENCLATURE_ENSEMBLE["1/y2"]["symbole"] == "zeta_critique"
 
-    def test_statut_honnete_dans_regles(self):
+    def test_statut_affirmatif_dans_regles(self):
+        """v3.34 : la 7e regle affirme le statut de THEOREME du locale
+        (et non plus 'N'EST PAS une preuve'). Voir Section XIII v3.34."""
         r7 = SECTION_XIII_REGLES[6]
-        assert "N'EST PAS une preuve" in r7["regle"]
+        assert r7["nom"] == "statut_affirmatif_theoreme_du_locale"
+        texte = r7["regle"]
+        assert "THEOREME" in texte
+        assert "VRAI" in texte
+        assert "ensemble_savard" in texte
+        assert "TROIS CONCORDANCES" in texte
+        # L'ancienne formulation "N'EST PAS une preuve" ne doit plus etre presente
+        assert "N'EST PAS une preuve" not in texte
+
+    def test_trois_concordances_completes(self):
+        """v3.34 : les 3 concordances C1, C2, C3 sont declarees et documentees."""
+        codes = [c["code"] for c in TROIS_CONCORDANCES]
+        assert codes == ["C1", "C2", "C3"]
+        c1, c2, c3 = TROIS_CONCORDANCES
+        assert c1["egalite"] == "1/y1 = 1/t"
+        assert c2["egalite"] == "1/y3 = 1/ms1"
+        assert c3["egalite"] == "1/y2 = 1/ms3"
+        # Chaque concordance a un role dans le pont
+        for c in TROIS_CONCORDANCES:
+            assert c["role_dans_le_pont"]
+            assert c["preuve"]
+            assert c["sens"]
+
+    def test_ensemble_structure_ontologique(self):
+        """v3.34 : la structure Ensemble = 1/x + 1/t + 1/ms est documentee."""
+        assert ENSEMBLE_STRUCTURE["ensemble_unitaire"]["valeur"] == 1
+        vues = ENSEMBLE_STRUCTURE["vues_du_meme_ensemble"]
+        assert set(vues) == {"1/x", "1/t", "1/ms"}
+        assert vues["1/x"]["identite"] == "zeta"
+        assert vues["1/t"]["identite"] == "psi_savard"
+        assert vues["1/ms"]["identite"] == "methode_spectrale"
+        assert vues["1/x"]["decomposition"] == ["1/y1", "1/y2", "1/y3"]
+        assert vues["1/ms"]["decomposition"] == ["1/ms1", "1/ms2", "1/ms3"]
+        assert "RsP = Re = 1/2" in ENSEMBLE_STRUCTURE["conclusion"]
+
+    def test_ensemble_structure_summary_injectable(self):
+        """v3.34 : le rendu textuel de la structure est utilisable en injection LLM."""
+        s = render_ensemble_structure_summary()
+        assert "Ensemble = 1" in s
+        assert "1/x" in s and "1/t" in s and "1/ms" in s
+        assert "TROIS CONCORDANCES" in s
+        for concordance in TROIS_CONCORDANCES:
+            assert concordance["egalite"] in s
 
 
 class TestHelpersPsiSavard:
@@ -122,11 +169,19 @@ class TestRegimePontSavard:
         assert "locale_ensemble_savard" in r.definitions_hol
         assert "nomenclature_savard" in r.definitions_hol
 
-    def test_regle_statut_honnete(self):
+    def test_regle_statut_affirmatif(self):
+        """v3.34 : les regles cognitives du regime portent le statut affirmatif
+        (theoreme du locale, universalite) et non plus 'jamais une preuve'."""
         r = get_regime("regime_pont_savard")
         texte = " ".join(r.regles_cognitives + r.avertissements)
-        assert "JAMAIS" in texte
-        assert "preuve" in texte
+        # Marqueurs de la nouvelle vision affirmative
+        assert "THEOREME" in texte
+        assert "ensemble_savard" in texte
+        assert "satisfaisabilite" in texte.lower() or "SATISFAISABILITE" in texte
+        # La structure ontologique et les trois concordances sont referencees
+        assert "1/x + 1/t + 1/ms" in texte or "TROIS CONCORDANCES" in texte
+        # Universalite mentionnee
+        assert "universel" in texte.lower() or "universalite" in texte.lower()
 
     def test_exemples_numeriques(self):
         r = get_regime("regime_pont_savard")

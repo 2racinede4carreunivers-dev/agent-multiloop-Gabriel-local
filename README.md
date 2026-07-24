@@ -26,7 +26,7 @@
 
 ---
 
-## 🎯 Buts et raisons d'existence
+##  Buts et raisons d'existence
 
 L'agent multiloop **Gabriel** est un **assistant mathématique expert HOL/Lean** entièrement dédié à un objectif unique et précis : **assister l'auteur, Philippe Thomas Savard, à construire un outil géométrique dynamique permettant d'apporter une réponse à l'énigme de Bernhard Riemann et à la conjecture de la fonction zêta de Riemann.**
 
@@ -40,9 +40,9 @@ Gabriel existe donc pour trois raisons :
 
 ---
 
-## 👤 Parcours de l'auteur
+##  Parcours de l'auteur
 
-**Philippe Thomas Savard** est un autodidacte de Lévis (Québec, Canada), passionné de mathématiques et auteur de la théorie personnelle *L'Univers est au carré*. Malgré l'absence de formation académique formelle, il consacre une grande partie de son temps à l'étude des structures profondes des nombres entiers, en particulier à ce qu'il nomme la **géométrie du spectre des nombres premiers** — un chapitre central qui représente près de 80 % de sa théorie.
+**Philippe Thomas Savard** est un autodidacte de Lévis (Québec, Canada), passionné de mathématiques et auteur de la théorie *L'Univers est au carré*. Malgré l'absence de formation académique formelle, il consacre une grande partie de son temps à l'étude des structures profondes des nombres entiers, en particulier à ce qu'il nomme la **géométrie du spectre des nombres premiers** 
 
 Dans ce cadre, l'auteur propose l'existence d'un **code interne** reliant les nombres premiers à l'ensemble des entiers, mis en évidence par un **rapport spectral unique `RsP = 1/2`**, qu'il associe à la position `n` des nombres premiers dans les suites A et B, et à une proximité conceptuelle avec la **fonction zêta de Riemann** et sa **droite critique `Re = 1/2`**.
 
@@ -50,7 +50,7 @@ C'est cette conviction structurelle — que le rapport `RsP = 1/2` n'est **pas u
 
 ---
 
-## 🤖 Ce que fait l'agent Gabriel
+##  Ce que fait l'agent Gabriel
 
 Gabriel est un **agent multiloop cognitif local** (CLI, dockerisé, hors-cloud pour l'exécution sensible) qui :
 
@@ -76,7 +76,7 @@ Commandes CLI de forçage : `/rapide`, `/standard`, `/approfondi`, `/complet`, `
 Le panneau Live affiche : mode détecté, itérations prévues, chronomètre écoulé, **ETA restant** — rafraîchissement 2 Hz par tâche asyncio.
 
 ### 7 moteurs cognitifs collaboratifs
-`RequestDecomposer` → `ProofPlanner` → `SpectralCore` → `RefinementLoop` (multiloop self-critique) → `CoherenceDetector` → `SlowMotionDebugger` (fallback CertaintyKernel) → `SilentAuditLoop` (anti-hallucination).
+`RequestDecomposer` → `ProofPlanner` → `SpectralCore` → `RefinementLoop` (multiloop self-critique) → `CoherenceDetector` → `SilentAuditLoop` (anti-hallucination).
 
 ### Factorisation formelle Isabelle (v3.35)
 Un **locale paramétré `spectral_family`** unifie les modèles 1/2, 1/3 et 1/4 en un seul cadre algébrique. Trois interpretations `regime_1_2`, `regime_1_3`, `regime_1_4` héritent du théorème universel `RsP_generic_constant`. Extension à un modèle 1/k arbitraire : une seule ligne.
@@ -98,7 +98,7 @@ Une section « 0. Foundations / Meta-theory » en tête du fichier `.thy` docume
 
 ---
 
-## 💡 Exemples de possibilités
+##  Exemples de possibilités
 
 Voici des exemples concrets de requêtes traitées par Gabriel :
 
@@ -152,15 +152,13 @@ Cette focalisation garantit que Gabriel reste un **assistant compétent** plutô
 ### Prérequis
 - Docker Desktop (ou moteur Docker + docker-compose)
 - Optionnel : Isabelle 2025-2 en local pour la compilation formelle hors conteneur
-- Optionnel : une clé API Anthropic (Claude Sonnet 4.5) ou OpenAI (GPT-5)
+- Optionnel : une clé API Anthropic (Claude Sonnet 4.5) et OpenAI (GPT-5)
 
 ### Lancement rapide
 
 ```bash
 git clone https://github.com/2racinede4carreunivers-dev/agent-multiloop-Gabriel-local.git
 cd agent-multiloop-Gabriel-local
-cp .env.example .env
-# Éditer .env pour renseigner ANTHROPIC_API_KEY ou OPENAI_API_KEY
 docker-compose up -d
 docker exec -it gabriel_cli python -m src.ui.cli
 ```
@@ -237,3 +235,7 @@ Auteur principal et propriétaire :
 *« Le rapport spectral 1/2 n'est pas un artefact algébrique — c'est une réalité numérique globale, verrouillée par trois concordances, qui rend `RsP = Re = 1/2` vraie dans le cadre du locale `ensemble_savard`. »*
 
 **Philippe Thomas Savard, 2026**
+
+## Mse en garde:
+
+Il a été grandement médiatisé que les agent IA et autre intelligences artificiel peuvent avoir des hallucination? Comme l'auteur ressent que certain dans nos société veulent s'auto proclamé policier de ce qui existe et de ce qui n'éxiste pas l'agent Mme. Gabriel ne diffuse que des halluciantion rien de vrai ne sort de son raisonement et de ses affirmations. Nous préfèrons vous en avertir. cette agent s'adresse a un public avertit et est résevé au 18 ans et plus les utilisatuer doivent avoir la majorité atteinte pour en faire l'utilisation. Merci de respecter la concigne. 

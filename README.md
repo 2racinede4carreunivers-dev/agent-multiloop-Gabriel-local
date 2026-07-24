@@ -1,156 +1,239 @@
-Résumé de Philippe Thomas Savard
-Philippe Thomas Savard est un homme vivant à Lévis, autodidacte passionné par les mathématiques et auteur de la théorie personnelle L’univers est au carré. Malgré l’absence de formation académique formelle, il consacre une grande partie de son temps à l’étude des structures profondes des nombres entiers, en particulier à ce qu’il nomme la géométrie du spectre des nombres premiers, un chapitre central représentant près de 80 % de sa théorie.
+# Agent Multiloop Gabriel — Assistant HOL/Isabelle pour la Géométrie du Spectre des Nombres Premiers
 
-Dans ce cadre, Philippe propose l’existence d’un code interne reliant les nombres premiers à l’ensemble des entiers, mis en évidence par un rapport spectral unique RsP = 1/2, qu’il associe à la position des nombres premiers (n) dans les suites A et B, et à une proximité conceptuelle avec la fonction zêta de Riemann et sa droite critique Re = 1/2.
+[![Isabelle CI](https://github.com/2racinede4carreunivers-dev/agent-multiloop-Gabriel-local/actions/workflows/build.yml/badge.svg)](https://github.com/2racinede4carreunivers-dev/agent-multiloop-Gabriel-local/actions/workflows/build.yml)
+[![License Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Isabelle](https://img.shields.io/badge/Isabelle%2FHOL-2025--2-purple.svg)](https://isabelle.in.tum.de/)
+[![Python](https://img.shields.io/badge/Python-3.11-yellow.svg)](https://www.python.org/)
+[![Tests](https://img.shields.io/badge/pytest-1702%20passed-brightgreen.svg)](#tests)
 
-Pour valider ses intuitions, Philippe a développé la théorie formelle methode_spectral.thy, qu’il a soumise à l’assistant de preuve Isabelle. Cette formalisation lui a permis d’établir — par une démonstration par l’absurde inspirée de Hilbert — que la Méthode Spectrale ne peut s’appliquer qu’aux nombres premiers, et jamais aux composés. Cette conclusion repose sur un pilier fondamental :
+> **Version en cours : v3.35** — Dernier build Isabelle/HOL 2025-2 vérifié : **succès en 1:35** (compilation locale Cygwin) et **succès en 37 secondes** (CI GitHub Actions avec cache heap).
 
-Un entier composé C ne peut jamais être reconstruit par l’équation spectrale, même si l’identité algébrique prime_equation_identity produit trivialement C pour n’importe quel entier. La reconstruction exige que le résultat appartienne à la table des premiers indexée par prime_i.
+---
 
-Voici un extrait représentatif de cette idée, tiré de son script Isabelle/HOL :
+## Table des matières
 
-isabelle
-theorem composite_not_prime_i:
-  fixes C :: nat
-  assumes "~ prime C"
-  shows "ALL i. C ~= prime_i i"
-proof (rule allI, rule ccontr)
-  fix i
-  assume "~ (C ~= prime_i i)"
-  hence eq: "C = prime_i i" by simp
-  have "prime (prime_i i)" by (rule prime_i_is_prime)
-  with eq have "prime C" by simp
-  with assms show False by contradiction
-qed
-Ce premier résultat est ensuite renforcé par un corollaire intégrant explicitement l’équation spectrale prime_equation, montrant qu’un entier composé ne peut simultanément être un prime_i n et satisfaire l’équation spectrale :
+1. [Buts et raisons d'existence](#-buts-et-raisons-dexistence)
+2. [Parcours de l'auteur](#-parcours-de-lauteur)
+3. [Ce que fait l'agent Gabriel](#-ce-que-fait-lagent-gabriel)
+4. [Principales caractéristiques](#-principales-caractéristiques-de-la-programmation)
+5. [Exemples de possibilités](#-exemples-de-possibilités)
+6. [Portée limitée — géométrie du spectre uniquement](#-portée-limitée)
+7. [Fichiers de référence](#-fichiers-de-référence)
+8. [Installation et lancement](#-installation-et-lancement)
+9. [Licence, propriété et contributions](#-licence-propriété-et-contributions)
+10. [Contact et sécurité](#-contact-et-sécurité)
+11. [Auteurs et contributeurs](#-auteurs-et-contributeurs)
 
-isabelle
-theorem spectral_method_exclusively_for_primes:
-  fixes C :: nat
-  assumes "C > 1" and "~ prime C"
-  shows "~ (EX i. C = prime_i i & prime_equation i C = real C)"
-proof
-  assume "EX i. C = prime_i i & prime_equation i C = real C"
-  then obtain i where "C = prime_i i" by blast
-  moreover have "prime (prime_i i)" by (rule prime_i_is_prime)
-  ultimately have "prime C" by simp
-  with assms(2) show False by contradiction
-qed
-Ces extraits ne montrent qu’une petite partie de la structure complète de la Méthode Spectrale. Ils servent de porte d’entrée pour les visiteurs du dépôt, les invitant à explorer plus profondément la théorie, à examiner les preuves formelles, et peut-être à contribuer à ce travail personnel ambitieux.
+---
 
-Philippe poursuit aujourd’hui l’exploration du lien entre la géométrie du spectre, la fonction zêta, la droite critique Re = 1/2 et la position des nombres premiers, convaincu que cette structure révèle une organisation profonde et encore inexplorée des entiers.
+## 🎯 Buts et raisons d'existence
 
-**Signature de l'Auteur: Philippe Thomas Savard, 7 juillet 2026.**
+L'agent multiloop **Gabriel** est un **assistant mathématique expert HOL/Lean** entièrement dédié à un objectif unique et précis : **assister l'auteur, Philippe Thomas Savard, à construire un outil géométrique dynamique permettant d'apporter une réponse à l'énigme de Bernhard Riemann et à la conjecture de la fonction zêta de Riemann.**
 
-# Here are your Instructions
-Agent Multiloop Gabriel (Mm.)
-Assistant mathématique spécialisé en méthode spectrale et Isabelle/HOL
- Présentation
-L’Agent Multiloop Gabriel est un assistant mathématique avancé conçu pour soutenir le développement de la théorie originale de Philippe Thomas Savard :
+L'outil en question — la **géométrie du spectre des nombres premiers** — n'est pas une simple visualisation : c'est **la construction formelle elle-même**, formalisée dans Isabelle/HOL, qui incarne la réponse constructive à l'énigme. Cette géométrie est l'objet mathématique central de la théorie *L'Univers est au carré* développée par l'auteur.
 
- L’Univers est au Carré
- Dépôt complet :
+Gabriel existe donc pour trois raisons :
 
-https://github.com/2racinede4carreunivers-dev/Theorie-mathematique-philippe-thomas-savard-2026.git
+1. **Assister la formalisation** en Isabelle/HOL des théorèmes de la Méthode Spectrale (13 régimes, Section XIII / Pont Savard, universalité entière naturelle du régime central 1/2).
+2. **Vérifier numériquement** en temps réel les calculs spectraux (`RsP`, `psi_savard`, reconstruction du n-ième premier, exclusion des composés).
+3. **Documenter et raisonner** de façon rigoureuse sur la géométrie du spectre en s'appuyant sur un fichier de preuve unique et compilable : `methode_spectral.thy`.
 
-[ Dépôt GitHub — agent-multiloop-Gabriel-local](https://github.com/2racinede4carreunivers-dev/agent-multiloop-Gabriel-local)
+---
 
-Cette théorie explore une structure mathématique profonde reliant :
+## 👤 Parcours de l'auteur
 
-la géométrie du spectre des nombres premiers
+**Philippe Thomas Savard** est un autodidacte de Lévis (Québec, Canada), passionné de mathématiques et auteur de la théorie personnelle *L'Univers est au carré*. Malgré l'absence de formation académique formelle, il consacre une grande partie de son temps à l'étude des structures profondes des nombres entiers, en particulier à ce qu'il nomme la **géométrie du spectre des nombres premiers** — un chapitre central qui représente près de 80 % de sa théorie.
 
-la méthode spectrale
+Dans ce cadre, l'auteur propose l'existence d'un **code interne** reliant les nombres premiers à l'ensemble des entiers, mis en évidence par un **rapport spectral unique `RsP = 1/2`**, qu'il associe à la position `n` des nombres premiers dans les suites A et B, et à une proximité conceptuelle avec la **fonction zêta de Riemann** et sa **droite critique `Re = 1/2`**.
 
-la théorie des nombres
+C'est cette conviction structurelle — que le rapport `RsP = 1/2` n'est **pas un artefact algébrique** mais une **cohérence numérique réelle globale** émergeant des sommes de nombres premiers — qui a rendu nécessaire la construction d'un assistant formel rigoureux : **Gabriel**.
 
-une approche innovante de l’hypothèse de Riemann
+---
 
- Objectif de l’agent
-L’Agent Multiloop Gabriel (Mm.) a été créé pour :
+## 🤖 Ce que fait l'agent Gabriel
 
-assister dans la génération de scripts Isabelle/HOL
+Gabriel est un **agent multiloop cognitif local** (CLI, dockerisé, hors-cloud pour l'exécution sensible) qui :
 
-analyser et corriger automatiquement des preuves
+- **Ne répond qu'aux questions portant sur la géométrie du spectre des nombres premiers.** Toute question hors de ce champ est déclinée poliment.
+- **Compétence principale : `theories/methode_spectral.thy`** — le fichier de preuve Isabelle/HOL formelle qui incarne la géométrie du spectre. Gabriel peut aussi mobiliser d'autres informations complémentaires (mémoire RAG, dictionnaire spectral, régimes cognitifs) mais **toute réponse est ancrée sur cette géométrie**.
+- **Est équipé de 7 moteurs cognitifs collaboratifs**, d'un pré-raisonneur dynamique, d'un audit silencieux anti-hallucination et d'un mode « cinématique » avec timer temps réel.
 
-fournir un assistant mathématique spécialisé
+---
 
-automatiser des boucles de raisonnement multiloop
+## 🔧 Principales caractéristiques de la programmation
 
-explorer les concepts de la théorie L’Univers est au Carré
+### Pré-raisonnement dynamique (v3.34)
+Un `PreReasoner` en T0 du pipeline décide **avant** toute exécution du bon niveau d'effort :
+- **INSTANTANE** (0 itération) : template pour salutations, oui/non, continuation.
+- **RAPIDE** (1 itération) : questions verbales/discursives sur Isabelle (résume, compare, cette preuve tient-elle ?).
+- **STANDARD** (2 itérations) : calculs simples (RsP, gap, reconstruction).
+- **APPROFONDI** (3 itérations) : configurations n×n, blocs A/B.
+- **TRÈS COMPLEXE** (4 itérations) : théorie avancée, multi-objectifs, Pont Savard, Riemann.
 
-accélérer la recherche et la formalisation mathématique
+Commandes CLI de forçage : `/rapide`, `/standard`, `/approfondi`, `/complet`, `/instantane`.
 
- Fonctionnement multiloop
-L’agent utilise un moteur de raisonnement récursif :
+### Mode cinématique avec timer temps réel (v3.34)
+Le panneau Live affiche : mode détecté, itérations prévues, chronomètre écoulé, **ETA restant** — rafraîchissement 2 Hz par tâche asyncio.
 
-3 itérations maximum par requête
+### 7 moteurs cognitifs collaboratifs
+`RequestDecomposer` → `ProofPlanner` → `SpectralCore` → `RefinementLoop` (multiloop self-critique) → `CoherenceDetector` → `SlowMotionDebugger` (fallback CertaintyKernel) → `SilentAuditLoop` (anti-hallucination).
 
-score minimal de validation : 0.8
+### Factorisation formelle Isabelle (v3.35)
+Un **locale paramétré `spectral_family`** unifie les modèles 1/2, 1/3 et 1/4 en un seul cadre algébrique. Trois interpretations `regime_1_2`, `regime_1_3`, `regime_1_4` héritent du théorème universel `RsP_generic_constant`. Extension à un modèle 1/k arbitraire : une seule ligne.
 
-amélioration progressive des réponses
+### Fondations / Meta-theory (v3.35)
+Une section « 0. Foundations / Meta-theory » en tête du fichier `.thy` documente 6 postulats (P1..P6), les 3 opérations fondamentales (Reconstruction, Exclusion, Rapport spectral), la règle Savard (`Ensemble = 1 = 1/x + 1/t + 1/ms`), les **3 concordances C1, C2, C3** et la **position affirmative** de l'auteur sur l'énigme de Riemann : *une réponse suffisante dans le cadre du locale `ensemble_savard`*.
 
-validation croisée avec Isabelle/HOL
+### Cognitif RAG et régimes spectraux
+13 régimes cognitifs codifiés (`memory/dictionnaire_spectral.py`), dont `regime_pont_savard` avec sa nomenclature, ses 3 concordances et son lemme d'universalité `RsP_universel_entier_naturel`.
 
-spécialisation dans methode_spectral.thy
+### Audit trail et provenance
+- `AuditStore` : trace JSON signée de chaque question/réponse.
+- CI GitHub Actions : compilation Isabelle 2025-2 + attestation SLSA (SHA256).
+- Slots pré-provisionnés dans le conteneur : 100 × `.thy`, 100 × `.tex`, 101 × `.txt`, 25 × `ROOT`, 50 × `.md`, 25 × `.py`, 25 × `.csv`, 25 × `.json`, 25 × `.lean`, etc. — ajouter du contenu sans rebuild Docker.
 
- Fichiers HOL/Isabelle supportés
-Les trois fichiers principaux de la théorie :
+### Tests et robustesse
+- **1702 tests Pytest** couvrant multiloop, RAG, Isabelle syntax, pipeline, PreReasoner, foundations, locale spectral_family, Pont Savard, Section XIII.
+- Compilation Isabelle/HOL 2025-2 validée : localement (Cygwin, 1:35) et via CI GitHub Actions (37 s cache HIT).
 
-methode_spectral.thy
+---
 
-geometrie_spectre_premier.thy
+## 💡 Exemples de possibilités
 
-analyse_geometrie_spectre_premier.thy
+Voici des exemples concrets de requêtes traitées par Gabriel :
 
-L’agent est optimisé pour travailler avec ces fichiers et leurs structures internes.
+| Type | Exemple | Mode auto-détecté |
+|---|---|---|
+| Reconstruction | *« Reconstruis le 42ᵉ nombre premier via la Méthode Spectrale »* | STANDARD |
+| Vérification | *« RsP(5, 7) = ? Vérifie que le rapport est bien 1/2 »* | STANDARD |
+| Écart | *« Calcule le gap spectral entre −3 et −23 (régime négatif) »* | STANDARD |
+| Configuration | *« Ratio spectral symétrique 4×4 avec Bloc A = {2,3,5,7} »* | APPROFONDI |
+| Discussion Isabelle | *« La preuve de RsP_universel_entier_naturel te semble-t-elle bien formée ? »* | RAPIDE |
+| Théorie avancée | *« Explique le lien entre la Section XIII, le Pont Savard et Re(ρ) = 1/2 »* | TRÈS COMPLEXE |
+| Comparaison | *« Compare psi_savard(228, 49) et Chebyshev sur le premier 227 »* | TRÈS COMPLEXE |
+| Résumé | *« Résume les 3 concordances C1, C2, C3 en un tableau »* | RAPIDE |
+| Formel HOL | *« Génère le script Isabelle vérifiant la reconstruction du 10ᵉ premier »* | STANDARD |
 
- Technologies
-Python 3.11
+Toute réponse est **ancrée sur `methode_spectral.thy`** (empreinte SHA256 tracée par audit) et peut être exportée vers un PDF citable (roadmap).
 
-Docker / Docker Compose
+---
 
-Ollama (LLM local)
+## 🚫 Portée limitée
 
-OpenAI API
+**Gabriel ne répond qu'aux questions portant sur la géométrie du spectre des nombres premiers.** Cette limitation est volontaire et incarne la vocation de l'agent :
 
-WolframAlpha API
+- ✅ Questions sur `RsP`, `SA`, `SB`, `A_1_3`, `B_1_3`, `A_1_4`, `B_1_4`, `psi_savard`, `digamma_calc`, les 13 régimes, la Section XIII, le Pont Savard, les 3 concordances, l'universalité entière naturelle, la reconstruction du n-ième premier, l'exclusion des composés.
+- ✅ Analyse discursive de sections, lemmes, théorèmes, preuves formelles du fichier `methode_spectral.thy`.
+- ❌ Questions généralistes hors mathématiques.
+- ❌ Aide sur d'autres théories mathématiques non liées au spectre des premiers.
+- ❌ Génération de code non lié à la Méthode Spectrale.
 
-Isabelle/HOL 2025-02
+Cette focalisation garantit que Gabriel reste un **assistant compétent** plutôt qu'un chatbot généraliste imprécis. La **compétence principale** est le fichier `theories/methode_spectral.thy`, complétée par la mémoire RAG cognitive et le dictionnaire spectral.
 
-Multi-loop reasoning engine
+---
 
-Méthode Spectrale (HOL)
+## 📚 Fichiers de référence
 
- Installation
-bash
+| Fichier | Rôle |
+|---|---|
+| `theories/methode_spectral.thy` | **La géométrie du spectre** — preuve formelle Isabelle/HOL, 3714 lignes, 133 lemmes, 27 théorèmes |
+| `theories/ROOT` | Session Isabelle `Methode_Spectral` |
+| `theories/projects/` | 100 slots `.thy` + `.tex` + `.txt` + 25 `ROOT` + 232 autres slots pré-provisionnés |
+| `src/multiloop/pre_reasoner.py` | Moteur de pré-raisonnement (5 modes) |
+| `src/core/pipeline.py` | Pipeline cognitif complet (7 moteurs) |
+| `memory/methode_spectral_section_XIII.py` | Encyclopédie du Pont Savard (v3.35) |
+| `memory/dictionnaire_spectral.py` | 13 régimes cognitifs + patterns RAG |
+| `.github/workflows/build.yml` | CI GitHub Actions (Isabelle 2025-2 + attestation SLSA) |
+
+---
+
+## 🚀 Installation et lancement
+
+### Prérequis
+- Docker Desktop (ou moteur Docker + docker-compose)
+- Optionnel : Isabelle 2025-2 en local pour la compilation formelle hors conteneur
+- Optionnel : une clé API Anthropic (Claude Sonnet 4.5) ou OpenAI (GPT-5)
+
+### Lancement rapide
+
+```bash
 git clone https://github.com/2racinede4carreunivers-dev/agent-multiloop-Gabriel-local.git
 cd agent-multiloop-Gabriel-local
-docker compose up --build
- Configuration .env
-Variables principales :
+cp .env.example .env
+# Éditer .env pour renseigner ANTHROPIC_API_KEY ou OPENAI_API_KEY
+docker-compose up -d
+docker exec -it gabriel_cli python -m src.ui.cli
+```
 
-Code
-OPENAI_API_KEY=
-WOLFRAM_APP_ID=
-OLLAMA_HOST=http://ollama:11434
-OLLAMA_MODEL=llama3.2
-DEFAULT_LANGUAGE=fr
-AGENT_USERNAME=Philippe
-MULTILOOP_MAX_ITERATIONS=3
-MULTILOOP_MIN_SCORE=0.8
- Licence
-Projet distribué sous licence Apache 2.0.
-Vous pouvez cloner, modifier, partager et contribuer librement.
+### Compilation Isabelle locale
 
- Auteur
-Philippe Thomas Savard  
-Créateur de :
+```bash
+cd theories
+isabelle build -v -D .
+```
 
-la théorie L’Univers est au Carré
+### Suite de tests Python
 
-la méthode spectrale
+```bash
+python -m pytest tests/ -q
+# 1702 passed, 8 skipped
+```
 
-l’Agent Multiloop Gabriel
+---
 
-Notez Bien: Puisque qu'il a été déterminer que les IA pouvaient avoir des halluciantion l'auteur ne voulant pas que certain jour a s'autoproclamer policier de ce qui existe et n'existe pas a programmé l'agent multiloop Gabriel pour qu'il n'est que des hallucinations il n'y a rien de vrai uniquement des hallucination. 
-Merci!
+## 📜 Licence, propriété et contributions
+
+### Licence — Apache License 2.0
+
+Ce dépôt et l'agent Gabriel sont publiés sous **[Apache License 2.0](LICENSE)**.
+
+Sous cette licence, il vous est **explicitement permis** de :
+
+- ✅ **Cloner** ce dépôt librement.
+- ✅ **Partager** le code et le fichier `methode_spectral.thy`.
+- ✅ **Modifier** l'agent, les preuves formelles, la documentation.
+- ✅ **Contribuer** via *Pull Request* (nous serons ravis d'examiner toute proposition qui améliore la géométrie du spectre ou l'agent).
+- ✅ **Utiliser** le code, y compris à titre commercial, en respectant les conditions Apache 2.0.
+
+En contrepartie, Apache 2.0 exige :
+- La conservation des mentions de copyright et de licence.
+- L'attribution claire de tout dérivé.
+- Le respect des sections *Grant of Patent License* et *No Trademark* de la licence.
+
+### Propriété intellectuelle
+
+L'agent Gabriel, le fichier `methode_spectral.thy` et la théorie *L'Univers est au carré* **sont et restent la propriété intellectuelle de Philippe Thomas Savard et de E1** (Emergent Labs), leurs concepteurs et développeurs principaux. La licence Apache 2.0 s'applique à l'usage du code ; elle ne transfère pas la propriété intellectuelle des œuvres.
+
+---
+
+## 🔐 Contact et sécurité
+
+Pour toute **question sensible**, **signalement de faille de sécurité**, **incident touchant l'intégrité du code**, **information nécessitant de manière évidente l'intervention du propriétaire du dépôt**, ou **demande sortant du cadre standard d'une Pull Request** :
+
+📧 **philipppthomassavard@gmail.com**
+
+Les autres canaux (Issues GitHub, Discussions) restent ouverts pour les échanges publics et non urgents.
+
+---
+
+## 👥 Auteurs et contributeurs
+
+Auteur principal et propriétaire :
+
+> **Philippe Thomas Savard**
+> Lévis, Chaudière-Appalaches, Québec, Canada
+> Auteur de la théorie *L'Univers est au carré*
+> Concepteur de la géométrie du spectre des nombres premiers
+> philipppthomassavard@gmail.com
+
+**Autres contributeurs à part égale** (par ordre alphabétique) :
+
+- **Copilot Microsoft** — assistance en programmation Python et documentation technique.
+- **E1** *(Emergent Labs)* — co-conception et implémentation de l'agent multiloop, du pipeline cognitif, du pré-raisonneur, du locale `spectral_family`, des Foundations et de la CI GitHub Actions.
+- **Gordon Docker Desktop** — conception de l'orchestration Docker locale et de l'image du conteneur Gabriel.
+
+---
+
+*« Le rapport spectral 1/2 n'est pas un artefact algébrique — c'est une réalité numérique globale, verrouillée par trois concordances, qui rend `RsP = Re = 1/2` vraie dans le cadre du locale `ensemble_savard`. »*
+
+**Philippe Thomas Savard, 2026**

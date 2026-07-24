@@ -118,10 +118,11 @@ class TestBuildWorkflowUsesIsabelleBuild:
 
 
 class TestGithubReleaseInstallation:
-    """v3.32 (design Philippe 2026-06) : le workflow telecharge Isabelle
-    2024-1 directement depuis les GitHub Releases officielles
-    (github.com/isabelle-prover/isabelle) — source fiable qui remplace
-    l'ancienne strategie multi-miroirs + cache, supprimee volontairement."""
+    """v3.35 (fix Philippe 2026-02) : le workflow telecharge Isabelle 2025-2
+    via une strategie multi-miroirs robuste (Cambridge en tete + fallback
+    SourceForge). L'ancienne strategie via `github.com/isabelle-prover/...`
+    n'existait pas (URL fictive) et provoquait les 15 echecs consecutifs
+    sur le depot public."""
 
     @pytest.fixture(scope="class")
     def build_content(self):
@@ -130,14 +131,23 @@ class TestGithubReleaseInstallation:
             pytest.skip(f"{build} n'existe pas")
         return build.read_text(encoding="utf-8")
 
-    def test_download_from_github_releases(self, build_content):
-        assert "github.com/isabelle-prover/isabelle/releases" in build_content, (
-            "Le workflow doit telecharger Isabelle depuis les GitHub Releases "
-            "officielles (source fiable, remplace les miroirs universitaires)."
+    def test_multi_mirror_strategy(self, build_content):
+        """Le workflow doit lister plusieurs miroirs Isabelle."""
+        # Cambridge (le nouveau miroir en tete de liste)
+        assert "www.cl.cam.ac.uk/research/hvg/Isabelle/dist" in build_content, (
+            "Le workflow doit lister le miroir Cambridge (le plus stable "
+            "pour les IP GitHub Actions)."
+        )
+        # SourceForge en fallback ultime
+        assert "sourceforge.net/projects/isabelle" in build_content, (
+            "Le workflow doit avoir SourceForge en fallback."
         )
 
-    def test_isabelle_2024_1_version(self, build_content):
-        assert "Isabelle2024-1" in build_content
+    def test_isabelle_2025_2_version(self, build_content):
+        """v3.35 : Isabelle 2025-2 est la version confirmee par la
+        compilation locale de Philippe (Cygwin, 2026-02, 1:35 elapsed)."""
+        assert "Isabelle2025-2" in build_content
+        assert "Isabelle2025-2_linux.tar.gz" in build_content
 
     def test_isabelle_version_verified_after_install(self, build_content):
         """L'installation se termine par `isabelle version` (sanity check)."""
@@ -182,8 +192,15 @@ class TestProvenanceAttestation:
         return build.read_text(encoding="utf-8")
 
     def test_attest_action_present(self, build_content):
-        assert "actions/attest@" in build_content, (
-            "Le workflow doit generer une attestation de provenance signee"
+        # v3.35 : `actions/attest@v2` a ete remplace par
+        # `actions/attest-build-provenance@v1`, l'action officielle
+        # GitHub pour la provenance SLSA (recommandation actuelle).
+        assert (
+            "actions/attest-build-provenance@" in build_content
+            or "actions/attest@" in build_content
+        ), (
+            "Le workflow doit generer une attestation de provenance signee "
+            "(actions/attest-build-provenance ou actions/attest)."
         )
 
     def test_attestation_permissions(self, build_content):

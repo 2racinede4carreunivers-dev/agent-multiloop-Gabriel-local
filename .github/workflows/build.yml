@@ -1,81 +1,284 @@
-name: Certification de provenance – Méthode Spectrale
+name: Certification de provenance – Méthode Spectrale (Isabelle/HOL)
 
-# Workflow de validation Isabelle et d’attestation de provenance
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
   id-token: write
   attestations: write
 
-jobs:
-  validation-institutionnelle:
-    runs-on: ubuntu-latest
+# Variables globales : version d'Isabelle utilisee (v3.35, alignee sur la
+# compilation locale confirmee par Philippe le 2026-02 : Isabelle2025-2).
+# La sous-arborescence du code se trouve dans agent-multiloop-Gabriel-local/.
+env:
+  ISABELLE_VERSION: "Isabelle2025-2"
+  ISABELLE_TARBALL: "Isabelle2025-2_linux.tar.gz"
+  ISABELLE_DIRNAME: "Isabelle2025-2"
+  PROJECT_DIR: "agent-multiloop-Gabriel-local"
 
+jobs:
+  # ==========================================================================
+  # JOB 1 : Compilation Isabelle/HOL de methode_spectral.thy
+  # ==========================================================================
+  validation-isabelle:
+    name: Compilation Isabelle/HOL
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      thy_sha256: ${{ steps.hash-thy.outputs.sha256 }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Isabelle
+      - name: Install SSL certificates
         run: |
-          set -e
           sudo apt-get update
-          sudo apt-get install -y wget tar bzip2 libgmp-dev
-          mkdir -p /tmp/isabelle
-          cd /tmp/isabelle
-          wget -O isabelle.tar.gz https://github.com/isabelle-prover/isabelle/releases/download/2024-1/isabelle2024-1_linux.tar.gz
-          tar -xzf isabelle.tar.gz
-          ls -1
-          echo "/tmp/isabelle/Isabelle2024-1/bin" >> "$GITHUB_PATH"
-          /tmp/isabelle/Isabelle2024-1/bin/isabelle version
+          sudo apt-get install -y ca-certificates curl file
+          sudo update-ca-certificates
+
+      # --------------------------------------------------------------------
+      # CACHE 1 : Installation d'Isabelle (~1.5 GB extraits).
+      # Clef DEPENDANTE UNIQUEMENT DE LA VERSION -> reste valide meme quand
+      # le fichier .thy change. C'etait la faille principale du workflow
+      # precedent : la clef contenait hashFiles(theories/**) et donc etait
+      # invalidee a chaque commit sur la theorie, forcant un retelechargement
+      # inutile du tarball 1.5 GB.
+      # --------------------------------------------------------------------
+      - name: Cache Isabelle installation (~1.5 GB)
+        uses: actions/cache@v4
+        id: cache-isabelle-install
+        with:
+          path: isabelle
+          key: isabelle-install-${{ env.ISABELLE_VERSION }}-v1
+
+      # --------------------------------------------------------------------
+      # CACHE 2 : heap de session compilee (specifique aux .thy actuels).
+      # Beaucoup plus petit (~50 MB) et rechargeable en quelques secondes.
+      # --------------------------------------------------------------------
+      - name: Cache Isabelle session heap
+        uses: actions/cache@v4
+        id: cache-isabelle-heap
+        with:
+          path: ~/.isabelle
+          key: isabelle-heap-${{ env.ISABELLE_VERSION }}-${{ hashFiles(format('{0}/theories/ROOT', env.PROJECT_DIR), format('{0}/theories/**/*.thy', env.PROJECT_DIR)) }}
+          restore-keys: |
+            isabelle-heap-${{ env.ISABELLE_VERSION }}-
+
+      # --------------------------------------------------------------------
+      # Telechargement d'Isabelle 2025-2 (uniquement si le cache est vide)
+      # --------------------------------------------------------------------
+      - name: Download and install Isabelle (${{ env.ISABELLE_VERSION }}, multi-mirror fallback)
+        if: steps.cache-isabelle-install.outputs.cache-hit != 'true'
+        run: |
+          echo "=== Download ${ISABELLE_TARBALL} (multi-mirror strategy) ==="
+
+          # Miroir Cambridge (le plus stable pour les IP CI) en tete.
+          # Le miroir historique isabelle.in.tum.de est laisse en dernier
+          # car il est frequemment rate-limitte pour les IP GitHub Actions.
+          # NOTE : le pseudo-repo github.com/isabelle-prover/isabelle
+          # utilise auparavant N'EXISTE PAS - c'etait la cause des echecs
+          # repetes du workflow precedent.
+          MIRRORS=(
+            "https://www.cl.cam.ac.uk/research/hvg/Isabelle/dist/${ISABELLE_TARBALL}"
+            "https://mirror.clarkson.edu/isabelle/dist/${ISABELLE_TARBALL}"
+            "https://ftp.gwdg.de/pub/misc/isabelle/dist/${ISABELLE_TARBALL}"
+            "https://ftp.hu-berlin.de/isabelle/dist/${ISABELLE_TARBALL}"
+            "https://mirror.cse.unsw.edu.au/pub/isabelle/dist/${ISABELLE_TARBALL}"
+            "https://isabelle.in.tum.de/dist/${ISABELLE_TARBALL}"
+          )
+
+          SUCCESS=0
+          for URL in "${MIRRORS[@]}"; do
+            echo ""
+            echo "--- Trying mirror: $URL ---"
+            # Timeout court par miroir (90s connect + 10 min max) pour
+            # echouer vite et passer au suivant si le miroir est HS.
+            if curl -L --fail --retry 2 --retry-delay 15 --connect-timeout 90 \
+                    --max-time 600 -A "GabrielCI/1.0 (+github-actions)" \
+                    -o "$ISABELLE_TARBALL" "$URL"; then
+              SIZE=$(stat -c%s "$ISABELLE_TARBALL" 2>/dev/null || echo 0)
+              if [ "$SIZE" -gt 100000000 ]; then
+                echo "[SUCCESS] Downloaded from $URL ($((SIZE/1024/1024)) MB)"
+                SUCCESS=1
+                break
+              else
+                echo "[WARN] Suspicious file size ($((SIZE/1024/1024)) MB), rejected"
+                rm -f "$ISABELLE_TARBALL"
+              fi
+            else
+              echo "[FAIL] $URL"
+              rm -f "$ISABELLE_TARBALL" 2>/dev/null || true
+            fi
+          done
+
+          if [ "$SUCCESS" -eq 0 ]; then
+            echo ""
+            echo "!!! All primary mirrors failed, fallback to SourceForge !!!"
+            curl -L --fail --retry 3 --retry-delay 30 --connect-timeout 120 \
+                 --max-time 900 -A "GabrielCI/1.0" \
+                 -o "$ISABELLE_TARBALL" \
+                 "https://sourceforge.net/projects/isabelle/files/${ISABELLE_VERSION}/${ISABELLE_TARBALL}/download" || \
+            (echo "!!! All mirrors and fallback failed !!!" && exit 1)
+          fi
+
+          echo ""
+          echo "=== Archive integrity checks ==="
+          ls -lh "$ISABELLE_TARBALL"
+          file "$ISABELLE_TARBALL" || true
+          gzip -t "$ISABELLE_TARBALL" || (echo "Corrupted archive" && exit 1)
+
+          echo ""
+          echo "=== Extraction ==="
+          tar -xzf "$ISABELLE_TARBALL"
+          mv "$ISABELLE_DIRNAME" isabelle
+          rm -f "$ISABELLE_TARBALL"
+          # Le repertoire doc/ n'est pas necessaire en CI (~200 MB gagnes)
+          rm -rf isabelle/doc/ 2>/dev/null || true
+
+      # --------------------------------------------------------------------
+      # PATH pour toutes les etapes suivantes (que le cache soit HIT ou MISS)
+      # --------------------------------------------------------------------
+      - name: Register Isabelle in PATH
+        run: |
+          if [ ! -x "$PWD/isabelle/bin/isabelle" ]; then
+            echo "!!! isabelle/bin/isabelle not found or not executable !!!"
+            ls -la "$PWD/isabelle/bin/" 2>&1 | head -20
+            exit 1
+          fi
+          echo "$PWD/isabelle/bin" >> $GITHUB_PATH
+          echo "ISABELLE_HOME=$PWD/isabelle" >> $GITHUB_ENV
+
+      - name: Show Isabelle version banner
+        run: |
+          isabelle version
+          isabelle getenv ISABELLE_HOME
+          isabelle getenv ML_HOME || true
 
       - name: Show repository layout
         run: |
-          pwd
-          ls -la
-          find . -maxdepth 3 \( -name ROOT -o -name 'methode_spectral.thy' \) | sort
+          echo "PWD = $PWD"
+          echo "PROJECT_DIR = $PROJECT_DIR"
+          ls -la "$PROJECT_DIR"
+          find "$PROJECT_DIR" -maxdepth 3 \( -name ROOT -o -name 'methode_spectral.thy' \) | sort
 
-      - name: Build Isabelle session
-        working-directory: agent-multiloop-Gabriel-local
+      # --------------------------------------------------------------------
+      # Compilation de la session Methode_Spectral
+      # (theories/ROOT dans le sous-dossier PROJECT_DIR)
+      # --------------------------------------------------------------------
+      - name: Build Isabelle session (Methode_Spectral)
+        id: isabelle-build
+        working-directory: ${{ env.PROJECT_DIR }}/theories
         run: |
-          isabelle build -v -D .
+          echo "Compiling Isabelle session 'Methode_Spectral' from theories/ROOT ..."
+          isabelle build -v -D . 2>&1 | tee build_output.log
+          BUILD_EXIT=${PIPESTATUS[0]}
+          echo "Exit code Isabelle: $BUILD_EXIT"
+          exit $BUILD_EXIT
 
-      - name: Create explicit attestation payload
-        if: success()
+      - name: Show Isabelle diagnostics on failure
+        if: failure() && steps.isabelle-build.outcome == 'failure'
+        working-directory: ${{ env.PROJECT_DIR }}/theories
         run: |
-          cat > attestation_payload.json <<'EOF'
+          echo "=== Isabelle errors (build_log -H Error) ==="
+          isabelle build_log -H Error Methode_Spectral 2>&1 || true
+          echo ""
+          echo "=== Last 100 lines of build_output.log ==="
+          tail -100 build_output.log || true
+          echo ""
+          echo "=== Grep '***' from build_output.log ==="
+          grep -n '\*\*\*' build_output.log || echo "(no Isabelle '***' error lines found)"
+
+      - name: Compute SHA256 of methode_spectral.thy
+        id: hash-thy
+        run: |
+          THY_SHA=$(sha256sum "${PROJECT_DIR}/theories/methode_spectral.thy" | awk '{print $1}')
+          echo "sha256=$THY_SHA" >> $GITHUB_OUTPUT
+          echo "SHA256(methode_spectral.thy) = $THY_SHA"
+
+  # ==========================================================================
+  # JOB 2 : Attestation de provenance SHA256 pour methode_spectral.thy
+  # ==========================================================================
+  attestation-provenance:
+    name: Attestation SHA256 (Isabelle uniquement)
+    needs: [validation-isabelle]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: needs.validation-isabelle.result == 'success'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute SHA256 of methode_spectral.thy
+        id: sha256
+        run: |
+          THY_PATH="${PROJECT_DIR}/theories/methode_spectral.thy"
+          THY_SHA=$(sha256sum "$THY_PATH" | awk '{print $1}')
+          echo "thy_sha256=$THY_SHA" >> $GITHUB_OUTPUT
+          echo "SHA256(methode_spectral.thy) = $THY_SHA"
+
+      - name: Create attestation payload JSON
+        run: |
+          cat > attestation_payload.json <<EOF
           {
             "schemaVersion": 1,
-            "subject": "agent-multiloop-Gabriel-local/theories/methode_spectral.thy",
             "author": "Philippe Thomas Savard",
+            "location": "Levis, Chaudiere-Appalaches, Canada",
+            "license": "Apache-2.0",
+            "commit": "${{ github.sha }}",
+            "workflow": "${{ github.workflow }}",
+            "runId": "${{ github.run_id }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "isabelleVersion": "${{ env.ISABELLE_VERSION }}",
+            "subjects": [
+              {
+                "name": "${{ env.PROJECT_DIR }}/theories/methode_spectral.thy",
+                "digest": {
+                  "sha256": "${{ steps.sha256.outputs.thy_sha256 }}"
+                },
+                "compiler": "Isabelle/HOL ${{ env.ISABELLE_VERSION }}",
+                "verified": true
+              }
+            ],
             "coAuthors": [
               "Emergent.sh E1",
               "Gordon Docker Desktop",
               "Copilot Microsoft"
             ],
-            "statement": "These assistants contributed remarkably and their contribution is invaluable for Philippe Thomas Savard."
+            "statement": "Ce workflow atteste que le fichier de preuve formelle de la Methode Spectrale de Philippe Thomas Savard (methode_spectral.thy) a ete compile avec succes par Isabelle/HOL ${{ env.ISABELLE_VERSION }}. L'empreinte SHA256 ci-dessus certifie l'integrite exacte du fichier au moment de la certification. These assistants contributed remarkably and their contribution is invaluable for Philippe Thomas Savard."
           }
           EOF
+          cat attestation_payload.json
 
-      - name: Generate explicit attestation
-        if: success()
-        uses: actions/attest@v2
+      - name: Generate GitHub attestation for methode_spectral.thy
+        uses: actions/attest-build-provenance@v1
         with:
-          subject-path: agent-multiloop-Gabriel-local/theories/methode_spectral.thy
-          predicate-type: 'https://example.com/attestations/methode-spectral/v1'
-          predicate: '{"schemaVersion":1,"subject":"agent-multiloop-Gabriel-local/theories/methode_spectral.thy","author":"Philippe Thomas Savard","coAuthors":["Emergent.sh E1","Gordon Docker Desktop","Copilot Microsoft"],"statement":"These assistants contributed remarkably and their contribution is invaluable for Philippe Thomas Savard."}'
+          subject-path: ${{ env.PROJECT_DIR }}/theories/methode_spectral.thy
 
-      - name: Upload attestation payload artifact
-        if: success()
+      - name: Create SHA256SUMS file (bundle certifiable)
+        run: |
+          {
+            echo "# Methode Spectrale - Empreintes de provenance"
+            echo "# Commit  : ${{ github.sha }}"
+            echo "# Run     : ${{ github.run_id }}"
+            echo "# Date UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "# Author  : Philippe Thomas Savard"
+            echo "# Isabelle: ${{ env.ISABELLE_VERSION }}"
+            echo ""
+            sha256sum "${PROJECT_DIR}/theories/methode_spectral.thy"
+          } > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload attestation payload + SHA256SUMS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: methode-spectral-attestation-payload
+          name: methode-spectral-provenance-${{ github.sha }}
           path: |
             attestation_payload.json
-            agent-multiloop-Gabriel-local/theories/methode_spectral.thy
-          retention-days: 30
-
-
+            SHA256SUMS.txt
+            ${{ env.PROJECT_DIR }}/theories/methode_spectral.thy
+          retention-days: 90
+          if-no-files-found: warn

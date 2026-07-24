@@ -34,7 +34,7 @@ services:
       - DEFAULT_LANGUAGE=fr
       - ISABELLE_HOME=/opt/Isabelle2025-2
       # v5.0 : HTTP API port pour communications externes
-      - GABRIEL_HTTP_PORT=8000
+      - GABRIEL_HTTP_PORT=9000
       - GABRIEL_HOST=0.0.0.0
 
     stdin_open: true
@@ -42,7 +42,7 @@ services:
 
     # v5.0 : Expose Gabriel sur le reseau Docker pour acces externe
     ports:
-      - "8001:8000"
+      - "9000:8000"
 
     command: ["python", "main_cli.py"]
 

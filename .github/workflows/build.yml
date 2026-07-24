@@ -199,6 +199,24 @@ jobs:
           echo "sha256=$THY_SHA" >> $GITHUB_OUTPUT
           echo "SHA256(methode_spectral.thy) = $THY_SHA"
 
+      # --------------------------------------------------------------------
+      # Upload du fichier .thy compile (+ build_output.log) comme artefact
+      # disponible immediatement a la fin du job de compilation. Utile pour
+      # inspecter la theorie effectivement compilee sans attendre le job
+      # d'attestation. Le nom de l'artefact contient le SHA du commit pour
+      # tracabilite.
+      # --------------------------------------------------------------------
+      - name: Upload methode_spectral.thy (post-compilation)
+        uses: actions/upload-artifact@v4
+        with:
+          name: methode-spectral-thy-${{ github.sha }}
+          path: |
+            ${{ env.PROJECT_DIR }}/theories/methode_spectral.thy
+            ${{ env.PROJECT_DIR }}/theories/ROOT
+            ${{ env.PROJECT_DIR }}/theories/build_output.log
+          retention-days: 90
+          if-no-files-found: warn
+
   # ==========================================================================
   # JOB 2 : Attestation de provenance SHA256 pour methode_spectral.thy
   # ==========================================================================

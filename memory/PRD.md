@@ -4,7 +4,24 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.34 — 1647/1647 tests Pytest ✅ — Gabriel a un PréRaisonneur dynamique (5 modes) + timer temps réel**
+**Production-Ready v3.36 — 1716/1716 tests Pytest ✅ — Auto-adaptive scale sur graphiques RsP (dual-panel intelligent)**
+
+### Changelog 2026-02 v3.36 (Auto-adaptive scale pour graphiques RsP)
+- **Problème résolu** : Philippe a signalé que le graphique "comparaison asymétrique ordonnée" pour n=1..100 affichait un pic à k=2 (RsP=+1.05) et un creux à k=1 (RsP=-0.17), écrasant visuellement la convergence fine vers 1/2 aux grands blocs. Après clarification, il s'est avéré que **les valeurs sont mathématiquement correctes** (divergence attendue pour très petits blocs asymétriques), mais que le rendu graphique ne rendait pas justice à la « signature spectrale » (divergence + convergence). Philippe a demandé que Gabriel **auto-adapte l'échelle** pour rendre les comparaisons jusqu'aux 1000 premiers nombres premiers lisibles.
+- **Nouveau champ `CurveData.adaptive_scale`** (défaut `False`, activé automatiquement pour les courbes RsP via `_build_rsp_curve_data`) + `CurveData.zoom_y_window` (fenêtre y du panneau zoom, défaut ±0.02).
+- **`png_renderer._should_use_dual_panel(curve)`** : détection déterministe (5 critères cumulatifs — adaptive_scale, target_line, ≥ 8 points, ≥ 1 outlier hors 3×window, ≥ 50% des points dans window). Aucun heuristique flou : décision reproductible.
+- **`png_renderer._render_dual_panel(...)`** : nouveau rendu **double panneau** (10×9.2 pouces) :
+  - **Panneau du haut** : vue complète avec y-range naturel — les outliers (k=1,2,3 dans le cas `ord`) sont **entourés en orange** avec la légende « divergence attendue (petits blocs) ».
+  - **Panneau du bas** : zoom fixe sur `[target - 0.02, target + 0.02]` — la convergence fine devient visible, les 3 outliers restent hors-échelle mais sont **annoncés dans le sous-titre** (`3 point(s) hors échelle (k=[1, 2, 3]) — voir vue du haut`).
+  - Bulle explicative + footer scientifique (formule + timestamp) + watermark Gabriel séparés (plus d'overlap).
+- **`_build_rsp_curve_data` (question_graphs.py)** : `n_max` effectif ajusté au dernier k valide (utile quand la table 1000-primes limite `ord` à k=499). Titre multi-lignes explicite quand la table plafonne le calcul.
+- **Rendu single-panel préservé** : les configs sans divergence (1x1, sym) restent affichées en un seul panneau (aucune régression visuelle).
+- **14 nouveaux tests Pytest** (`tests/test_adaptive_scale_v336.py`) :
+  - Détection dual-panel (`ord`, `chaos-savard` → dual, `1x1`, `sym` → single, override `adaptive_scale=False`, `target_line=None` → single).
+  - Effective k_max avec limite table primes (`ord` n=1..1000 → 499 points, titre annoté).
+  - Rendu PNG effectif (fichier créé, taille > 5 KB, valeurs numériques précises : k=1: -0.17, k=2: +1.05, k≥5: ≈0.5).
+  - Auto-trigger accepte n=1..1000 et « les 1000 premiers ».
+- **Total : 1716 tests passent** (1702 → 1716, zéro régression).
 
 ### Changelog 2026-02 v3.34 (PreReasoner, itérations dynamiques, timer live)
 - **Problème résolu** : Gabriel exécutait systématiquement les 4 itérations complètes du pipeline même pour des requêtes purement verbales sur Isabelle ("résume la Section XIII", "cette preuve tient-elle ?", "compare ces deux lemmes"). Le CLI n'affichait ni chronomètre, ni ETA, ni nombre d'itérations prévues. Le `ComplexityAnalyzer` et le `CinematicOrchestrator` existaient mais étaient **orphelins** — jamais branchés au pipeline principal. `FastModeBypass.FAST_PATTERNS` était de plus syntaxiquement cassé (dict mal formé).

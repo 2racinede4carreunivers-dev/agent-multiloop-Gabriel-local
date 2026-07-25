@@ -134,6 +134,9 @@ def _build_rsp_curve_data(
             continue
         rsp = entry.get("RsP_decimal", float("nan"))
         pts.append(CurvePoint(n=k, y_exact=rsp, y_float=rsp))
+    # v3.36 : ajuste k_max effectif au dernier k valide (utile quand la table
+    # de premiers limite le calcul, ex: 'ord' plafonne a k=499 pour 1000 primes)
+    effective_k_max = pts[-1].n if pts else k_max
     # Lib subtitle
     titles = {
         "1x1":           "Rapport spectral 1x1 — convergence vers 1/2",
@@ -150,16 +153,28 @@ def _build_rsp_curve_data(
         "ord":           "RsP = (sum_SA(A)-sum_SA(B)) / (sum_SB(A)-sum_SB(B))  asymetrie ordonnee |B|=|A|+1",
         "chaos":         "RsP = (sum_SA(A)-sum_SA(B)) / (sum_SB(A)-sum_SB(B))  chaotique simple",
     }
+    # v3.36 : titre reflete le k_max effectif (peut differer du k_max demande
+    # quand la table de primes limite le calcul). Titre multi-lignes si limite.
+    title_line1 = titles.get(config, config)
+    title_line2 = f"k={k_min}..{effective_k_max}"
+    if effective_k_max < k_max:
+        primes_needed = 2 * effective_k_max + 1
+        title_line2 += f"  (demande k_max={k_max} — limite : {primes_needed} primes utilises)"
+    full_title = f"{title_line1}\n{title_line2}"
     return CurveData(
         kind=CurveKind.RATIO_SA_SB,   # reutilise le rendu ratio
-        n_min=k_min, n_max=k_max, scale="linear",
-        title=f"{titles.get(config, config)}  (k={k_min}..{k_max})",
+        n_min=k_min, n_max=effective_k_max, scale="linear",
+        title=full_title,
         x_label="k (taille du bloc / index de la courbe)",
         y_label="RsP",
         points=pts,
         target_line=0.5,
         target_label="cible 1/2",
         formula=formulas.get(config, f"config={config}"),
+        # v3.36 : active l'echelle adaptative pour toutes les courbes RsP.
+        # Utile surtout pour 'ord' et 'chaos-savard' qui divergent a petit k.
+        adaptive_scale=True,
+        zoom_y_window=0.02,
     )
 
 

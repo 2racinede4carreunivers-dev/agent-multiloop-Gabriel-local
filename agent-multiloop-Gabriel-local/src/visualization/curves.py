@@ -68,6 +68,15 @@ class CurveData:
     # v3.25 : Legende explicite des axes (rendue en bas a droite du graphique).
     # Format : {"n": "indice de position...", "SA(n)": "somme alternee A..."}
     axis_legend: dict[str, str] = field(default_factory=dict)
+    # v3.36 (Philippe 2026-02) : Auto-adaptation d'echelle pour graphiques RsP
+    # comportant une divergence a petits blocs + convergence a grands blocs.
+    # Quand True, render_png bascule en mode double-panneau si les donnees
+    # remplissent les criteres (outliers precoces + convergence tardive vers
+    # target_line). Sinon rendu classique inchange.
+    adaptive_scale: bool = False
+    # v3.36 : Fenetre y "zoom convergence" (defaut : target +/- 0.02).
+    # Ignore si adaptive_scale=False.
+    zoom_y_window: float = 0.02
 
     def __post_init__(self) -> None:
         # Validation : critical_summary tronque a 750 caracteres (choix Philippe 2026-02)

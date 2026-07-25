@@ -68,8 +68,15 @@ class TestIsabelleParserCompatibility:
     """Simulation d'une passe parser Isabelle basique."""
 
     def test_starts_with_theory(self, thy_content):
-        assert thy_content.startswith("theory "), (
-            "Le fichier doit commencer par 'theory <nom>'"
+        # Isabelle autorise des commentaires (* ... *) avant `theory` (bloc
+        # d'en-tete metadata). On retire le premier bloc de commentaire s'il
+        # precede immediatement le mot-cle theory.
+        import re
+        stripped = thy_content.lstrip()
+        stripped = re.sub(r"^\(\*.*?\*\)\s*", "", stripped, count=1, flags=re.DOTALL)
+        assert stripped.startswith("theory "), (
+            "Le fichier doit commencer par 'theory <nom>' (apres un eventuel "
+            "commentaire d'en-tete)"
         )
 
     def test_ends_with_end(self, thy_content):

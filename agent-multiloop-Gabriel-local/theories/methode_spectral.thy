@@ -1,3 +1,20 @@
+(*
+================================================================================
+  Fichier : Methode_spectral.thy
+    /fiʃje : metod spɛktʁal ti/
+  Date : Vingt-quatre juillet deux mille vingt-six
+    /vɛ̃t katʁ ʒɥijɛ dø mil vɛ̃t sis/
+  Lieu : Lévis Chaudière-Appalaches Canada
+    /levi ʃodjɛʁ apalak kanada/
+  Titre : L'univers est au carré
+    /lynivɛʁ ɛto kaʁe/
+  Sous-titre : Chapitre — La géométrie du spectre des nombres premiers
+    /ʃapitʁ — la ʒeometʁi dy spɛktʁ dɛ nɔ̃bʁ pʁəmje/
+  Auteur : Philippe Thomas Savard
+    /filip tɔma savaʁ/
+================================================================================
+*)
+
 theory methode_spectral
   imports Complex_Main "HOL-Computational_Algebra.Primes"
 begin

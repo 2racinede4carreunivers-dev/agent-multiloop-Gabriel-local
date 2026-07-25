@@ -4,7 +4,30 @@
 Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteurs cognitifs pour assister Philippe Thomas Savard dans ses démonstrations mathématiques sur la "Méthode Spectrale" de reconstruction des nombres premiers, avec intégration Isabelle/HOL et garde-fous anti-hallucination LLM.
 
 ## Statut Global
-**Production-Ready v3.36 — 1716/1716 tests Pytest ✅ — Auto-adaptive scale sur graphiques RsP (dual-panel intelligent)**
+**Production-Ready v3.37 — 1716/1716 tests Pytest ✅ — 7 traductions internationales de methode_spectral.thy (EN/ES/DE/PT/RU/ZH/JA) + entête bilingue phonétique**
+
+### Changelog 2026-02 v3.37 (Traductions internationales `methode_spectral.thy`)
+- **Demande Philippe** : Créer 7 versions traduites du fichier `methode_spectral.thy` pour les audiences anglophone, hispanophone, germanophone, lusophone, russophone, sinophone, japonophone. Impératif absolu : **le code HOL doit rester strictement identique bit-à-bit** entre toutes les versions. Seuls les textes en langue naturelle (commentaires `(* ... *)` et blocs Isabelle `text \<open>...\<close>`) sont traduits. Zéro modification sémantique/mathématique/épistémologique/philosophique/ontologique. Entête bilingue à ajouter à chaque fichier (**libellés dans la langue cible**, transcriptions API/IPA identiques à la version française d'origine).
+- **Pipeline `scripts/translate_thy.py`** :
+  - **Parser à balances équilibrées** (`_find_balanced_text_blocks`) : gère les `\<open>ident\<close>` inline imbriqués dans les blocs `text \<open>...\<close>` (bug régex naïve corrigé — un bloc mal capturé provoquait l'ajout de texte japonais AU MILIEU du code HOL sur la première itération).
+  - **Extraction JSON robuste** (`_robust_json_extract`) : 3 stratégies successives (json.loads → json5 → regex line-par-ligne) pour tolérer les caractères CJK problématiques (batches chinois 3/9/10/11 échouaient au premier essai).
+  - **Validateur structurel post-traduction** : vérifie que chaque segment traduit préserve EXACTEMENT le même nombre de `\<open>`, `\<close>`, `(*`, `*)` que l'original ; sinon fallback FR automatique pour préserver la compilation Isabelle.
+  - **Traduction batch par 40 segments** via Claude Sonnet 4.6 (Emergent Universal Key), température 0.0, prompt système strict sur préservation des identifiants et syntaxe Isabelle.
+- **Entête bilingue standardisé** (16 lignes en commentaire Isabelle `(* ... *)`) présent en tête de chaque fichier avec :
+  - Libellés traduits (Fichier/File/Archivo/Datei/Arquivo/Fayl/Wenjian/Fairu, etc.)
+  - Contenu métadata traduit (titre "L'univers est au carré", sous-titre "La géométrie du spectre des nombres premiers", lieu, date, auteur)
+  - Transcriptions API/IPA universelles (prononciation française authentique préservée dans TOUTES les versions)
+- **7 fichiers produits dans `theories/`** (tous 95 `\<open>` = 95 `\<close>` = équilibre parfait) :
+  - `methode_spectral_en.thy` (English, 3739 lignes, 146 KB, 220/353 commentaires + 80/81 blocs traduits)
+  - `methode_spectral_es.thy` (Español, 3740 lignes, 148 KB, 213 + 80)
+  - `methode_spectral_de.thy` (Deutsch, 3741 lignes, 151 KB, 214 + 81)
+  - `methode_spectral_pt.thy` (Português, 3740 lignes, 146 KB, 217 + 81)
+  - `methode_spectral_ru.thy` (Русский, 3746 lignes, 148 KB, 214 + 81)
+  - `methode_spectral_zh.thy` (中文, 3671 lignes, 123 KB, 212 + 74 — 8 segments en fallback FR après validation stricte)
+  - `methode_spectral_ja.thy` (日本語, 3668 lignes, 120 KB, 213 + 81)
+- **Vérification automatique** : chaque `.thy` traduit passe le test `strip_all(fr) == strip_all(lang)` (code HOL comparé après retrait de tous les commentaires et blocs texte) → **code identique bit-à-bit garanti pour les 7 langues**.
+- **Test de non-régression** : les 1716 pytests Python passent sans modification (les fichiers `.thy` traduits sont indépendants du code Python).
+- **Fichier français original** : reçoit également le nouvel entête phonétique (16 lignes) en amont du `theory methode_spectral` ; test `test_starts_with_theory` adapté pour reconnaître les commentaires d'en-tête (grammaire Isabelle native).
 
 ### Changelog 2026-02 v3.36 (Auto-adaptive scale pour graphiques RsP)
 - **Problème résolu** : Philippe a signalé que le graphique "comparaison asymétrique ordonnée" pour n=1..100 affichait un pic à k=2 (RsP=+1.05) et un creux à k=1 (RsP=-0.17), écrasant visuellement la convergence fine vers 1/2 aux grands blocs. Après clarification, il s'est avéré que **les valeurs sont mathématiquement correctes** (divergence attendue pour très petits blocs asymétriques), mais que le rendu graphique ne rendait pas justice à la « signature spectrale » (divergence + convergence). Philippe a demandé que Gabriel **auto-adapte l'échelle** pour rendre les comparaisons jusqu'aux 1000 premiers nombres premiers lisibles.

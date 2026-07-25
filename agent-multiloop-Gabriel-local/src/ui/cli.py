@@ -447,6 +447,37 @@ class CLIInterface:
             except (ValueError, IndexError):
                 console.print("\n  Usage : prime <N>  (ex : prime 26)\n", style="yellow")
             return True
+        if c.startswith("psi ") or c.startswith("digamma "):
+            # v3.38 : formule pure d'Euler pour psi(n) = -gamma + H_{n-1}
+            # NE requiert PAS de connaitre le n-ieme premier.
+            try:
+                from ..spectral.digamma_pure import (
+                    digamma_pure_exact, digamma_pure_asymptotic,
+                    EULER_GAMMA, harmonic,
+                )
+                n = int(c.split()[1])
+                if n < 1:
+                    raise ValueError
+                H = harmonic(n - 1)
+                val_exact = float(H) - EULER_GAMMA
+                val_asympt = digamma_pure_asymptotic(n) if n >= 1 else None
+                console.print(
+                    f"\n  [bold cyan]psi({n})  =  -gamma + H_{{n-1}}[/bold cyan]  "
+                    f"[dim](formule d'Euler, pure — sans premier)[/dim]\n"
+                    f"    H_{{{n-1}}} (exact rationnel) = [green]{H}[/green]\n"
+                    f"    gamma (Euler-Mascheroni)   = {EULER_GAMMA:.16f}\n"
+                    f"    psi({n}) (forme exacte)    = [bold yellow]{val_exact:.16f}[/bold yellow]\n"
+                    f"    psi({n}) (serie asympt.)   = {val_asympt:.16f}\n"
+                    f"    [dim]* Precision ~1e-15 face a scipy.special.digamma[/dim]\n"
+                )
+            except (ValueError, IndexError):
+                console.print(
+                    "\n  Usage : psi <N>   ou   digamma <N>   (ex : psi 26)\n"
+                    "  Calcule la fonction digamma d'Euler psi(N) = -gamma + H_{N-1}\n"
+                    "  sans requerir la valeur du N-ieme premier.\n",
+                    style="yellow",
+                )
+            return True
         if c.startswith("gap "):
             parts = cmd.strip().split()
             if len(parts) < 3:

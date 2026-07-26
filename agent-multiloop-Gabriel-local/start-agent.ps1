@@ -1,8 +1,8 @@
 # =============================================================================
-#  start-agent.ps1  |  Auteur : Philippe Thomas Savard  |  Version : v4.0
+#  start-agent.ps1  |  Auteur : Philippe Thomas Savard  |  Version : v3.35
 #  Multi-Loop Math Agent (Methode Spectrale Savard + Isabelle/HOL + Ollama/OpenAI)
 #
-#  Inspire de poweshell_ise_ouvertur.ps1 v4.0
+#  Inspire de poweshell_ise_ouvertur.ps1 v3.35
 #
 #  Workflow :
 #    1. Verifie Docker Desktop (le demarre si necessaire)

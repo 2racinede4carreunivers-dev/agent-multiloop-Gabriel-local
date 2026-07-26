@@ -1,5 +1,7 @@
 # Politique de Sécurité — Gabriel Multi-Loop
 
+> 🇬🇧 An English version of this document is available: [`SECURITY.md`](./SECURITY.md)
+
 **Auteur du projet :** Philippe Thomas Savard
 **Dépôt :** `agent-multiloop-Gabriel-local`
 **Dernière révision :** 25 juillet 2026

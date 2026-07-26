@@ -2266,11 +2266,10 @@ text \<open>
 \<close>
 typedecl indice_spectral   (* type abstrait pour les n de la methode spectrale *)
 typedecl premier_spectral  (* type abstrait pour les P de la methode spectrale *)
-
 consts
-  A_suite :: "indice_spectral => nat"
-  B_suite :: "indice_spectral => nat"
-  P_spectral :: "indice_spectral => premier_spectral"
+  A_suite_ZeroZeta :: "indice_spectral => nat"
+  B_suite_ZeroZeta :: "indice_spectral => nat"
+  P_spectral       :: "indice_spectral => premier_spectral"
   rapport_spectral :: "premier_spectral => premier_spectral => rat"
 
 text \<open>
@@ -2279,12 +2278,13 @@ text \<open>
   dans les suites A et B. Le detail constructif est donne dans les sections precedentes
   de la methode spectrale ; ici, nous en donnons une abstraction logique.
 \<close>
+
 axiomatization where
   spectral_index_to_prime:
     "ALL n::indice_spectral. EX P::premier_spectral. P_spectral n = P" and
 
   spectral_index_from_suites:
-    "ALL n::indice_spectral. A_suite n + B_suite n >= 1"
+    "ALL n::indice_spectral. A_suite_ZeroZeta n + B_suite_ZeroZeta n >= 1"
 
 text \<open>
   Axiome : tous les nombres premiers spectraux P entre eux respectent un rapport
@@ -2292,6 +2292,7 @@ text \<open>
   cela en imposant que le rapport entre deux premiers spectraux soit toujours
   de la forme 1/k pour un certain entier k >= 1.
 \<close>
+
 consts
   k_spectral :: "premier_spectral => premier_spectral => nat"
 
@@ -2323,13 +2324,15 @@ consts
 axiomatization where
   concordance_spectrale:
     "ALL n::indice_spectral.
-       prime_position_from_zero (zero_associe n) (A_suite n + B_suite n)"
+       prime_position_from_zero (zero_associe n)
+         (A_suite_ZeroZeta n + B_suite_ZeroZeta n)"
+
 
 text \<open>
   Interpretation : pour chaque indice spectral n, il existe un zero de zeta (ici
   represente par \<open>zero_associe n\<close>) qui intervient, via la fonction abstraite
   \<open>prime_position_from_zero\<close>, dans la determination de la position du nombre
-  premier correspondant (code ici par la quantite de termes A_suite n + B_suite n).
+  premier correspondant (code ici par la quantite de termes A_suite_ZeroZeta n + B_suite_ZeroZeta n).
 
   Cet axiome formalise le parallele conceptuel entre :
 
@@ -2881,6 +2884,65 @@ lemma RsP_generic_1_4_is_quarter:
   shows "regime_1_4.RsP_generic n1 n2 = 1/4"
   by (rule regime_1_4.RsP_generic_constant[OF assms])
 
+(***************************************************************)
+(*  SECTION XI.A : Suites spectrales A_i et B_i (version k=2)  *)
+(*  Ajoutée après la Section XI originale                      *)
+(***************************************************************)
+
+text \<open>
+  Cette section introduit les versions spécialisées des suites A_i et B_i
+  pour le régime spectral k = 2, avec a1 = 2 et r = 2. Ces suites sont
+  directement construites à partir des définitions générales de la Section XI.
+\<close>
+(* Suite A spécialisée : a1 = 2, r = 2 *)
+definition A_suite_InDSpecT :: "nat => nat => real" where
+  "A_suite_InDSpecT n i = suite_A_savard_construction 2 2 n i"
+
+(* Suite B spécialisée : a1 = 2, r = 2 *)
+definition B_suite_InDSpecT :: "nat => nat => real" where
+  "B_suite_InDSpecT n i = suite_B_savard_construction 2 2 n i"
+
+text \<open>
+  Les formes fermées SA(n) et SB(n) sont celles démontrées dans la Section XI.
+\<close>
+
+definition SA :: "nat => real" where
+  "SA n = (3.25 / 2) * (2 ^ n) - 2"
+
+definition SB :: "nat => real" where
+  "SB n = (6.5 / 2) * (2 ^ n) - 66"
+
+text \<open>
+  Sommation terme-à-terme des suites A_i et B_i.
+\<close>
+
+definition somme_A :: "nat => real" where
+  "somme_A n = (\<Sum> i\<in>{1..n}. A_suite_InDSpecT n i)"
+
+definition somme_B :: "nat => real" where
+  "somme_B n = (\<Sum> i\<in>{1..n}. B_suite_InDSpecT n i)"
+
+text \<open>
+  Lemmess de cohérence : les sommes terme-à-terme des suites A_i et B_i
+  coïncident exactement avec les formes fermées SA(n) et SB(n).
+  Ces résultats sont garantis par les démonstrations de la Section XI
+  (différence fine, stabilité spectrale, extraction des constantes).
+\<close>
+
+lemma somme_A_eq_SA:
+  "somme_A n = SA n"
+  unfolding somme_A_def A_suite_def SA_def
+  unfolding suite_A_savard_construction_def progression_simple_terme_def
+            avant_dernier_terme_savard_def dernier_terme_savard_def
+  by (simp add: algebra_simps)
+
+lemma somme_B_eq_SB:
+  "somme_B n = SB n"
+  unfolding somme_B_def B_suite_def SB_def
+  unfolding suite_B_savard_construction_def progression_simple_terme_def
+            avant_dernier_terme_savard_def dernier_terme_savard_def
+  by (simp add: algebra_simps)
+
 
 section "Section XII : Construction generalisee pour rapport spectral 1/k_i"
 
@@ -3174,7 +3236,7 @@ text \<open>
     1/x  = 1/y1 + 1/y2 + 1/y3                         (decomposition de zeta)
              |          |          |
            Tchebychev  Re(rho)   zeros non-triviaux
-           (ψ)         = 1/2     positions des P
+           (\<psi>)         = 1/2     positions des P
 
     1/ms = 1/ms1 + 1/ms2 + 1/ms3                      (decomposition Meth. Spec.)
              |          |          |

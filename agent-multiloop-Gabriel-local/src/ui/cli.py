@@ -478,6 +478,52 @@ class CLIInterface:
                     style="yellow",
                 )
             return True
+        if c.startswith("analyse-thy ") or c.startswith("analyze-thy "):
+            # v3.39 : analyse un fichier .thy arbitraire (utile pour les fichiers
+            # de theories/projects/ qui ne sont PAS charges par le RAG).
+            try:
+                from ..adapters.corpus.thy_analyzer import (
+                    analyse_thy_file, format_analysis_report,
+                )
+                # Extrait le chemin (tout ce qui suit la commande)
+                parts = cmd.strip().split(maxsplit=1)
+                if len(parts) < 2:
+                    raise ValueError("chemin manquant")
+                thy_path = parts[1].strip().strip('"').strip("'")
+                # Support des chemins Windows-style : C:\...\file.thy -> normalise
+                thy_path = thy_path.replace("\\", "/")
+                # Si l'utilisateur donne un chemin Windows depuis Docker, on essaie
+                # de le mapper au montage du conteneur.
+                from pathlib import Path
+                p = Path(thy_path)
+                if not p.exists():
+                    # Essai de fallback : cherche dans theories/projects/
+                    candidate = Path("theories/projects") / p.name
+                    if candidate.exists():
+                        p = candidate
+                        console.print(
+                            f"  [dim](Fichier trouve via fallback : {candidate})[/dim]",
+                        )
+                    else:
+                        console.print(
+                            f"\n  [yellow]Fichier introuvable : {thy_path}[/yellow]\n"
+                            f"  Astuce : dans le conteneur Docker, utilise le chemin\n"
+                            f"  [cyan]theories/projects/<nom_du_fichier>.thy[/cyan]  ou un chemin absolu.\n",
+                        )
+                        return True
+                analysis = analyse_thy_file(p)
+                console.print("")
+                console.print(format_analysis_report(analysis))
+                console.print("")
+            except (ValueError, FileNotFoundError) as exc:
+                console.print(
+                    f"\n  [yellow]analyse-thy : {exc}[/yellow]\n"
+                    "  Usage : analyse-thy <chemin_vers_fichier.thy>\n"
+                    "  Exemple : analyse-thy theories/projects/projet_uni_car_savard_01.thy\n",
+                )
+            except Exception as exc:
+                console.print(f"\n  [red]Erreur analyse-thy : {exc}[/red]\n")
+            return True
         if c.startswith("gap "):
             parts = cmd.strip().split()
             if len(parts) < 3:

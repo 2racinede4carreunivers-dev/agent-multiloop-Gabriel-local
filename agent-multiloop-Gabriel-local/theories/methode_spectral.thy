@@ -1,3 +1,8 @@
+﻿
+theory methode_spectral
+  imports Complex_Main "HOL-Computational_Algebra.Primes"
+begin
+
 (*
 ================================================================================
   Fichier : Methode_spectral.thy
@@ -15,9 +20,6 @@
 ================================================================================
 *)
 
-theory methode_spectral
-  imports Complex_Main "HOL-Computational_Algebra.Primes"
-begin
 (****************************************************************)
 (* TABLE DES MATIERES - SCRIPT HOL : GEOMETRIE DU SPECTRE       *)
 (*                                                              *)

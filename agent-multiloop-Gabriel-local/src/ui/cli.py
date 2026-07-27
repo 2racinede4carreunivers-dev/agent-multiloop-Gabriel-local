@@ -478,6 +478,143 @@ class CLIInterface:
                     style="yellow",
                 )
             return True
+        if c.startswith("analyse-thy ") or c.startswith("analyze-thy "):
+            # v3.39 : analyse un fichier .thy arbitraire (utile pour les fichiers
+            # de theories/projects/ qui ne sont PAS charges par le RAG).
+            try:
+                from ..adapters.corpus.thy_analyzer import (
+                    analyse_thy_file, format_analysis_report,
+                )
+                # Extrait le chemin (tout ce qui suit la commande)
+                parts = cmd.strip().split(maxsplit=1)
+                if len(parts) < 2:
+                    raise ValueError("chemin manquant")
+                thy_path = parts[1].strip().strip('"').strip("'")
+                # Support des chemins Windows-style : C:\...\file.thy -> normalise
+                thy_path = thy_path.replace("\\", "/")
+                # Si l'utilisateur donne un chemin Windows depuis Docker, on essaie
+                # de le mapper au montage du conteneur.
+                from pathlib import Path
+                p = Path(thy_path)
+                if not p.exists():
+                    # Essai de fallback : cherche dans theories/projects/
+                    candidate = Path("theories/projects") / p.name
+                    if candidate.exists():
+                        p = candidate
+                        console.print(
+                            f"  [dim](Fichier trouve via fallback : {candidate})[/dim]",
+                        )
+                    else:
+                        console.print(
+                            f"\n  [yellow]Fichier introuvable : {thy_path}[/yellow]\n"
+                            f"  Astuce : dans le conteneur Docker, utilise le chemin\n"
+                            f"  [cyan]theories/projects/<nom_du_fichier>.thy[/cyan]  ou un chemin absolu.\n",
+                        )
+                        return True
+                analysis = analyse_thy_file(p)
+                console.print("")
+                console.print(format_analysis_report(analysis))
+                console.print("")
+            except (ValueError, FileNotFoundError) as exc:
+                console.print(
+                    f"\n  [yellow]analyse-thy : {exc}[/yellow]\n"
+                    "  Usage : analyse-thy <chemin_vers_fichier.thy>\n"
+                    "  Exemple : analyse-thy theories/projects/projet_uni_car_savard_01.thy\n",
+                )
+            except Exception as exc:
+                console.print(f"\n  [red]Erreur analyse-thy : {exc}[/red]\n")
+            return True
+        if c.startswith("opinion-thy ") or c.startswith("avis-thy "):
+            # v3.39 : demande a Gabriel (via multiloop LLM) son OPINION sur un .thy
+            # arbitraire. Combine analyse structurelle + extraits + prompt LLM.
+            try:
+                from ..adapters.corpus.thy_analyzer import analyse_thy_file
+                from pathlib import Path
+                parts = cmd.strip().split(maxsplit=1)
+                if len(parts) < 2:
+                    raise ValueError("chemin manquant")
+                thy_path = parts[1].strip().strip('"').strip("'").replace("\\", "/")
+                p = Path(thy_path)
+                if not p.exists():
+                    candidate = Path("theories/projects") / p.name
+                    if candidate.exists():
+                        p = candidate
+                        console.print(f"  [dim](Fichier trouve via fallback : {candidate})[/dim]")
+                    else:
+                        console.print(
+                            f"\n  [yellow]Fichier introuvable : {thy_path}[/yellow]\n"
+                            f"  Astuce : utilise un chemin relatif au conteneur, "
+                            f"ex. [cyan]theories/projects/mon_fichier.thy[/cyan]\n"
+                        )
+                        return True
+                # 1. Analyse structurelle
+                analysis = analyse_thy_file(p)
+                # 2. Charge quelques extraits significatifs (imports + 1re section + 1er theoreme)
+                content = p.read_text(encoding="utf-8", errors="replace")
+                excerpt_lines = content.splitlines()
+                # Extrait : 60 premieres lignes (header, imports, TOC)
+                header_excerpt = "\n".join(excerpt_lines[:60])
+                # Extrait : autour du premier theoreme si present
+                theorem_excerpt = ""
+                import re as _re
+                m_th = _re.search(r'^\s*theorem\s+\w+', content, _re.MULTILINE)
+                if m_th:
+                    start_line = content[:m_th.start()].count("\n")
+                    theorem_excerpt = "\n".join(excerpt_lines[start_line:start_line + 30])
+                # 3. Construction du prompt enrichi pour le multiloop
+                prompt = (
+                    f"Philippe m'a demande mon opinion sur le fichier .thy suivant :\n"
+                    f"  Chemin : {analysis['path']}\n"
+                    f"  Theory : {analysis['theory_name']}  ({analysis['lines']} lignes)\n"
+                    f"  Imports : {analysis['imports']}\n\n"
+                    f"Structure decouverte :\n"
+                    f"  - {len(analysis['sections'])} sections, "
+                    f"{len(analysis['definitions'])} definitions, "
+                    f"{len(analysis['lemmas'])} lemmes, "
+                    f"{len(analysis['theorems'])} theoremes, "
+                    f"{len(analysis['locales'])} locales, "
+                    f"{analysis['n_axiomatizations']} blocs axiomatization.\n\n"
+                    f"Titres des sections (max 20) :\n"
+                    + "\n".join(f"  - {s}" for s in analysis['sections'][:20]) + "\n\n"
+                    f"Extrait du debut du fichier (60 premieres lignes) :\n"
+                    f"```isabelle\n{header_excerpt}\n```\n\n"
+                )
+                if theorem_excerpt:
+                    prompt += (
+                        f"Extrait autour du premier theoreme :\n"
+                        f"```isabelle\n{theorem_excerpt}\n```\n\n"
+                    )
+                if analysis.get("warnings"):
+                    prompt += (
+                        f"Avertissements du static-check :\n"
+                        + "\n".join(f"  - {w}" for w in analysis['warnings']) + "\n\n"
+                    )
+                prompt += (
+                    "Donne-moi ton opinion argumentee sur ce fichier :\n"
+                    "1. Coherence globale avec la Methode Spectrale Savard\n"
+                    "2. Points forts et originalites eventuelles\n"
+                    "3. Faiblesses, doublons, incoherences (nom de theory != nom de fichier, etc.)\n"
+                    "4. Recommandations concretes d'amelioration\n"
+                    "5. Verdict : le fichier est-il pret pour Isabelle build, ou necessite-t-il des corrections ?\n"
+                )
+                console.print(
+                    f"\n  [bold cyan]Envoi du fichier a Gabriel (multiloop LLM)...[/bold cyan]\n"
+                    f"  [dim]Fichier : {analysis['path']}[/dim]\n"
+                    f"  [dim]Prompt : ~{len(prompt)} caracteres[/dim]\n"
+                )
+                # 4. Envoi via l'orchestrateur multiloop existant
+                answer = await self.orchestrator.ask(prompt)
+                self._display_answer(answer)
+            except (ValueError, FileNotFoundError) as exc:
+                console.print(
+                    f"\n  [yellow]opinion-thy : {exc}[/yellow]\n"
+                    "  Usage : opinion-thy <chemin_vers_fichier.thy>\n"
+                    "  Alias : avis-thy <chemin>\n"
+                    "  Exemple : opinion-thy theories/projects/projet_uni_car_savard_01.thy\n"
+                )
+            except Exception as exc:
+                console.print(f"\n  [red]Erreur opinion-thy : {exc}[/red]\n")
+            return True
         if c.startswith("gap "):
             parts = cmd.strip().split()
             if len(parts) < 3:

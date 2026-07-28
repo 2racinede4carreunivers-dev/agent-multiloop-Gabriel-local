@@ -14,9 +14,6 @@ services:
 
   # ===========================================
   # SERVICE PRINCIPAL : llm-agent-multiloop
-  # v5.0 : methode_spectral.thy INCLUS dans l'image
-  # Expose HTTP port 8000 pour communications externes
-  # (Isabelle CLI, www.universestaucarre.com, etc.)
   # ===========================================
   llm-agent-multiloop:
     build:
@@ -25,7 +22,6 @@ services:
     container_name: llm-agent-multiloop-run
     restart: unless-stopped
 
-    # Charger UN SEUL .env, celui de ce dossier (a cote du docker-compose.yml)
     env_file:
       - .env
 
@@ -33,14 +29,12 @@ services:
       - OLLAMA_HOST=http://ollama:11434
       - DEFAULT_LANGUAGE=fr
       - ISABELLE_HOME=/opt/Isabelle2025-2
-      # v5.0 : HTTP API port pour communications externes
       - GABRIEL_HTTP_PORT=9000
       - GABRIEL_HOST=0.0.0.0
 
     stdin_open: true
     tty: true
 
-    # v5.0 : Expose Gabriel sur le reseau Docker pour acces externe
     ports:
       - "9000:8000"
 
@@ -53,25 +47,17 @@ services:
       - ./config.yaml:/home/agent/app/config.yaml:ro
       - ./tests:/home/agent/app/tests:ro
       - ./scripts:/home/agent/app/scripts:ro
-      # v5.0 : methode_spectral.thy deja inclus dans l'image (Dockerfile.cli)
-      # Decommentez ci-dessous pour OVERRIDER avec une version locale :
-      # - ./theories:/home/agent/app/theories:ro
-      # Guide de configuration (utilise par tests/test_env_config.py) :
+
+      # OVERRIDE : utiliser la version locale des fichiers .thy
+      - ./theories:/home/agent/app/theories:ro
+
       - ./CONFIG_ENV_GUIDE.md:/home/agent/app/CONFIG_ENV_GUIDE.md:ro
-      # v3.26 : workflows GitHub Actions (utilises par tests/test_validation16_*
-      # et tests/test_workflow_isabelle_syntax.py) :
       - ./.github:/home/agent/app/.github:ro
-      # docker-compose.yml lui-meme (test_paths_resolution_container_fix) :
       - ./docker-compose.yml:/home/agent/app/docker-compose.yml:ro
-      # Module RAG cognitif Gabriel (sinon : No module named 'memory')
       - ./memory:/home/agent/app/memory
-      # Monter le .env local (pas celui du dossier parent !)
       - ./.env:/home/agent/app/.env:ro
       - agent-data:/home/agent/app/data
       - agent-logs:/home/agent/app/logs
-      # Debats archives sur OneDrive (variable HOST_DEBAT_DIR du .env)
-      # Sur Windows : "C:\Users\HP 3\OneDrive\debat-Gabriel-spectral" -> /home/agent/app/data/debats-onedrive
-      # Si HOST_DEBAT_DIR est vide, ce volume est ignore (le defaut ./data/debats prend le relais).
       - ${HOST_DEBAT_DIR:-./data/debats}:/home/agent/app/data/debats-onedrive
 
     networks:
@@ -81,7 +67,7 @@ services:
       - ollama
 
   # ===========================================
-  # SERVICE : OLLAMA (LLM primaire local)
+  # SERVICE : OLLAMA
   # ===========================================
   ollama:
     image: ollama/ollama:latest
@@ -95,7 +81,7 @@ services:
       - agent-network
 
   # ===========================================
-  # SERVICE : OLLAMA INIT (telecharge le modele)
+  # SERVICE : OLLAMA INIT
   # ===========================================
   ollama-init:
     image: ollama/ollama:latest
@@ -115,40 +101,33 @@ services:
     restart: "no"
 
   # ===========================================
-  # SERVICE : ISABELLE/HOL (OPTIONNEL — 3.2 GB)
-  # Active uniquement avec : docker-compose --profile isabelle up
-  # ou via start-agent.ps1 -WithIsabelle
-  # 
-  # v5.0 : Mode CLI (batch) pour integration avec Gabriel
-  # Utilise isabelle process -o quick -T thy_check au lieu de jedit
+  # SERVICE : ISABELLE/HOL
   # ===========================================
   isabelle:
     image: makarius/isabelle:latest
     container_name: isabelle
     restart: unless-stopped
     profiles: ["isabelle"]
-    
+
     environment:
-      # v5.0 : Communication avec Gabriel sur le reseau Docker
       - GABRIEL_HOST=llm-agent-multiloop
       - GABRIEL_PORT=8000
       - ISABELLE_BATCH_MODE=true
-    
+
     volumes:
       - ./theories:/theories
       - ./scripts/isabelle-integration.sh:/scripts/isabelle-integration.sh:ro
       - isabelle-heaps:/home/isabelle/.isabelle/heaps
       - isabelle-output:/tmp/isabelle-output
-    
+
     working_dir: /theories
-    
+
     networks:
       - agent-network
-    
+
     depends_on:
       - llm-agent-multiloop
-    
-    # v5.0 : Mode CLI - traite les fichiers .thy et communique avec Gabriel
+
     entrypoint: ["/bin/bash"]
     command: ["-c", "exec /scripts/isabelle-integration.sh"]
 
@@ -161,8 +140,5 @@ volumes:
   isabelle-output:
 
 networks:
-  # v5.0 : Reseau Docker pour Gabriel, Isabelle, Ollama
-  # Permet aussi la connexion de www.universestaucarre.com
-  # via docker network inspect agent-network
   agent-network:
     driver: bridge

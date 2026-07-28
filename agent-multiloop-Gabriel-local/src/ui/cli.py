@@ -280,6 +280,13 @@ HELP_TEXT = """
                    Exemples : 'courbe SA_SB 1..50 --png',
                               'courbe ratio 1..200 --table --png',
                               'courbe digamma 1..30 --table'
+  psi <N>          Fonction digamma d'Euler psi(N) = -gamma + H_{N-1} (formule pure)
+  psi-savard <x1> <x2> ... [--n=N] [--latex] [--latex-out=fichier.tex]
+                   Pont Tchebychev classique vs Psi_Savard(x, n) : table Rich
+                   comparant Psi(x) et Psi_Sav(x, n) + option de sortie LaTeX
+                   (table booktabs + graphique pgfplots).
+                   Ex: 'psi-savard 30 98 228 --n=10 --latex'
+                   Ex: 'psi-savard --n=25 --latex-out=/tmp/psi_n25.tex'
   debug "<q>"      Mode debugger manuel pedagogique (decompose, bypass, comment)
   verifier <N>     Validation toolkit + creation d'audit citable (rapport 1/2)
   valider <N>      Boucle complete Wolfram <-> Gabriel <-> Isabelle (.thy auto-compile)
@@ -447,6 +454,101 @@ class CLIInterface:
             except (ValueError, IndexError):
                 console.print("\n  Usage : prime <N>  (ex : prime 26)\n", style="yellow")
             return True
+        if c.startswith("psi-savard") or c.startswith("psisavard"):
+            # v3.40 : Pont Tchebychev classique vs Psi_Savard.
+            # Usage : psi-savard <x1> <x2> ... [--n=10] [--latex] [--latex-out=chemin.tex]
+            try:
+                from ..spectral.psi_savard import (
+                    build_comparison_table, chebyshev_psi, psi_savard,
+                    to_latex_table, to_latex_pgfplots, to_latex_document,
+                )
+                parts = cmd.strip().split()
+                # Options
+                n_val = 10
+                want_latex = False
+                latex_out: str | None = None
+                x_values: list[float] = []
+                for tok in parts[1:]:
+                    if tok.startswith("--n="):
+                        n_val = int(tok.split("=", 1)[1])
+                    elif tok == "--latex":
+                        want_latex = True
+                    elif tok.startswith("--latex-out="):
+                        want_latex = True
+                        latex_out = tok.split("=", 1)[1]
+                    else:
+                        # Valeur numerique x
+                        try:
+                            x_values.append(float(tok))
+                        except ValueError:
+                            pass
+                if not x_values:
+                    # Serie par defaut aligne sur les validations .thy
+                    x_values = [10, 20, 30, 50, 100, 200, 500, 1000]
+                rows = build_comparison_table(x_values, n=n_val)
+                # Table Rich terminal
+                from rich.table import Table as _RichTable
+                tbl = _RichTable(
+                    title=(
+                        f"Pont Tchebychev vs Psi_Savard  (n = {n_val}, "
+                        f"SB({n_val}) = {int(rows[0]['x']*0+float(__import__('src.spectral.suites', fromlist=['SB']).SB(n_val)))})"
+                    ),
+                    show_lines=False, header_style="bold cyan",
+                )
+                tbl.add_column("x", justify="right")
+                tbl.add_column("Psi(x) Tcheb.", justify="right", style="red")
+                tbl.add_column(f"Psi_Sav(x, n={n_val})", justify="right", style="cyan")
+                tbl.add_column("ecart abs.", justify="right", style="yellow")
+                tbl.add_column("|Psi_Sav - x| / x", justify="right", style="green")
+                for r in rows:
+                    tbl.add_row(
+                        f"{r['x']:.0f}",
+                        f"{r['psi_tchebychev']:.4f}",
+                        f"{r['psi_savard']:.4f}",
+                        f"{r['ecart_absolu']:+.4f}",
+                        f"{r['ecart_relatif_x']:.4%}",
+                    )
+                console.print(tbl)
+                console.print(
+                    "\n  [dim]* Psi_Sav(x, n) = x - 2^n/SB(n) - log10(2*pi) "
+                    "- 1/2 * log10(1 - x^-2)"
+                    "\n    Cf. methode_spectral.thy - XIII.1 (definition psi_savard).[/dim]\n"
+                )
+                # Sortie LaTeX
+                if want_latex:
+                    latex_frag = (
+                        to_latex_table(rows, n=n_val) + "\n\n"
+                        + to_latex_pgfplots(rows, n=n_val)
+                    )
+                    if latex_out:
+                        # Ecrit un document autonome compilable
+                        content = to_latex_document(rows, n=n_val, standalone=True)
+                        from pathlib import Path
+                        path = Path(latex_out)
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_text(content, encoding="utf-8")
+                        console.print(
+                            f"  [green][OK] Document LaTeX autonome ecrit dans "
+                            f"{latex_out}[/green]\n"
+                            f"  [dim]Compilation : pdflatex {latex_out}   (2 passes)[/dim]\n"
+                        )
+                    else:
+                        console.print("\n  [bold]--- Fragment LaTeX (a coller dans le doc) ---[/bold]\n")
+                        console.print(latex_frag, style="dim")
+                        console.print()
+            except (ValueError, IndexError) as _e:
+                console.print(
+                    "\n  [yellow]Usage : psi-savard <x1> <x2> ... [--n=N] "
+                    "[--latex] [--latex-out=fichier.tex][/yellow]\n"
+                    "  [dim]Compare Psi(x) Tchebychev classique et Psi_Savard(x, n).\n"
+                    "  --n=N            : ordre spectral (defaut n=10)\n"
+                    "  --latex          : imprime un fragment LaTeX (table + pgfplots)\n"
+                    "  --latex-out=X    : ecrit un document LaTeX autonome dans X\n"
+                    "  Ex: psi-savard 30 98 228 --n=10 --latex\n"
+                    "  Ex: psi-savard --n=25 --latex-out=/tmp/psi_n25.tex[/dim]\n"
+                )
+            return True
+
         if c.startswith("psi ") or c.startswith("digamma "):
             # v3.38 : formule pure d'Euler pour psi(n) = -gamma + H_{n-1}
             # NE requiert PAS de connaitre le n-ieme premier.

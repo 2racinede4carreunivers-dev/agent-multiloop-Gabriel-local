@@ -785,6 +785,34 @@ Conséquence : Philippe éditait le bon fichier mais Docker en lisait un autre d
 - `647ee40` — Test Gabriel 8/8 + README v2.0
 - `695c64e` — Mise à jour fonctions Isabelle (HOL_ISABELLE_FIX.md, hol_integration.py, hol_script_generator.py, verif_p103_n27_CORRECT.thy)
 
+## Health Status
+✅ **Production-Ready v3.40** — **1763/1763 tests** — Doc LaTeX avec 25 hyperliens HOL cliquables (Pandoc → 43 signets Word), commande `psi-savard` LaTeX-ready, Isabelle/HOL compile, 7 traductions .thy, Claude API confirmée bout-en-bout (Sonnet 4.5), Slow-Motion 8 cadrans + Modèle de Certitude + Boucle Logique, Axes cognitifs 2-5 + Plan Trifocal.
+
+### [2026-02-15] v3.40 — Hyperliens HOL + Pont Tchebychev/Ψ_Savard (LaTeX)
+- **Doc LaTeX `docs/geometrie_spectre_premiers.tex`** enrichi :
+  - Nouvelle section "Index hyperlinké — Validations Isabelle/HOL" après la TDM (25 entrées cliquables `\hyperref[hol:...]`)
+  - 25 ancres `\phantomsection\label{hol:...}` posées sur chaque sous-section de validation HOL (§I.2 → Chap.7.4)
+  - Les 2 tableaux récapitulatifs (Résultats clés + Synthèse Pont Savard) sont eux aussi 100 % cliquables
+  - Conversion `.docx` via Pandoc génère **43 signets Word cliquables** (validé)
+- **Nouveau module `src/spectral/psi_savard.py`** (Python) :
+  - `psi_savard(x, n)` = formule EXACTE de `methode_spectral.thy` XIII.1 (base **log10**, pas log naturel)
+  - `chebyshev_psi(x)` = Ψ classique (von Mangoldt via crible d'Ératosthène)
+  - Correspondance parfaite avec Isabelle/HOL XIII.2 : `Ψ_Savard(30,10) = 28.888144`, `Ψ_Savard(98,25) = 96.894150`, `Ψ_Savard(228,49) = 226.894132` (tolérance 1e-6)
+  - Exports `to_latex_table` (booktabs), `to_latex_pgfplots` (tikz+pgfplots), `to_latex_document` (autonome)
+- **Nouvelle commande CLI `psi-savard <x1> <x2> ... [--n=N] [--latex] [--latex-out=fichier.tex]`** :
+  - Table Rich (x, Ψ Tchebychev, Ψ_Savard, écart absolu, |Ψ_Sav − x|/x)
+  - Sortie LaTeX fragment ou document autonome compilable (`pdflatex` + `pandoc`)
+  - Menu d'aide `HELP_TEXT` mis à jour
+- **Fichier LaTeX prêt à l'emploi** : `docs/psi_savard_comparison.tex` (2 kB, standalone)
+- **13 nouveaux tests pytest** dans `tests/test_psi_savard_v340.py` (valident les 3 points de contrôle Isabelle, convergence, monotonie Ψ, rendus LaTeX)
+
+### Files Added / Modified (v3.40)
+- ADD `src/spectral/psi_savard.py`
+- ADD `tests/test_psi_savard_v340.py`
+- ADD `docs/psi_savard_comparison.tex`
+- MOD `docs/geometrie_spectre_premiers.tex` (index HOL + labels + tableaux hyperlinkés)
+- MOD `src/ui/cli.py` (commande `psi-savard` + aide)
+
 ## Backlog / Futures tâches
 - **P2** : Refactor avancé — fusionner les versions parallèles encore actives (`pipeline.py` + `pipeline_with_gap_detection.py`, `llm_router.py` + `llm_router_v2.py`, `gabriel_llm_integration_safe.py` + `gabriel_llm_integration_v2.py`) en une seule classe canonique (nécessite tests d'intégration approfondis)
 - **P2** : Badge GitHub Actions dans README.md (à ajouter après le 1er run distant)

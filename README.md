@@ -17,12 +17,13 @@
 3. [Ce que fait l'agent Gabriel](#-ce-que-fait-lagent-gabriel)
 4. [Principales caractéristiques](#-principales-caractéristiques-de-la-programmation)
 5. [Exemples de possibilités](#-exemples-de-possibilités)
-6. [Portée limitée — géométrie du spectre uniquement](#-portée-limitée)
-7. [Fichiers de référence](#-fichiers-de-référence)
-8. [Installation et lancement](#-installation-et-lancement)
-9. [Licence, propriété et contributions](#-licence-propriété-et-contributions)
-10. [Contact et sécurité](#-contact-et-sécurité)
-11. [Auteurs et contributeurs](#-auteurs-et-contributeurs)
+6. [Déploiement web et ressources publiques](#-déploiement-web-et-ressources-publiques)
+7. [Portée limitée — géométrie du spectre uniquement](#-portée-limitée)
+8. [Fichiers de référence](#-fichiers-de-référence)
+9. [Installation et lancement](#-installation-et-lancement)
+10. [Licence, propriété et contributions](#-licence-propriété-et-contributions)
+11. [Contact et sécurité](#-contact-et-sécurité)
+12. [Auteurs et contributeurs](#-auteurs-et-contributeurs)
 
 ---
 
@@ -46,7 +47,7 @@ Gabriel existe donc pour trois raisons :
 
 Dans ce cadre, l'auteur propose l'existence d'un **code interne** reliant les nombres premiers à l'ensemble des entiers, mis en évidence par un **rapport spectral unique `RsP = 1/2`**, qu'il associe à la position `n` des nombres premiers dans les suites A et B, et à une proximité conceptuelle avec la **fonction zêta de Riemann** et sa **droite critique `Re = 1/2`**.
 
-C'est cette conviction structurelle — que le rapport `RsP = 1/2` n'est **pas un artefact algébrique** mais une **cohérence numérique réelle globale** émergeant des sommes de nombres premiers — qui a rendu nécessaire la construction d'un assistant formel rigoureux : **Gabriel**.
+C'est cette conviction structurelle — que le rapport `RsP = 1/2` n'est **pas un artefact algébrique** mais une **cohérence numérique réelle globale** émergeant des sommes de nombres premiers — qui a rendu nécessaire la construction d'un assistant formel rigoureux : **MM. Gabriel**.
 
 ---
 
@@ -56,7 +57,7 @@ Gabriel est un **agent multiloop cognitif local** (CLI, dockerisé, hors-cloud p
 
 - **Ne répond qu'aux questions portant sur la géométrie du spectre des nombres premiers.** Toute question hors de ce champ est déclinée poliment.
 - **Compétence principale : `theories/methode_spectral.thy`** — le fichier de preuve Isabelle/HOL formelle qui incarne la géométrie du spectre. Gabriel peut aussi mobiliser d'autres informations complémentaires (mémoire RAG, dictionnaire spectral, régimes cognitifs) mais **toute réponse est ancrée sur cette géométrie**.
-- **Est équipé de 7 moteurs cognitifs collaboratifs**, d'un pré-raisonneur dynamique, d'un audit silencieux anti-hallucination et d'un mode « cinématique » avec timer temps réel.
+- **Est équipé de 7 moteurs cognitifs collaboratifs**, d'un pré-raisonneur dynamique, d'un audit silencieux anti-hallucination inversé et d'un mode « cinématique » avec timer temps réel.
 
 ---
 
@@ -115,6 +116,28 @@ Voici des exemples concrets de requêtes traitées par Gabriel :
 | Formel HOL | *« Génère le script Isabelle vérifiant la reconstruction du 10ᵉ premier »* | STANDARD |
 
 Toute réponse est **ancrée sur `methode_spectral.thy`** (empreinte SHA256 tracée par audit) et peut être exportée vers un PDF citable (roadmap).
+
+---
+
+## 🌐 Déploiement web et ressources publiques
+
+Le prolongement public de cet univers logiciel est disponible sur **[www.universestaucarre.com](https://www.universestaucarre.com)**. Le site propose une porte d'entrée directe vers les travaux de **Philippe Thomas Savard** autour de la **Géométrie du spectre des nombres premiers** et de la théorie unifiée **L'Univers est au carré**.
+
+Cette présence web n'est **pas une copie exacte** de la présente version locale de Gabriel. Elle constitue plutôt une vitrine en ligne, complémentaire au dépôt, où les utilisateurs peuvent :
+
+- découvrir le cadre théorique général de **L'Univers est au carré** ;
+- approfondir la **Géométrie du spectre des nombres premiers** ;
+- dialoguer avec **trois agents IA collaboratifs**, conçus comme des interlocuteurs experts et socratiques ;
+- naviguer dans un environnement cohérent avec ce dépôt Gabriel, avec le dépôt théorique public **[Theorie-mathematique-philippe-thomas-savard-2026](https://github.com/2racinede4carreunivers-dev/Theorie-mathematique-philippe-thomas-savard-2026.git)** et avec la branche **Gabriel version Emergent.sh**.
+
+L'objectif de cette plateforme est de rendre les travaux de l'auteur plus consultables, plus interactifs et plus accessibles, sans sortir du cadre mathématique qu'ils revendiquent. Les agents en ligne sont orientés vers les questions sur la Méthode Spectrale, les preuves, les concepts structurants et les implications théoriques du corpus.
+
+Par souci de **transparence intellectuelle**, l'application web précise également, lorsque nécessaire, la différence entre :
+
+- ce qu'expose ou défend la théorie **L'Univers est au carré** ;
+- et l'état actuel des positions dominantes dans les communautés mathématiques et scientifiques contemporaines.
+
+Cette mise en contexte fait partie intégrante de l'expérience utilisateur : elle permet de consulter le logiciel, les idées et les réponses des agents en sachant clairement où se situe le corpus de l'auteur par rapport aux cadres académiques actuels.
 
 ---
 

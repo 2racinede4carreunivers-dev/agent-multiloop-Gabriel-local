@@ -19,6 +19,26 @@ Gabriel est un **agent IA multiloop de pointe** conçu pour l'assistance en **HO
 
 ---
 
+## 🌐 Déploiement web et information publique
+
+Une déclinaison web de l'écosystème Gabriel est accessible sur **[www.universestaucarre.com](https://www.universestaucarre.com)**. Elle n'est pas exactement la même version que celle de ce dépôt local, mais elle s'appuie sur le même socle de travaux et sert de point d'accès public aux utilisateurs souhaitant découvrir la théorie et les agents en ligne.
+
+Le site présente :
+
+- la **Géométrie du spectre des nombres premiers** ;
+- la théorie unifiée **L'Univers est au carré** de **Philippe Thomas Savard** ;
+- un logiciel web permettant de dialoguer avec **trois agents IA collaboratifs, experts et de style socratique** ;
+- un environnement aligné avec ce dépôt Gabriel, avec le dépôt théorique public **[Theorie-mathematique-philippe-thomas-savard-2026](https://github.com/2racinede4carreunivers-dev/Theorie-mathematique-philippe-thomas-savard-2026.git)**, ainsi qu'avec la variante **Gabriel version Emergent.sh**.
+
+Ces agents sont conçus pour accompagner les utilisateurs dans leurs questions sur les travaux de l'auteur, notamment sur la Méthode Spectrale, les preuves Isabelle/HOL, la géométrie du spectre et le cadre général de **L'Univers est au carré**.
+
+Par souci de **transparence**, l'application web indique aussi, quand cela est pertinent, l'écart possible entre les propositions de la théorie de l'auteur et l'état actuel des positions dominantes dans les milieux mathématiques et scientifiques. L'objectif est que l'utilisateur sache toujours distinguer :
+
+- le contenu défendu ou exploré dans le corpus théorique ;
+- et le niveau d'acceptation actuel de ces idées dans les cercles académiques contemporains.
+
+---
+
 ##  Architecture Multiloop
 
 Gabriel fonctionne avec **7 moteurs collaboratifs** organisés en boucles d'amélioration itérative :

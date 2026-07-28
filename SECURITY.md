@@ -167,7 +167,7 @@ The list of reporters who contributed to improving Gabriel Multi-Loop's security
 
 ## 10. Author, intellectual property and jurisdiction
 
-- **Sole author** of the Spectral Method and of the Gabriel Multi-Loop implementation: **Philippe Thomas Savard**
+- **Sole author** of the Spectral Method,Géométrie du spectre des nombres premiers and the theorie "L'univers est au carré" and of the Gabriel Multi-Loop implementation: **Philippe Thomas Savard**
 - **Address**: Lévis, Chaudière-Appalaches, Quebec, Canada
 - **Governing law** for security disputes: **Quebec law** and, subsidiarily, **Canadian federal law**
 - **Source code licence**: see `LICENSE` at the root of the repository
@@ -186,7 +186,7 @@ The list of reporters who contributed to improving Gabriel Multi-Loop's security
 
 | Need | Channel |
 |------|---------|
-| Confidential critical vulnerability | `2racinede4carreunivers@gmail.com` |
+| Confidential critical vulnerability | `2racinede4carreunivers@gmail.com` |`philippethomassavar@gmail.com` `philippotcarre@outlook.com`
 | Non-security bug | GitHub Issues (prefix `[BUG]`) |
 | Question about this policy | GitHub Issues (prefix `[SECURITY-QUESTION]`) |
 | Contribution / fix submission | Pull Request on the `main` branch |

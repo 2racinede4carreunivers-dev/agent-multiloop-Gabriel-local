@@ -1,33 +1,4 @@
-#!/usr/bin/env python3
-"""Point d'entree principal du Multi-Loop Mathematical Agent."""
-from __future__ import annotations
-
-import logging
-import os
-import sys
-import time
-from pathlib import Path
-
-# Ajouter le repertoire racine au path
-_ROOT = Path(__file__).parent.resolve()
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
-
-from src.core.config import load_config
-from src.core.logging_setup import _env_verbose, setup_logging
-
-
-def _rich_init_banner() -> "tuple[object, object] | tuple[None, None]":
-    """Retourne (console, live_context_manager) si Rich est disponible."""
-    try:
-        from rich.console import Console
-        from rich.panel import Panel
-        from rich.text import Text
-        from rich.align import Align
-        from rich.box import ROUNDED
-    except ImportError:
-        return None, None
-
+P
     console = Console()
     title = Text("Multi-Loop Mathematical Agent - Gabriel local", style="bold cyan")
     subtitle = Text(

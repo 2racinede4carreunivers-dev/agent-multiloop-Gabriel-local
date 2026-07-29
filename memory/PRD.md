@@ -6,6 +6,18 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 ## Statut Global
 **Production-Ready v3.37 — 1716/1716 tests Pytest ✅ — 7 traductions internationales de methode_spectral.thy (EN/ES/DE/PT/RU/ZH/JA) + entête bilingue phonétique**
 
+### Changelog 2026-02-15 v3.41 (Restauration acces filesystem + Vision)
+- **Bug signale (Philippe)** : Gabriel avait perdu 3 capacites : (1) tracer graphiques/tableaux/schemas, (2) analyser une image via chemin, (3) atteindre fichiers/documents montes dans les volumes Docker.
+- **Root cause** : `src/core/plan_trifocal_avec_image.py` avait un chemin Windows hardcode (`C:\theorie-...`) et un import inexistant (`rich.image.Image`) — jamais wire dans le CLI. Aucune commande CLI n'existait pour lire fichiers/analyser images/scanner dossiers.
+- **Correction** :
+  - **Nouveau module** `src/core/filesystem_access.py` (295 lignes) : `voir_image()` (apercu ASCII + metadata), `analyser_image()` (Claude Vision via SDK anthropic), `lire_fichier()` (avec sondage NUL systematique + borne `max_bytes=128 KiB`), `scanner_dossier()` (dossiers montes) + formatters Rich.
+  - **Fix** `plan_trifocal_avec_image.py` : suppression du chemin Windows + import `rich.image` inexistant ; remplace par `TRIFOCAL_IMAGE_PATH` env var + candidats `docs/data/images/*` cross-platform.
+  - **Nouvelles commandes CLI** dans `src/ui/cli.py` : `voir-image <chemin>`, `voir <chemin>` (alias), `analyser-image <chemin> [question]`, `analyser <chemin>` (alias), `lire <chemin> [n_lignes]`, `scan <chemin>`, `trifocal image`, `trifocal schema`. Section "FICHIERS & IMAGES (volumes montes)" ajoutee au panel `commandes`.
+  - **Tests** : `tests/test_filesystem_access.py` (17 tests, tous verts). QA testing_agent : 11/11 apres correction (dont refus binaire deguise en `.py` et troncation octets d'une ligne enorme).
+- **Statut** : 1776 pytests passing (vs 1759 avant fix, +17 tests). 9 echecs pre-existants (Isabelle BOM/mojibake/workflow) inchanges — hors perimetre.
+- **Impact utilisateur** : Gabriel peut maintenant lire n'importe quel fichier des volumes (`/home/agent/app/data`, `/home/agent/app/theories`, `/workspace/*`), decrire une image via Claude Vision (necessite cle `ANTHROPIC_API_KEY` valide dans `.env`), et scanner l'arborescence des mounts Docker.
+
+
 ### Changelog 2026-02 v3.37 (Traductions internationales `methode_spectral.thy`)
 - **Demande Philippe** : Créer 7 versions traduites du fichier `methode_spectral.thy` pour les audiences anglophone, hispanophone, germanophone, lusophone, russophone, sinophone, japonophone. Impératif absolu : **le code HOL doit rester strictement identique bit-à-bit** entre toutes les versions. Seuls les textes en langue naturelle (commentaires `(* ... *)` et blocs Isabelle `text \<open>...\<close>`) sont traduits. Zéro modification sémantique/mathématique/épistémologique/philosophique/ontologique. Entête bilingue à ajouter à chaque fichier (**libellés dans la langue cible**, transcriptions API/IPA identiques à la version française d'origine).
 - **Pipeline `scripts/translate_thy.py`** :

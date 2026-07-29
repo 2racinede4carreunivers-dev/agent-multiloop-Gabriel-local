@@ -56,6 +56,34 @@ def test_lire_fichier_refuse_binaire(tmp_path: Path) -> None:
         fa.lire_fichier(str(f))
 
 
+def test_lire_fichier_refuse_binaire_avec_extension_texte(tmp_path: Path) -> None:
+    """Un binaire renomme en .py doit etre refuse."""
+    f = tmp_path / "programme.py"
+    f.write_bytes(b"print('ok')\x00\x00 payload binaire")
+    with pytest.raises(ValueError, match="binaire"):
+        fa.lire_fichier(str(f))
+
+
+def test_lire_fichier_borne_max_bytes(tmp_path: Path) -> None:
+    """Un fichier avec une seule ligne enorme doit etre tronque en octets."""
+    f = tmp_path / "enorme.md"
+    # 200 KiB sur une seule ligne (aucun \n) : depasse DEFAULT_MAX_BYTES=128KiB
+    f.write_text("a" * (200 * 1024), encoding="utf-8")
+    r = fa.lire_fichier(str(f))
+    assert r.truncated
+    assert "tronque" in r.content
+    # Le contenu doit etre borne autour de 128 KiB, pas 200 KiB
+    assert len(r.content) < 150 * 1024
+
+
+def test_lire_fichier_max_bytes_configurable(tmp_path: Path) -> None:
+    f = tmp_path / "grand.txt"
+    f.write_text("x" * 10_000, encoding="utf-8")
+    r = fa.lire_fichier(str(f), max_bytes=1_000)
+    assert r.truncated
+    assert "tronque a 1000 octets" in r.content
+
+
 # ------------------------------------------------------------------
 # scanner_dossier
 # ------------------------------------------------------------------

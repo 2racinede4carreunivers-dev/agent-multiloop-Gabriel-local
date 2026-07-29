@@ -105,12 +105,15 @@ def _human_size(n: int) -> str:
 # Lecture de fichier texte
 # ------------------------------------------------------------------
 
-def lire_fichier(chemin: str, max_lignes: int = DEFAULT_MAX_LINES) -> FileReadResult:
+def lire_fichier(chemin: str, max_lignes: int = DEFAULT_MAX_LINES,
+                 max_bytes: int = DEFAULT_MAX_BYTES) -> FileReadResult:
     """Lit un fichier texte depuis n'importe quel chemin (volumes inclus).
 
-    - Refuse les fichiers binaires (sauf extensions text-safe connues).
-    - Limite la sortie a `max_lignes` (defaut 200) pour eviter de saturer
-      le terminal.
+    - Refuse les fichiers binaires (sondage des premiers octets, meme pour
+      les extensions texte autorisees).
+    - Borne la lecture a `max_bytes` (defaut 128 KiB) pour eviter de saturer
+      la memoire quand une ligne est enorme.
+    - Limite la sortie a `max_lignes` (defaut 200).
     """
     p = _resolve(chemin)
     if not p.exists():
@@ -121,36 +124,48 @@ def lire_fichier(chemin: str, max_lignes: int = DEFAULT_MAX_LINES) -> FileReadRe
     size = p.stat().st_size
     ext = p.suffix.lower()
 
-    # Heuristique text-safe : soit extension connue, soit taille raisonnable
-    # + detection par sondage du contenu.
-    is_text_ext = ext in TEXT_EXTENSIONS
-    if not is_text_ext:
-        # Sonde les 4 premiers Ko pour detecter du binaire
+    # Sonde binaire systematique (extension texte ou non) : un fichier
+    # renomme en .py/.md mais contenant des NUL doit etre refuse.
+    try:
         with open(p, "rb") as f:
             head = f.read(4096)
-        if b"\x00" in head:
-            raise ValueError(
-                f"'{p}' semble binaire (extension {ext or 'aucune'}). "
-                "Utilisez 'voir-image' pour les images."
-            )
+    except OSError as exc:
+        raise RuntimeError(f"Impossible de lire {p} : {exc}") from exc
+    if b"\x00" in head:
+        raise ValueError(
+            f"'{p}' semble binaire (octet NUL detecte). "
+            "Utilisez 'voir-image' pour les images."
+        )
 
-    # Lecture reelle
+    # Lecture bornee par max_bytes pour empecher qu'une ligne enorme
+    # sature la memoire / le terminal.
     encoding = "utf-8"
     try:
-        raw = p.read_text(encoding=encoding, errors="replace")
-    except (OSError, UnicodeDecodeError) as exc:
+        with open(p, "rb") as f:
+            raw_bytes = f.read(max_bytes + 1)
+    except OSError as exc:
         raise RuntimeError(f"Impossible de lire {p} : {exc}") from exc
+    bytes_truncated = len(raw_bytes) > max_bytes
+    if bytes_truncated:
+        raw_bytes = raw_bytes[:max_bytes]
+    raw = raw_bytes.decode(encoding, errors="replace")
 
     all_lines = raw.splitlines()
-    total = len(all_lines)
+    total = len(all_lines) if not bytes_truncated else len(all_lines) + 1
     shown = all_lines[:max_lignes]
-    truncated = total > max_lignes
+    truncated_lines = len(all_lines) > max_lignes
+    truncated = truncated_lines or bytes_truncated
 
     content = "\n".join(shown)
-    if truncated:
+    if truncated_lines:
         content += (
-            f"\n\n... ({total - max_lignes} lignes supplementaires, "
-            f"total={total}. Augmentez max_lignes pour tout voir.)"
+            f"\n\n... ({len(all_lines) - max_lignes} lignes supplementaires, "
+            f"total_lu={len(all_lines)}. Augmentez max_lignes pour tout voir.)"
+        )
+    if bytes_truncated:
+        content += (
+            f"\n\n... (fichier tronque a {max_bytes} octets sur {size} au total. "
+            "Augmentez max_bytes pour lire davantage.)"
         )
 
     return FileReadResult(

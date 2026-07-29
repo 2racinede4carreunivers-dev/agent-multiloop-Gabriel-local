@@ -408,7 +408,25 @@ class CLIInterface:
         if c == "env-check" or c == "env" or c.startswith("env "):
             return self._handle_env_check(cmd)
         if c == "trifocal" or c.startswith("trifocal "):
+            # Sous-commandes visuelles (image / schema) prises en charge
+            # separement pour eviter les dependances lourdes.
+            tokens = cmd.strip().split()
+            sub = tokens[1].lower() if len(tokens) >= 2 else ""
+            if sub in {"image", "schema"}:
+                from ..core.plan_trifocal_avec_image import (
+                    handle_plan_trifocal_with_image,
+                )
+                if handle_plan_trifocal_with_image(cmd, console=console):
+                    return True
             return self._handle_trifocal(cmd)
+        if c.startswith("voir-image ") or c.startswith("voir "):
+            return self._handle_voir_image(cmd)
+        if c.startswith("analyser-image ") or c.startswith("analyser "):
+            return self._handle_analyser_image(cmd)
+        if c.startswith("lire ") or c == "lire":
+            return self._handle_lire(cmd)
+        if c.startswith("scan ") or c == "scan":
+            return self._handle_scan(cmd)
         if c in {"ci", "tests", "pytest"}:
             console.print("\n  [dim]Execution de la suite pytest locale (tests/)... patientez quelques secondes.[/dim]\n")
             summary = run_pytest_local()
@@ -1255,6 +1273,20 @@ class CLIInterface:
                  "Valide la coherence epipolaire pour n  ex: trifocal valider 26"),
                 ("trifocal riemann",
                  "Affiche le lien Methode Spectrale <-> Hypothese de Riemann"),
+                ("trifocal image",
+                 "Affiche le schema 'Quadrature Parabole Zero Critique'"),
+                ("trifocal schema",
+                 "Description + apercu du schema trifocal"),
+            ]),
+            ("[bold cyan]FICHIERS & IMAGES (volumes montes)[/bold cyan]", [
+                ("voir-image <chemin>",
+                 "Apercu ASCII + metadonnees d'une image"),
+                ("analyser-image <chemin> [q]",
+                 "Analyse Claude Vision (decrit / interprete l'image)"),
+                ("lire <chemin> [n_lignes]",
+                 "Lit un fichier texte (.tex/.thy/.md/.py/.csv/...)"),
+                ("scan <chemin>",
+                 "Liste le contenu d'un dossier (volumes Docker)"),
             ]),
             ("[bold cyan]LANGAGE NATUREL & AUTO-TRIGGER[/bold cyan]", [
                 ("<question libre>",
@@ -1769,7 +1801,9 @@ class CLIInterface:
                 "    [yellow]trifocal axes[/yellow]                 Liste les 3 axes (FZg, HyRi, MsP)\n"
                 "    [yellow]trifocal postulats[/yellow]            Liste les 5 postulats epipolaires (P1-P5)\n"
                 "    [yellow]trifocal valider <n> [modele][/yellow] Valide la coherence epipolaire pour n\n"
-                "    [yellow]trifocal riemann[/yellow]              Affiche le lien avec l'Hypothese de Riemann\n\n"
+                "    [yellow]trifocal riemann[/yellow]              Affiche le lien avec l'Hypothese de Riemann\n"
+                "    [yellow]trifocal image[/yellow]                Affiche le schema quadrature (image)\n"
+                "    [yellow]trifocal schema[/yellow]               Description + apercu du schema\n\n"
                 "  Exemples :\n"
                 "    [cyan]trifocal valider 26[/cyan]       (modele 1/2 par defaut)\n"
                 "    [cyan]trifocal valider 10 1/3[/cyan]\n"
@@ -1907,6 +1941,129 @@ class CLIInterface:
             "Tapez 'trifocal' pour l'aide.[/yellow]\n"
         )
         return True
+
+    # ------------------------------------------------------------------
+    # Acces filesystem : voir-image / analyser-image / lire / scan
+    # ------------------------------------------------------------------
+
+    def _split_path_arg(self, cmd: str, prefix_options: list[str]) -> tuple[str, str]:
+        """Retourne (chemin, reste) apres avoir enleve le prefixe (voir/lire/...)."""
+        raw = cmd.strip()
+        for prefix in prefix_options:
+            if raw.lower().startswith(prefix.lower() + " "):
+                rest = raw[len(prefix) + 1:].strip()
+                # On accepte des chemins avec espaces si entoures de guillemets
+                if rest.startswith('"') and '"' in rest[1:]:
+                    end = rest.index('"', 1)
+                    return rest[1:end], rest[end + 1:].strip()
+                if rest.startswith("'") and "'" in rest[1:]:
+                    end = rest.index("'", 1)
+                    return rest[1:end], rest[end + 1:].strip()
+                parts = rest.split(None, 1)
+                return parts[0], (parts[1] if len(parts) > 1 else "")
+        return "", ""
+
+    def _handle_voir_image(self, cmd: str) -> bool:
+        """Commande `voir-image <chemin>` : apercu ASCII + metadonnees."""
+        from ..core.filesystem_access import voir_image, format_image
+        chemin, _ = self._split_path_arg(cmd, ["voir-image", "voir"])
+        if not chemin:
+            console.print(
+                "\n  [yellow]Usage : voir-image <chemin>\n"
+                "  Exemple : voir-image /home/agent/app/data/graphs/mon_image.png[/yellow]\n"
+            )
+            return True
+        try:
+            result = voir_image(chemin, cols=70)
+            console.print(Panel(
+                format_image(result),
+                title="[cyan]Apercu image[/cyan]",
+                border_style="cyan",
+            ))
+        except (FileNotFoundError, IsADirectoryError, RuntimeError, ValueError) as exc:
+            console.print(f"\n  [red]{exc}[/red]\n")
+        return True
+
+    def _handle_analyser_image(self, cmd: str) -> bool:
+        """Commande `analyser-image <chemin> [question]` : Claude Vision."""
+        from ..core.filesystem_access import analyser_image
+        chemin, question = self._split_path_arg(cmd, ["analyser-image", "analyser"])
+        if not chemin:
+            console.print(
+                "\n  [yellow]Usage : analyser-image <chemin> [question]\n"
+                "  Exemple : analyser-image /home/agent/app/data/graphs/sa.png\n"
+                "            analyser-image /path/schema.png \"quels axes ?\"[/yellow]\n"
+            )
+            return True
+        console.print(
+            "\n  [dim]Analyse Claude Vision en cours (peut prendre 10-30s)...[/dim]\n"
+        )
+        try:
+            texte = analyser_image(chemin, question=question or None)
+            console.print(Panel(
+                texte,
+                title=f"[cyan]Analyse Claude Vision : {chemin}[/cyan]",
+                border_style="cyan",
+                padding=(1, 2),
+            ))
+        except (FileNotFoundError, IsADirectoryError, RuntimeError, ValueError) as exc:
+            console.print(f"\n  [red]{exc}[/red]\n")
+        return True
+
+    def _handle_lire(self, cmd: str) -> bool:
+        """Commande `lire <chemin> [n_lignes]` : lecture d'un fichier texte."""
+        from ..core.filesystem_access import lire_fichier, format_file
+        chemin, reste = self._split_path_arg(cmd, ["lire"])
+        if not chemin:
+            console.print(
+                "\n  [yellow]Usage : lire <chemin> [n_lignes]\n"
+                "  Exemples :\n"
+                "    lire /home/agent/app/theories/methode_spectral.thy\n"
+                "    lire docs/geometrie_spectre_premiers.tex 100[/yellow]\n"
+            )
+            return True
+        n_lignes = 200
+        if reste:
+            try:
+                n_lignes = int(reste.split()[0])
+            except (ValueError, IndexError):
+                pass
+        try:
+            result = lire_fichier(chemin, max_lignes=n_lignes)
+            console.print(Panel(
+                format_file(result),
+                title=f"[cyan]Contenu fichier[/cyan]",
+                border_style="cyan",
+            ))
+        except (FileNotFoundError, IsADirectoryError, RuntimeError, ValueError) as exc:
+            console.print(f"\n  [red]{exc}[/red]\n")
+        return True
+
+    def _handle_scan(self, cmd: str) -> bool:
+        """Commande `scan <chemin>` : liste un dossier (volumes montes)."""
+        from ..core.filesystem_access import scanner_dossier, format_scan
+        chemin, _ = self._split_path_arg(cmd, ["scan"])
+        if not chemin:
+            console.print(
+                "\n  [yellow]Usage : scan <chemin>\n"
+                "  Exemples :\n"
+                "    scan /home/agent/app/data\n"
+                "    scan /home/agent/app/theories\n"
+                "    scan /workspace[/yellow]\n"
+            )
+            return True
+        try:
+            result = scanner_dossier(chemin)
+            console.print(Panel(
+                format_scan(result),
+                title=f"[cyan]Scan dossier[/cyan]",
+                border_style="cyan",
+            ))
+        except (FileNotFoundError, NotADirectoryError, PermissionError, ValueError) as exc:
+            console.print(f"\n  [red]{exc}[/red]\n")
+        return True
+
+
 
     def _handle_env_check(self, cmd: str) -> bool:
         """Commande `env-check` : diagnostic complet des fichiers .env.

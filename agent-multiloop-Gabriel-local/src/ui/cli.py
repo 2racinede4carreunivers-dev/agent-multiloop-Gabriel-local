@@ -1287,9 +1287,9 @@ class CLIInterface:
             ("[bold cyan]FICHIERS & IMAGES (volumes montes)[/bold cyan]", [
                 ("voir-image <chemin>",
                  "Apercu ASCII + metadonnees d'une image"),
-                ("image <chemin> [question]",
+                ("image <chemin> \\[question]",
                  "Alias rapide : analyse Claude Vision (idem analyser-image)"),
-                ("analyser-image <chemin> [q]",
+                ("analyser-image <chemin> \\[q]",
                  "Analyse Claude Vision (decrit / interprete l'image)"),
                 ("lire <chemin> [n_lignes]",
                  "Lit un fichier texte (.tex/.thy/.md/.py/.csv/...)"),

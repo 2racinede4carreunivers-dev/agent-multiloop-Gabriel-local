@@ -9,6 +9,19 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 TEX_PATH = ROOT / "theories" / "tex" / "geometrie_gabriel_savard_13.tex"
+EXPECTED_BIB_KEYS = (
+    "Riemann1859",
+    "Tchebychev1852",
+    "HardyWright1979",
+    "Davenport2000",
+    "Titchmarsh1986",
+    "Nipkow2002",
+    "Isabelle2024",
+    "Savard2026a",
+    "Savard2026b",
+    "Savard2026c",
+)
+GITHUB_URL = "https://github.com/PhilippeThomasSavard/Agent-multiloop-Gabriel"
 
 
 @pytest.fixture(scope="module")
@@ -92,41 +105,70 @@ def test_document_boundaries_and_delimiters(tex: str) -> None:
 
 
 
-def test_single_active_document_end_and_restored_tail(tex: str) -> None:
-    """Un seul document actif englobe désormais toute la seconde partie."""
+def test_file_length_and_size_after_duplicate_removal(tex_bytes: bytes, tex: str) -> None:
+    """La suppression du bloc orphelin conserve le fichier attendu de 1082 lignes."""
+    assert len(tex.splitlines()) == 1082
+    assert tex_bytes.count(b"\n") == 1082
+    assert 43_000 <= len(tex_bytes) <= 45_000
+
+
+def test_single_active_document_and_bibliography_boundaries(tex: str) -> None:
+    """Le document et sa bibliographie n'ont chacun qu'une paire de bornes."""
     clean = _without_comments(tex)
+    commands = [line.strip() for line in clean.splitlines() if line.strip()]
     assert clean.count(r"\begin{document}") == 1
     assert clean.count(r"\end{document}") == 1
-    assert [line.strip() for line in clean.splitlines() if line.strip()][-1] == (
-        r"\end{document}"
-    )
-    assert r"\end{document}" in tex.splitlines()[-5:]
+    assert clean.count(r"\begin{thebibliography}") == 1
+    assert clean.count(r"\end{thebibliography}") == 1
+    assert commands[-1] == r"\end{document}"
+    assert tex.splitlines()[-1] == r"\end{document}"
 
-    fix_comment = (
-        "%% FIX v3.44 : suppression du `\\end{document}` premature qui coupait\n"
-        "%% le document au milieu, ignorant ~360 lignes (Section Perspectives\n"
-        "%% futures, appendices, index, glossaire, sections PASJ complementaires).\n"
-        "%% Le VRAI `\\end{document}` est en fin de fichier (ligne finale)."
-    )
-    assert fix_comment in tex
 
-    restored_tokens = (
-        r"\subsection{Perspectives futures}",
-        r"\label{ssec:perspectives}",
-        r"\section*{Financement}",
-        r"\section*{Disponibilité des données}",
-        r"\section*{Annexe --- Échange avec un pseudo expert Google}",
-        r"\section*{Note de Validation Externe}",
-        r"\section*{Supplementary data}",
-        r"\section*{Funding}",
-        r"\section*{Data availability}",
+def test_bibliography_has_ten_unique_expected_keys_and_full_urls(tex: str) -> None:
+    """Les dix références attendues sont uniques et les URL GitHub non tronquées."""
+    clean = _without_comments(tex)
+    bibliography = clean.split(r"\begin{thebibliography}{}", maxsplit=1)[1].split(
+        r"\end{thebibliography}", maxsplit=1
+    )[0]
+    keys = re.findall(r"\\bibitem(?:\[[^\]]*\])?\{([^{}]+)\}", bibliography)
+    assert keys == list(EXPECTED_BIB_KEYS)
+    assert len(keys) == len(set(keys)) == 10
+    assert bibliography.count(GITHUB_URL) == 2
+    assert all(
+        r"\url{" + GITHUB_URL + "}" in bibliography.split(
+            rf"\bibitem[Savard(2026{suffix})]{{Savard2026{suffix}}}", maxsplit=1
+        )[1]
+        for suffix in ("a", "b")
     )
-    future_start = clean.index(restored_tokens[0])
-    document_end = clean.index(r"\end{document}")
-    for token in restored_tokens:
-        assert token in clean, f"Contenu restauré absent : {token}"
-    assert future_start < clean.index(r"\label{ssec:perspectives}", future_start)
-    assert all(clean.rfind(token) < document_end for token in restored_tokens)
+
+
+def test_all_labels_are_unique(tex: str) -> None:
+    """Les 82 labels actifs sont uniques, notamment celui des perspectives."""
+    clean = _without_comments(tex)
+    labels = re.findall(r"\\label\{([^{}]+)\}", clean)
+    assert len(labels) == 82
+    assert len(labels) == len(set(labels))
+    assert labels.count("ssec:perspectives") == 1
+
+
+def test_perspectives_and_acknowledgements_are_intact(tex: str) -> None:
+    clean = _without_comments(tex)
+    perspective_start = clean.index(r"\subsection{Perspectives}")
+    perspective_end = clean.index(r"\end{itemize}", perspective_start)
+    perspectives = clean[perspective_start:perspective_end]
+    for fragment in (
+        "suites de 1 à 7 termes",
+        "suites négatives et mixtes",
+        "convergence asymptotique",
+        "Publication et soumission",
+    ):
+        assert fragment in perspectives
+
+    ack_match = re.search(r"\\begin\{ack\}(.*?)\\end\{ack\}", clean, re.DOTALL)
+    assert ack_match is not None
+    acknowledgements = ack_match.group(1)
+    for fragment in ("Copilot", "E1", "Gordon", "Gabriel"):
+        assert fragment in acknowledgements
 
 
 def test_unnumberedsection_macro_is_complete_and_in_preamble(tex: str) -> None:
@@ -148,6 +190,8 @@ def test_unnumberedsection_macro_is_complete_and_in_preamble(tex: str) -> None:
 
 def test_first_two_starred_sections_are_replaced(tex: str) -> None:
     clean = _without_comments(tex)
+    invocations = re.findall(r"\\unnumberedsection\{[^\n]+\}", clean)
+    assert len(invocations) == 2
     assert r"\section*{Note liminaire}" not in clean
     assert r"\section*{Avant-Propos" not in clean
     assert clean.count(r"\unnumberedsection{Note liminaire}") == 1

@@ -73,6 +73,22 @@
 \@ifundefined{corollary}{\newtheorem{corollary}[theorem]{Corollaire}}{}
 \makeatother
 
+%% -------------------------------------------------------------------------
+%%  \unnumberedsection : sections non-numerotees compatibles pasj02+MiKTeX
+%%  Contourne le conflit `\section*` <-> pasj02.cls (lineno) qui provoque
+%%  l'erreur "Missing number, treated as zero" a la 1re \section* apres
+%%  \end{abstract}. Cette macro produit un titre visuel + entree TOC +
+%%  ancre hyperref sans declencher le compteur de sections de pasj02.
+\makeatletter
+\newcommand{\unnumberedsection}[1]{%
+  \bigskip\par
+  \phantomsection
+  \addcontentsline{toc}{section}{#1}%
+  {\noindent\Large\bfseries #1\par}%
+  \nopagebreak\medskip\@afterheading
+}
+\makeatother
+
 
 \begin{document}
 
@@ -143,9 +159,11 @@ positifs et distincts, sans restriction.
 
 %%% =========================================================================
 %%%  SECTION 0 — AVANT-PROPOS  (version integrale, restauree v0.9.1)
+%%%  IMPORTANT : \unnumberedsection remplace \section* pour eviter le
+%%%  conflit pasj02.cls + MiKTeX local (erreur "Missing number, treated
+%%%  as zero" a la 1re \section* apres \end{abstract}).
 %%% =========================================================================
-\section*{Note liminaire}
-\addcontentsline{toc}{section}{Note liminaire}
+\unnumberedsection{Note liminaire}
 
 Ce document présente les fondements formels de la Méthode Spectrale de
 Philippe Thomas Savard, incluant des preuves validées par l'assistant de
@@ -153,8 +171,7 @@ preuve Isabelle/HOL.  Version~: \textbf{v0.9.1 (HOL-corrigé)}.
 Auteur~: Philippe Thomas Savard --- Lévis, Chaudière-Appalaches, Québec,
 Canada --- 20~juillet 2026.  Licence~: Apache~License~2.0.
 
-\section*{Avant-Propos --- La Chair Première Géométrique}
-\addcontentsline{toc}{section}{Avant-Propos}
+\unnumberedsection{Avant-Propos --- La Chair Première Géométrique}
 
 Il y a des moments, dans la vie d'un chercheur, où une observation naïve
 ouvre une fissure dans le mur de l'évidence.  Ce mur dans lequel se trouve

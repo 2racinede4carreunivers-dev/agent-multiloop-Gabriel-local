@@ -12,8 +12,10 @@
 #    - Delimiteurs : accolades { } equilibrees, math $ de parite paire
 #
 #  Usage :
-#    ./scripts/healthcheck_tex.sh                  # verifie tous les .tex
-#    ./scripts/healthcheck_tex.sh path/to/file.tex # verifie un fichier
+#    ./scripts/healthcheck_tex.sh                  # verifie UNIQUEMENT le
+#                                                  # fichier canonique v13
+#                                                  # (geometrie_gabriel_savard_13.tex)
+#    ./scripts/healthcheck_tex.sh path/to/file.tex # verifie un fichier specifique
 #
 #  Installation en pre-commit git :
 #    ln -s ../../scripts/healthcheck_tex.sh .git/hooks/pre-commit
@@ -39,7 +41,10 @@ else
   if [[ -f "${DEFAULT_TEX}" ]]; then
     FILES=("${DEFAULT_TEX}")
   else
-    mapfile -t FILES < <(find "${REPO_ROOT}/theories/tex" -maxdepth 2 -name "*.tex" 2>/dev/null)
+    echo "ERREUR : fichier canonique introuvable : ${DEFAULT_TEX}" >&2
+    echo "  Passez explicitement les .tex a verifier en argument," >&2
+    echo "  ou restaurez le fichier canonique." >&2
+    exit 2
   fi
 fi
 

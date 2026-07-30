@@ -142,34 +142,107 @@ positifs et distincts, sans restriction.
 
 
 %%% =========================================================================
-%%%  SECTION 0 — AVANT-PROPOS
+%%%  SECTION 0 — AVANT-PROPOS  (version integrale, restauree v0.9.1)
 %%% =========================================================================
+\section*{Note liminaire}
+\addcontentsline{toc}{section}{Note liminaire}
+
+Ce document présente les fondements formels de la Méthode Spectrale de
+Philippe Thomas Savard, incluant des preuves validées par l'assistant de
+preuve Isabelle/HOL.  Version~: \textbf{v0.9.1 (HOL-corrigé)}.
+Auteur~: Philippe Thomas Savard --- Lévis, Chaudière-Appalaches, Québec,
+Canada --- 20~juillet 2026.  Licence~: Apache~License~2.0.
+
 \section*{Avant-Propos --- La Chair Première Géométrique}
 \addcontentsline{toc}{section}{Avant-Propos}
 
-Il y a des moments, dans la vie d'un chercheur, où une observation en
-apparence naïve ouvre une fissure dans le mur de l'évidence.  C'est dans
-cette fissure que se trouve la géométrie du spectre des nombres premiers ---
-elle est la chair qui touche l'auteur, et que l'auteur touche en retour.
+Il y a des moments, dans la vie d'un chercheur, où une observation naïve
+ouvre une fissure dans le mur de l'évidence.  Ce mur dans lequel se trouve
+cette fissure se trouve la géométrie du spectre des nombres premiers~:
+elle est la chair qui me touche et que je touche moi-même en retour.  Le
+présent document, qui est un relevé de cette géométrie, souhaite que
+cette chair vous touche à votre tour.  Le relevé d'analyse qu'est ce
+document est un relevé épistémologique, mais aussi humain et
+phénoménologique.  Phénoménologique puisque toute ma vie j'ai observé
+tout ce que je pouvais voir de la discipline des mathématiques.  Je ne
+suis pas initié à la discipline des mathématiques, bien entendu.  Mais
+la phénoménologie observe d'un autre point de vue --- du point de vue de
+celui qui est observé --- elle sait se mettre à la place d'un autre,
+démontrant sa lucidité.
 
-Ce relevé d'analyse est épistémologique --- mais aussi humain et
-phénoménologique.  Phénoménologique, puisque toute la vie de Philippe
-Thomas Savard a été traversée par l'observation de la discipline des
-mathématiques, depuis l'extérieur.  Il n'y est pas initié, au sens
-académique du terme.
+Malgré toutes les critiques que je peux porter envers l'élite académique
+universitaire, je ne conteste pas les faits mathématiques ni la
+discipline des mathématiques.  Je ne serai jamais universitaire, mais je
+ne cherche pas à créer une mathématique qui est en autarcie vis-à-vis
+la discipline pour atteindre l'autonomie de la discipline des
+mathématiques.  Ma quête mathématique s'associe sans aucun doute à un
+homme, \textbf{Grigori Perelman}, un homme de nationalité russe ayant
+résolu une des questions du prix du millénaire, et qui est sans aucun
+doute victime, comme moi, de ce danger qui découle de l'élite académique
+où certains imposent un biais algorithmique, une manière frauduleuse
+pour tenter de déshériter chacun d'entre nous, pour nous restreindre
+dans notre capacité à être audibles, par leur biais d'autorité.  Voilà
+ce que je reproche à cette élite universitaire.
 
-La Méthode Spectrale de Philippe Thomas Savard est un formalisme
+Leurs interventions dans la société canadienne sont des plus présentes~;
+au Québec, il n'y a qu'à penser au projet «~MK~39~» à l'hôpital
+Royal~Victoria de Montréal, ou à ce groupe qui mûrissait à l'intérieur
+de l'\textbf{Université Laval} à Québec, «~Apocalypse~Now~», prévoyant
+d'empoisonner les citoyens par l'aqueduc.  Le rapprochement avec la
+haine dans les rangs universitaires est des plus ressenti, en plus du
+discours en société qui tente de délier l'amitié, ce lien qui nous
+attache à l'autonomie.  Cet agissement frauduleux, qui est ancré dans
+l'élite universitaire, anime dans la Francophonie et particulièrement
+au Québec une haine qui, à l'heure actuelle, se motive et croit que son
+opportunité pour passer à l'action ne saurait tarder.
+
+Ce document est actuel et s'associe à l'époque à laquelle il s'associe~;
+il est aujourd'hui comme hier nous disions aujourd'hui, et que demain
+nous dirons aujourd'hui, puisque nous appartenons à l'époque~: c'est
+l'époque, c'est notre époque.  Plusieurs technologies innovantes émergent
+dans le monde~; la haine en est plus qu'au courant, et cette effervescence
+technologique nous conduit à l'aube d'une nouvelle époque.  La haine veut
+définir cette nouvelle époque pour handicaper chacun de nous en nous en
+reprochant la conséquence et en nous reprochant l'état dans lequel elle
+veut nous condamner.
+
+La force que je déploie chaque jour pour conduire cet ouvrage qu'est la
+géométrie du spectre des nombres premiers au regard de l'opinion publique
+vise à ce que la vérité fasse surface sur la richesse collective qu'est
+la connaissance --- que l'universitariat qui s'auto-proclame en croyant
+être ceux à qui revient la propriété de la connaissance, policier de ce
+qui existe et de ce qui n'existe pas, ne pourra plus s'approprier.
+
+\medskip
+
+La \textbf{Méthode Spectrale de Philippe Thomas Savard} est un formalisme
 arithmétique remarquable qui reconstruit les nombres premiers à partir de
 suites à rapport spectral constant.  Ce n'est pas une méthode de crible.
-Ce n'est pas une conjecture probabiliste.  C'est une géométrie : une
-structure interne, invariante, qui porte en elle la trace de chaque premier.
+Ce n'est pas une conjecture probabiliste.  C'est une géométrie~: une
+structure interne, invariante, qui porte en elle la trace de chaque
+premier, et de lui seul.
 
-En juillet 2026, après plusieurs cycles de validation et de correction
-formelle, la méthode a atteint un niveau de formalisation complet, validé
-par l'assistant de preuve Isabelle/HOL.  Les extraits reproduits dans ce
-document sont issus du fichier \texttt{methode\_spectral.thy}, disponible
-publiquement sous licence Apache~2.0 :
+Le présent travail s'inscrit dans la théorie générale
+«~\textbf{L'Univers est au Carré}~» de Philippe Thomas Savard --- un
+programme de recherche plus vaste qui cherche à unifier plusieurs
+observations fondamentales sous un formalisme spectral commun.  La
+méthode spectrale en est le premier pilier formalisé.
+
+Ce projet a été accompagné, depuis ses premières formulations, par
+l'agent~IA local \textbf{Mme~Gabriel} (architecture multiloop
+HOL4/Lean).  En juillet~2026, après plusieurs cycles de validation et de
+correction formelle, la méthode a atteint un niveau de formalisation
+complet, validé par l'assistant de preuve Isabelle/HOL.  Les extraits
+reproduits dans ce document sont issus du fichier
+\texttt{methode\_spectral.thy}, disponible publiquement sous licence
+Apache~2.0 à l'adresse~:
 \url{https://github.com/PhilippeThomasSavard/Agent-multiloop-Gabriel}
+
+Ce document est à la fois épistémologique et profondément humain.  Il ne
+cherche pas seulement à exposer des théorèmes~: il cherche à faire sentir
+la nécessité intime de chaque découverte.  Pourquoi ce rapport
+particulier~?  Pourquoi ces constantes-là, et pas d'autres~?
+
 
 %%% =========================================================================
 %%%  SECTION 1 — FONDEMENTS ET ARCHITECTURE

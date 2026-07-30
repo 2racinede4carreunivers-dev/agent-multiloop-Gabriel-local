@@ -79,6 +79,9 @@
 %%  l'erreur "Missing number, treated as zero" a la 1re \section* apres
 %%  \end{abstract}. Cette macro produit un titre visuel + entree TOC +
 %%  ancre hyperref sans declencher le compteur de sections de pasj02.
+%%  v3.45 : extension a \unnumberedsubsection et \unnumberedsubsubsection
+%%  car pasj02 souffre du meme bug sur les variantes etoilees des niveaux
+%%  inferieurs (erreur observee sur \subsubsection*{Validation...}).
 \makeatletter
 \newcommand{\unnumberedsection}[1]{%
   \bigskip\par
@@ -86,6 +89,20 @@
   \addcontentsline{toc}{section}{#1}%
   {\noindent\Large\bfseries #1\par}%
   \nopagebreak\medskip\@afterheading
+}
+\newcommand{\unnumberedsubsection}[1]{%
+  \medskip\par
+  \phantomsection
+  \addcontentsline{toc}{subsection}{#1}%
+  {\noindent\large\bfseries #1\par}%
+  \nopagebreak\smallskip\@afterheading
+}
+\newcommand{\unnumberedsubsubsection}[1]{%
+  \smallskip\par
+  \phantomsection
+  \addcontentsline{toc}{subsubsection}{#1}%
+  {\noindent\normalsize\bfseries #1\par}%
+  \nopagebreak\@afterheading
 }
 \makeatother
 
@@ -351,7 +368,7 @@ arithmétique destiné à construire et analyser des suites dont :
         $1/k_s$.
 \end{itemize}
 
-\subsubsection*{Validation Isabelle/HOL --- Suites explicites (Boîte HOL~1 à~5)}
+\unnumberedsubsubsection{Validation Isabelle/HOL --- Suites explicites (Boîte HOL~1 à~5)}
 
 \begin{verbatim}
 etape1_3  = [1/2, 1/3, 1/6]
@@ -418,7 +435,7 @@ de rapports.  Pour toute famille $(k_i)_{i\geq1}$ avec $k_i > 1$, le
 rapport spectral $r_i = a_{n+1}^{(i)}/a_n^{(i)} = 1/k_i$ peut apparaître
 une infinité de fois.
 
-\subsubsection*{Validation Isabelle/HOL --- Boîte HOL~4 et~5 :
+\unnumberedsubsubsection{Validation Isabelle/HOL --- Boîte HOL~4 et~5 :
 \texttt{ratio\_puissances\_de\_deux} et \texttt{ratio\_spectral\_local}}
 
 Le lemme \texttt{ratio\_spectral\_local} est la formalisation directe de la
@@ -723,7 +740,7 @@ la partie réelle de la droite critique :
 $\mathrm{RsP} = \mathrm{Re} = \tfrac{1}{2}$}
 \label{sec:alignement}
 
-\subsubsection*{Validation Isabelle/HOL --- Boîte HOL~14 :
+\unnumberedsubsubsection{Validation Isabelle/HOL --- Boîte HOL~14 :
 \texttt{Re\_droite\_critique}}
 
 Cette définition identifie structurellement la droite critique de Riemann au
@@ -731,7 +748,7 @@ rapport spectral des suites A et B.  Ce que Riemann appelle
 $\operatorname{Re}(\rho)$, la Méthode Spectrale l'appelle RsP --- et ils
 valent tous deux exactement $1/2$.
 
-\subsubsection*{Validation Isabelle/HOL --- Boîte HOL~15 :
+\unnumberedsubsubsection{Validation Isabelle/HOL --- Boîte HOL~15 :
 \texttt{pont\_spectral\_direct\_final}}
 
 \begin{theorem}[Pont Spectral Direct Final]
@@ -989,10 +1006,10 @@ Savard.
 %%% =========================================================================
 %%%  FINANCEMENT / DATA AVAILABILITY
 %%% =========================================================================
-\section*{Financement}
+\unnumberedsection{Financement}
 Recherche indépendante, autofinancée.  Aucun conflit d'intérêt déclaré.
 
-\section*{Disponibilité des données}
+\unnumberedsection{Disponibilité des données}
 Les fichiers de théorie Isabelle/HOL \texttt{methode\_spectral.thy} et
 \texttt{methode\_de\_philippot.thy} sont disponibles publiquement sous
 licence Apache~2.0 à l'adresse :
@@ -1002,7 +1019,7 @@ licence Apache~2.0 à l'adresse :
 %%%  ANNEXE — DISCUSSION AVEC UN PSEUDO EXPERT GOOGLE
 %%% =========================================================================
 \appendix
-\section*{Annexe --- Échange avec un pseudo expert Google}
+\unnumberedsection{Annexe --- Échange avec un pseudo expert Google}
 
 \begin{quote}
   \emph{«~Monsieur Savard, votre formule donne un résultat incroyablement

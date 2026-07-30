@@ -1422,13 +1422,22 @@ text \<open>
         RsP_bloc(k) = (sum_{i=1..k} a_i - sum_{j=1..k+1} b_j)
                     / (sum_{j=1..k+1} b_j)
 
-     Une reformulation equivalente, plus proche du rapport historique
-     de Savard, projette la difference des SOMMES sur la difference
-     des extremites (a_k - b_{k+1}), retablissant la forme
+     Une variante utile pour l'analyse de l'asymetrie porte
+     uniquement sur les extremites (a_k et b_{k+1}) :
 
         RsP_bloc_extreme(k) = (a_k - b_{k+1}) / (SB_bloc(k))
 
      ou SB_bloc(k) = sum_{j=1..k+1} b_j est la somme totale du bloc B.
+
+     NOTE IMPORTANTE : ces deux formes NE SONT PAS numeriquement
+     egales au rapport historique RsP(n1, n2) = (SA(n1) - SA(n2))
+     / (SB(n1) - SB(n2)) demontre a 1/2 par RsP_un_demi_general.
+     Elles decrivent une observable spectrale DIFFERENTE (la
+     comparaison de blocs entiers, pas de deux positions). Leur
+     valeur numerique depend des suites (a, b) choisies et n'est
+     PAS forcee a 1/2 par la construction. Le lien avec le regime
+     central 1/2 se fait EXCLUSIVEMENT via le theoreme
+     RsP_un_demi_general pour la forme de difference historique.
 
   3. COMPARAISON ASYMETRIQUE CHAOTIQUE.
 
@@ -1555,32 +1564,78 @@ lemma S_pondere_uniforme:
   by simp
 
 text \<open>
-  EXTENSION COMPLEXE (parallele a XIII.4.b).
+  EXTENSION COMPLEXE (parallele a XIII.4.b) - formalisation HOL.
 
-  Dans le regime complexe, on remplace les ponderations reelles par
-  des complexes issus de la serie de Dirichlet : alpha_i = 1 et
-  beta_j = p_j^{-s} pour s = sigma + i*t. Le fonctionnel S_pondere
-  se transporte alors dans Complex_Main et son invariance sur la
-  partie reelle se lit :
+  Dans le regime complexe, les ponderations sont des elements du
+  type `complex` (fourni par Complex_Main, deja importe en tete du
+  fichier). Le fonctionnel S_pondere_complexe se transporte
+  identiquement dans Complex_Main et son invariance sur la partie
+  reelle se lit :
 
     Re(S_complexe(A_k, B_k)) = 1/2  pour s sur la droite critique.
+\<close>
 
-  Cette version complexe n'est pas formalisee ici comme lemme HOL
-  (car les series de Dirichlet ne sont pas capturables sans le
-  package HOL-Analysis complet) ; elle est documentee dans le
-  theoreme pont_spectral_direct_final (Section XIII) et sa
-  subsection XIII.4.b, qui referencent explicitement l'extension
-  Re(RsP_complexe) = 1/2.
+(* Ponderation complexe : identique a la version reelle mais sur le
+   corps des complexes. Complex_Main est deja importe en tete. *)
+definition ponderation_bloc_complexe :: "complex list \<Rightarrow> complex list \<Rightarrow> complex" where
+  "ponderation_bloc_complexe coeffs valeurs =
+     sum_list (map2 (\<lambda>c v. c * v) coeffs valeurs)"
+
+definition S_pondere_complexe :: "complex list \<Rightarrow> complex list \<Rightarrow>
+                                   complex list \<Rightarrow> complex list \<Rightarrow> complex" where
+  "S_pondere_complexe alphas a_vals betas b_vals =
+     ponderation_bloc_complexe alphas a_vals /
+     ponderation_bloc_complexe betas b_vals"
+
+(* Poids unitaires complexes : le fonctionnel degenere en somme simple *)
+lemma ponderation_bloc_complexe_uniforme:
+  "length coeffs = length valeurs \<Longrightarrow>
+   (\<forall>c \<in> set coeffs. c = 1) \<Longrightarrow>
+   ponderation_bloc_complexe coeffs valeurs = sum_list valeurs"
+  unfolding ponderation_bloc_complexe_def
+  by (induction coeffs valeurs rule: list_induct2) auto
+
+(* Injection reel -> complexe : la version complexe restreinte aux
+   reels retrouve la version reelle. *)
+lemma ponderation_bloc_complexe_of_real:
+  "ponderation_bloc_complexe (map complex_of_real cs) (map complex_of_real vs)
+   = complex_of_real (ponderation_bloc cs vs)"
+proof (induction cs vs rule: list_induct2')
+  case 1 show ?case
+    by (simp add: ponderation_bloc_complexe_def ponderation_bloc_def)
+next
+  case (2 c cs) show ?case
+    by (simp add: ponderation_bloc_complexe_def ponderation_bloc_def)
+next
+  case (3 v vs) show ?case
+    by (simp add: ponderation_bloc_complexe_def ponderation_bloc_def)
+next
+  case (4 c cs v vs) thus ?case
+    by (simp add: ponderation_bloc_complexe_def ponderation_bloc_def)
+qed
+
+text \<open>
+  Cette section documente et formalise TROIS niveaux :
+  1. Reel (definitions ponderation_bloc / S_pondere + lemmes).
+  2. Complexe (definitions ponderation_bloc_complexe / S_pondere_complexe
+     + lemme d'injection reel -> complexe).
+  3. Le passage explicite s = sigma + i*t (series de Dirichlet) et le
+     transport Re(RsP_complexe) = 1/2 est adresse en Section XIII.4.b
+     (extension chaotique, asymetrique et complexe) via le theoreme
+     pont_spectral_direct_final. La construction complete des series
+     de Dirichlet requiert HOL-Analysis / HOL-Complex_Analysis et
+     depasse le cadre de ce fichier.
 
   --------------------------------------------------------------------------
   RELATION AVEC LE THEOREME RsP_un_demi_general :
 
-  Lorsque a = SA et b = SB (les suites canoniques du fichier), le
-  rapport de blocs RsP_bloc et le rapport de difference RsP se
-  reduisent numeriquement au meme regime central : RsP = 1/2 pour
-  tout k tel que les suites soient definies sur des indices distincts.
-  L'invariance structurelle etablie par RsP_un_demi_general se
-  transporte donc directement sur RsP_bloc.
+  Le regime central 1/2 est etabli EXCLUSIVEMENT pour le rapport
+  de difference historique RsP(n1, n2) = (SA(n1)-SA(n2))/(SB(n1)-SB(n2))
+  (theoreme RsP_un_demi_general). Le rapport de blocs RsP_bloc(k) et
+  ses variantes definis ci-dessus decrivent une observable
+  spectrale DIFFERENTE (comparaison de blocs entiers). Leur valeur
+  numerique depend des suites (a, b) choisies et n'est PAS forcee a
+  1/2 par la construction. Aucun lemme HOL ne pretend le contraire.
 \<close>
 
 (* Ancrage explicite : quand a = SA et b = SB, la version blocs vit

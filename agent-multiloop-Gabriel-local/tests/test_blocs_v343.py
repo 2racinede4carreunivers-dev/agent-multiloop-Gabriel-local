@@ -28,6 +28,10 @@ EXPECTED_DECLARATIONS = (
     "RsP_bloc_extreme_at_1",
     "ponderation_bloc_uniforme",
     "S_pondere_uniforme",
+    "ponderation_bloc_complexe",
+    "S_pondere_complexe",
+    "ponderation_bloc_complexe_uniforme",
+    "ponderation_bloc_complexe_of_real",
 )
 CENTRAL_REGIME_DECLARATIONS = (
     "RsP_un_demi_general",
@@ -154,6 +158,44 @@ class TestBlocSectionV343:
             r'real list \\<Rightarrow> real list \\<Rightarrow> real"',
             section_v343,
         )
+
+    def test_false_equivalence_claims_are_replaced_by_exact_warning(self, section_v343: str):
+        assert "NE SONT PAS" in section_v343
+        assert "n'est PAS forcee a 1/2" in section_v343
+        assert "observable spectrale DIFFERENTE" in section_v343
+        assert "reformulation equivalente" not in section_v343
+        assert "se reduisent numeriquement au meme regime central : RsP = 1/2" not in section_v343
+
+    def test_complex_weighted_definitions_have_expected_types(self, section_v343: str):
+        assert (
+            'definition ponderation_bloc_complexe :: "complex list \\<Rightarrow> '
+            'complex list \\<Rightarrow> complex"'
+        ) in section_v343
+        assert re.search(
+            r'definition S_pondere_complexe :: "complex list \\<Rightarrow> '
+            r'complex list \\<Rightarrow>\s*complex list \\<Rightarrow> '
+            r'complex list \\<Rightarrow> complex"',
+            section_v343,
+        )
+
+    def test_complex_lemmas_are_formalized_without_axioms(self, thy_content: str, section_v343: str):
+        assert 'imports Complex_Main' in thy_content
+        assert re.search(
+            r"lemma ponderation_bloc_complexe_uniforme:\s*"
+            r'"length coeffs = length valeurs \\<Longrightarrow>.*?'
+            r'ponderation_bloc_complexe coeffs valeurs = sum_list valeurs"',
+            section_v343,
+            flags=re.DOTALL,
+        )
+        injection = re.search(
+            r"lemma ponderation_bloc_complexe_of_real:(.*?)(?=\n(?:lemma|definition|text|section)\b)",
+            section_v343,
+            flags=re.DOTALL,
+        )
+        assert injection, "Lemme d'injection réel vers complexe introuvable"
+        assert "complex_of_real" in injection.group(1)
+        assert "ponderation_bloc cs vs" in injection.group(1)
+        assert re.search(r"\b(?:by|proof)\b", injection.group(1))
 
 
 # Non-régression des déclarations centrales existantes.

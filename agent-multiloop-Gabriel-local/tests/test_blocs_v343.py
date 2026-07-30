@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from pathlib import Path
 
 import pytest
@@ -89,6 +90,15 @@ class TestMethodeSpectralFileIntegrity:
     def test_ml_comments_are_balanced(self, thy_content: str):
         assert thy_content.count("(*") == thy_content.count("*)")
 
+    def test_file_is_nfc_normalized(self, thy_content: str):
+        assert unicodedata.normalize("NFC", thy_content) == thy_content
+
+    def test_exact_delimiter_counts_are_preserved(self, thy_content: str):
+        assert thy_content.count(r"\<open>") == 105
+        assert thy_content.count(r"\<close>") == 105
+        assert thy_content.count("(*") == 380
+        assert thy_content.count("*)") == 380
+
 
 # Présence, positionnement et contenu documentaire de la nouvelle section.
 class TestBlocSectionV343:
@@ -165,6 +175,31 @@ class TestBlocSectionV343:
         assert "observable spectrale DIFFERENTE" in section_v343
         assert "reformulation equivalente" not in section_v343
         assert "se reduisent numeriquement au meme regime central : RsP = 1/2" not in section_v343
+
+    def test_failed_proof_regression_uses_nat_numeral_rewrite(self, section_v343: str):
+        assert re.search(
+            r"lemma bloc_B_1_paire:.*?by \(simp add: upt_conv_Cons eval_nat_numeral\)",
+            section_v343,
+            flags=re.DOTALL,
+        )
+        assert re.search(
+            r"lemma somme_bloc_B_1:.*?by \(simp add: bloc_B_1_paire\)",
+            section_v343,
+            flags=re.DOTALL,
+        )
+        assert re.search(
+            r"lemma RsP_bloc_extreme_at_1:.*?"
+            r"by \(simp add: somme_bloc_B_1 eval_nat_numeral\)",
+            section_v343,
+            flags=re.DOTALL,
+        )
+
+    def test_corrective_warning_counterexample_and_anchor_are_intact(self, section_v343: str):
+        assert "RsP_bloc(1) = -91/90" in section_v343
+        assert "Ancrage syntaxique" in section_v343
+        assert "ceci ne signifie PAS que RsP_bloc(k) sur SA/SB vaut" in section_v343
+        assert re.search(r"(?m)^lemma bloc_A_k_pour_SA:", section_v343)
+        assert re.search(r"(?m)^lemma bloc_B_k_pour_SB:", section_v343)
 
     def test_complex_weighted_definitions_have_expected_types(self, section_v343: str):
         assert (

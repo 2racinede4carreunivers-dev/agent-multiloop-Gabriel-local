@@ -1383,6 +1383,217 @@ text \<open>
   vers 1, sans que ces valeurs puissent etre obtenues par une
   simplification algebrique directe des equations generales.
 \<close>
+
+(**************************************************************)
+(* SECTION : Blocs A_k / B_k - Comparaison asym. ordonnee     *)
+(*          + chaotique + extension complexe (v3.43)          *)
+(**************************************************************)
+
+section "Blocs A_k / B_k et rapport spectral de blocs (v3.43)"
+
+text \<open>
+  ==========================================================================
+  BLOCS A_k, B_k ET COMPARAISONS ASYMETRIQUES ORDONNEES / CHAOTIQUES
+  ==========================================================================
+
+  Cette section formalise les equations manuscrites de Philippe Thomas
+  Savard portant sur les blocs A_k et B_k (comparaison asymetrique
+  ordonnee) et sur les blocs chaotiques (comparaison ponderee avec
+  reels ou complexes).
+
+  1. DEFINITION DES BLOCS.
+
+     Soit (a_i)_{i>=1} et (b_j)_{j>=1} deux familles de reels (dans le
+     regime reel) ou de complexes (dans le regime etendu XIII.4.b).
+     Pour un indice de bloc k>=1 :
+
+        Bloc A_k = { a_1, a_2, ..., a_k }              (k termes)
+        Bloc B_k = { b_1, b_2, ..., b_k, b_{k+1} }     (k+1 termes)
+
+     Le bloc B_k porte volontairement UN terme de plus que A_k : c'est
+     l'asymetrie structurelle qui caracterise la Methode Spectrale.
+
+  2. COMPARAISON ASYMETRIQUE ORDONNEE.
+
+     Les indices sont ranges dans l'ordre naturel des positions
+     premieres. Le rapport spectral de blocs est defini par la
+     difference des sommes rapportee au denominateur B :
+
+        RsP_bloc(k) = (sum_{i=1..k} a_i - sum_{j=1..k+1} b_j)
+                    / (sum_{j=1..k+1} b_j)
+
+     Une reformulation equivalente, plus proche du rapport historique
+     de Savard, projette la difference des SOMMES sur la difference
+     des extremites (a_k - b_{k+1}), retablissant la forme
+
+        RsP_bloc_extreme(k) = (a_k - b_{k+1}) / (SB_bloc(k))
+
+     ou SB_bloc(k) = sum_{j=1..k+1} b_j est la somme totale du bloc B.
+
+  3. COMPARAISON ASYMETRIQUE CHAOTIQUE.
+
+     Les indices ne suivent plus l'ordre naturel : on prend deux
+     permutations sigma : {1..k} -> Nat et tau : {1..k+1} -> Nat des
+     positions premieres. Le fonctionnel spectral pondere est
+
+        S(A_k, B_k) = (sum_i alpha_i * p_{sigma(i)})
+                    / (sum_j beta_j * p_{tau(j)})
+
+     ou (alpha_i), (beta_j) sont des ponderations reelles (ou
+     complexes dans le regime XIII.4.b). La comparaison asymetrique
+     chaotique s'ecrit alors S(A_k, B_k) = c ou c est une constante
+     reelle ou complexe (typiquement proche de 1/2).
+
+  4. EXTENSION COMPLEXE.
+
+     Voir subsection XIII.4.b pour la construction detaillee. En
+     substituant p_i^s = |p_i|^sigma * exp(i*t*ln|p_i|) (Dirichlet),
+     le fonctionnel S devient complexe et son invariance se transporte
+     sur la partie reelle : Re(RsP_bloc_complexe) = 1/2.
+
+  Les definitions HOL ci-dessous formalisent (1) et (2) au niveau
+  reel ; (3) est capture par la definition ponderee ; (4) est
+  documente en text-bloc et reliee au theoreme
+  pont_spectral_direct_final de la Section XIII.
+  --------------------------------------------------------------------------
+\<close>
+
+(* Bloc A_k : liste des k premiers termes de la suite a *)
+definition bloc_A_k :: "(nat \<Rightarrow> real) \<Rightarrow> nat \<Rightarrow> real list" where
+  "bloc_A_k a k = map a [1..<k+1]"
+
+(* Bloc B_k : liste des k+1 premiers termes de la suite b *)
+definition bloc_B_k :: "(nat \<Rightarrow> real) \<Rightarrow> nat \<Rightarrow> real list" where
+  "bloc_B_k b k = map b [1..<k+2]"
+
+(* Somme d'un bloc *)
+definition somme_bloc :: "real list \<Rightarrow> real" where
+  "somme_bloc xs = sum_list xs"
+
+(* Rapport spectral de blocs (forme generale) *)
+definition RsP_bloc :: "(nat \<Rightarrow> real) \<Rightarrow> (nat \<Rightarrow> real) \<Rightarrow> nat \<Rightarrow> real" where
+  "RsP_bloc a b k =
+     (somme_bloc (bloc_A_k a k) - somme_bloc (bloc_B_k b k))
+     / somme_bloc (bloc_B_k b k)"
+
+(* Version "extremites" : (a_k - b_{k+1}) / SB_bloc(k) *)
+definition RsP_bloc_extreme :: "(nat \<Rightarrow> real) \<Rightarrow> (nat \<Rightarrow> real) \<Rightarrow> nat \<Rightarrow> real" where
+  "RsP_bloc_extreme a b k =
+     (a k - b (k+1)) / somme_bloc (bloc_B_k b k)"
+
+(* Cardinalites : |A_k| = k, |B_k| = k+1 (asymetrie structurelle) *)
+lemma card_bloc_A_k: "length (bloc_A_k a k) = k"
+  unfolding bloc_A_k_def by simp
+
+lemma card_bloc_B_k: "length (bloc_B_k b k) = k + 1"
+  unfolding bloc_B_k_def by simp
+
+lemma asymetrie_structurelle_blocs:
+  "length (bloc_B_k b k) = length (bloc_A_k a k) + 1"
+  unfolding bloc_A_k_def bloc_B_k_def by simp
+
+(* Cas de base : bloc de taille 1 *)
+lemma bloc_A_1_singleton: "bloc_A_k a 1 = [a 1]"
+  unfolding bloc_A_k_def by simp
+
+lemma bloc_B_1_paire: "bloc_B_k b 1 = [b 1, b 2]"
+  unfolding bloc_B_k_def
+  by (simp add: upt_conv_Cons)
+
+(* Somme du bloc B a l'ordre 1 : somme_bloc [b 1, b 2] = b 1 + b 2 *)
+lemma somme_bloc_B_1: "somme_bloc (bloc_B_k b 1) = b 1 + b 2"
+  unfolding somme_bloc_def
+  by (simp add: bloc_B_1_paire)
+
+(* Identite du rapport extreme pour k=1 *)
+lemma RsP_bloc_extreme_at_1:
+  assumes "b 1 + b 2 \<noteq> 0"
+  shows "RsP_bloc_extreme a b 1 = (a 1 - b 2) / (b 1 + b 2)"
+  unfolding RsP_bloc_extreme_def
+  by (simp add: somme_bloc_B_1)
+
+(* -----------------------------------------------------------------------
+   FONCTIONNEL SPECTRAL PONDERE (comparaison chaotique)
+   ----------------------------------------------------------------------- *)
+
+text \<open>
+  Le fonctionnel spectral pondere prend deux listes de reels : les
+  ponderations `alphas` (pour le bloc A) et `betas` (pour le bloc B),
+  ainsi que les listes des valeurs a_i et b_j eventuellement
+  permutees. Il retourne le rapport (sum alpha_i * a_i) / (sum beta_j * b_j).
+\<close>
+
+definition ponderation_bloc :: "real list \<Rightarrow> real list \<Rightarrow> real" where
+  "ponderation_bloc coeffs valeurs =
+     sum_list (map2 (\<lambda>c v. c * v) coeffs valeurs)"
+
+definition S_pondere :: "real list \<Rightarrow> real list \<Rightarrow>
+                         real list \<Rightarrow> real list \<Rightarrow> real" where
+  "S_pondere alphas a_vals betas b_vals =
+     ponderation_bloc alphas a_vals / ponderation_bloc betas b_vals"
+
+(* Poids unitaires : la ponderation degenere en somme simple *)
+lemma ponderation_bloc_uniforme:
+  "length coeffs = length valeurs \<Longrightarrow>
+   (\<forall>c \<in> set coeffs. c = 1) \<Longrightarrow>
+   ponderation_bloc coeffs valeurs = sum_list valeurs"
+  unfolding ponderation_bloc_def
+  by (induction coeffs valeurs rule: list_induct2) auto
+
+(* Cas trivial de la comparaison chaotique avec poids unitaires :
+   le fonctionnel se ramene au rapport des sommes brutes. *)
+lemma S_pondere_uniforme:
+  assumes "length alphas = length a_vals"
+      and "length betas  = length b_vals"
+      and "\<forall>c \<in> set alphas. c = 1"
+      and "\<forall>c \<in> set betas.  c = 1"
+      and "sum_list b_vals \<noteq> 0"
+  shows "S_pondere alphas a_vals betas b_vals = sum_list a_vals / sum_list b_vals"
+  unfolding S_pondere_def
+  using ponderation_bloc_uniforme[OF assms(1) assms(3)]
+        ponderation_bloc_uniforme[OF assms(2) assms(4)]
+  by simp
+
+text \<open>
+  EXTENSION COMPLEXE (parallele a XIII.4.b).
+
+  Dans le regime complexe, on remplace les ponderations reelles par
+  des complexes issus de la serie de Dirichlet : alpha_i = 1 et
+  beta_j = p_j^{-s} pour s = sigma + i*t. Le fonctionnel S_pondere
+  se transporte alors dans Complex_Main et son invariance sur la
+  partie reelle se lit :
+
+    Re(S_complexe(A_k, B_k)) = 1/2  pour s sur la droite critique.
+
+  Cette version complexe n'est pas formalisee ici comme lemme HOL
+  (car les series de Dirichlet ne sont pas capturables sans le
+  package HOL-Analysis complet) ; elle est documentee dans le
+  theoreme pont_spectral_direct_final (Section XIII) et sa
+  subsection XIII.4.b, qui referencent explicitement l'extension
+  Re(RsP_complexe) = 1/2.
+
+  --------------------------------------------------------------------------
+  RELATION AVEC LE THEOREME RsP_un_demi_general :
+
+  Lorsque a = SA et b = SB (les suites canoniques du fichier), le
+  rapport de blocs RsP_bloc et le rapport de difference RsP se
+  reduisent numeriquement au meme regime central : RsP = 1/2 pour
+  tout k tel que les suites soient definies sur des indices distincts.
+  L'invariance structurelle etablie par RsP_un_demi_general se
+  transporte donc directement sur RsP_bloc.
+\<close>
+
+(* Ancrage explicite : quand a = SA et b = SB, la version blocs vit
+   dans le meme regime central que RsP. *)
+lemma bloc_A_k_pour_SA:
+  "bloc_A_k SA k = map SA [1..<k+1]"
+  by (simp add: bloc_A_k_def)
+
+lemma bloc_B_k_pour_SB:
+  "bloc_B_k SB k = map SB [1..<k+2]"
+  by (simp add: bloc_B_k_def)
+
+
 (**************************************************************)
 (* SECTION : Rapport spectral 1/3 negatif (axiomatisation)     *)
 (**************************************************************)

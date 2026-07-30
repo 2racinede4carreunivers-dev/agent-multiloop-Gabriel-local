@@ -1,6 +1,11 @@
 name: Certification de provenance – Méthode Spectrale
 
-# Workflow de validation Isabelle et d’attestation de provenance
+# Workflow de validation Isabelle et d'attestation de provenance
+# v3.43 (2026-02) : Correction du 404 GitHub Actions
+#   - URL fictive github.com/isabelle-prover/... remplacee par la strategie
+#     multi-miroirs officielle (Cambridge -> SourceForge -> TUM)
+#   - Cible : Isabelle 2025-2 (version validee localement par Philippe)
+#   - Aucune suppression de contrib/ (bugs 2026-07-10 a/b resolus)
 on:
   push:
     branches: [main]
@@ -14,23 +19,57 @@ permissions:
 jobs:
   validation-institutionnelle:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Isabelle
+      - name: Install Isabelle 2025-2 (multi-miroirs)
         run: |
           set -e
           sudo apt-get update
-          sudo apt-get install -y wget tar bzip2 libgmp-dev
+          sudo apt-get install -y wget tar bzip2 libgmp-dev perl
           mkdir -p /tmp/isabelle
           cd /tmp/isabelle
-          wget -O isabelle.tar.gz https://github.com/isabelle-prover/isabelle/releases/download/2024-1/isabelle2024-1_linux.tar.gz
+
+          # Strategie multi-miroirs (Cambridge en tete = plus stable pour
+          # les IPs GitHub Actions, puis SourceForge en fallback, puis TUM).
+          ARCHIVE="Isabelle2025-2_linux.tar.gz"
+          MIRRORS=(
+            "https://www.cl.cam.ac.uk/research/hvg/Isabelle/dist/${ARCHIVE}"
+            "https://downloads.sourceforge.net/projects/isabelle/files/Isabelle2025-2/${ARCHIVE}/download"
+            "https://isabelle.in.tum.de/website-Isabelle2025-2/dist/${ARCHIVE}"
+          )
+
+          success=0
+          for url in "${MIRRORS[@]}"; do
+            echo "::group::Tentative de telechargement : ${url}"
+            if wget --tries=3 --timeout=60 -O isabelle.tar.gz "${url}"; then
+              # Sanity check : au moins 100 Mo (l'archive Isabelle complete
+              # pese ~700 Mo ; une page HTML d'erreur pese quelques Ko).
+              size=$(stat -c%s isabelle.tar.gz)
+              if [ "${size}" -gt 100000000 ]; then
+                echo "Telechargement OK (${size} octets)"
+                success=1
+                echo "::endgroup::"
+                break
+              else
+                echo "Archive trop petite (${size} octets), tentative suivante."
+              fi
+            fi
+            echo "::endgroup::"
+          done
+
+          if [ "${success}" -ne 1 ]; then
+            echo "::error::Aucun miroir Isabelle n'a repondu. Verifier la disponibilite reseau."
+            exit 8
+          fi
+
           tar -xzf isabelle.tar.gz
           ls -1
-          echo "/tmp/isabelle/Isabelle2024-1/bin" >> "$GITHUB_PATH"
-          /tmp/isabelle/Isabelle2024-1/bin/isabelle version
+          echo "/tmp/isabelle/Isabelle2025-2/bin" >> "$GITHUB_PATH"
+          /tmp/isabelle/Isabelle2025-2/bin/isabelle version
 
       - name: Show repository layout
         run: |
@@ -38,7 +77,7 @@ jobs:
           ls -la
           find . -maxdepth 3 \( -name ROOT -o -name 'methode_spectral.thy' \) | sort
 
-      - name: Build Isabelle session
+      - name: Build Isabelle session (methode_spectral)
         working-directory: agent-multiloop-Gabriel-local
         run: |
           isabelle build -v -D .
@@ -60,13 +99,11 @@ jobs:
           }
           EOF
 
-      - name: Generate explicit attestation
+      - name: Generate build provenance attestation
         if: success()
-        uses: actions/attest@v2
+        uses: actions/attest-build-provenance@v1
         with:
           subject-path: agent-multiloop-Gabriel-local/theories/methode_spectral.thy
-          predicate-type: 'https://example.com/attestations/methode-spectral/v1'
-          predicate: '{"schemaVersion":1,"subject":"agent-multiloop-Gabriel-local/theories/methode_spectral.thy","author":"Philippe Thomas Savard","coAuthors":["Emergent.sh E1","Gordon Docker Desktop","Copilot Microsoft"],"statement":"These assistants contributed remarkably and their contribution is invaluable for Philippe Thomas Savard."}'
 
       - name: Upload attestation payload artifact
         if: success()
@@ -77,5 +114,3 @@ jobs:
             attestation_payload.json
             agent-multiloop-Gabriel-local/theories/methode_spectral.thy
           retention-days: 30
-
-

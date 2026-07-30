@@ -45,24 +45,35 @@ except Exception as e:
 
 class ClaudeClient:
     """Client Anthropic Claude - nouveau dans v2"""
-    
-    def __init__(self, api_key: str | None = None,
-                 model: str | None = None,
-                 temperature: float = 0.7, max_tokens: int = 4096, timeout: float = 60):
-        import os
 
-        self.api_key = api_key or os.getenv("CLAUDE_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
-        # Detection des placeholders d'un .env non rempli -> on neutralise
+    def __init__(
+        self,
+        api_key: str | None = None,
+        model: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        timeout: float = 60,
+    ):
+        # Modèle : argument explicite > variable d'env > par défaut Sonnet 4.5
+        self.api_key = (
+            api_key
+            or os.getenv("CLAUDE_API_KEY")
+            or os.getenv("ANTHROPIC_API_KEY")
+        )
+
+        # Détection des placeholders d'un .env non rempli -> on neutralise
         if self.api_key:
             placeholders = ("COLLEZ", "VOTRE", "PLACEHOLDER", "sk-ant-[")
             if any(self.api_key.upper().startswith(p.upper()) for p in placeholders):
+                import hashlib
+
+                masked = hashlib.sha256(self.api_key.encode()).hexdigest()[:8]
                 logger.warning(
-                    "CLAUDE_API_KEY contient un placeholder (%s...) - "
-                    "Claude desactive jusqu'a saisie d'une cle reelle sk-ant-...",
-                    self.api_key[:20],
+                    "CLAUDE_API_KEY semble invalide (hash=%s). Claude désactivé jusqu'à saisie d'une clé réelle.",
+                    masked,
                 )
                 self.api_key = None
-        # Modele : argument explicite > variable d'env > defaut Sonnet 4.5
+
         self.model = (
             model
             or os.getenv("CLAUDE_MODEL")
@@ -71,13 +82,13 @@ class ClaudeClient:
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.timeout = timeout
-        
+
         self.client = None
         if self.api_key:
             if not CLAUDE_AVAILABLE:
                 logger.error(
                     "❌ Module 'anthropic' non installé dans le container Docker.\n"
-                    "   -> Verifier que requirements.txt contient : anthropic>=0.40.0\n"
+                    "   -> Vérifier que requirements.txt contient : anthropic>=0.40.0\n"
                     "   -> Puis rebuild l'image : docker-compose down && docker-compose up --build"
                 )
             else:
@@ -86,54 +97,63 @@ class ClaudeClient:
                     logger.info(f"✅ Claude client initialized: model={self.model}")
                 except Exception as e:
                     logger.error(f"❌ Claude initialization failed: {e}")
-    
+
     def is_available(self) -> bool:
         """Vérifie si Claude est disponible"""
         return self.client is not None and self.api_key is not None
-    
-    async def generate(self, prompt: str, system: str | None = None, 
-                      temperature: float | None = None) -> str:
+
+    async def generate(
+        self,
+        prompt: str,
+        system: str | None = None,
+        temperature: float | None = None,
+    ) -> str:
         """Génère réponse via Claude API"""
-        
+
         if not self.is_available():
             return ""
-        
+
         try:
             response = self.client.messages.create(
                 model=self.model,
                 max_tokens=self.max_tokens,
-                system=system or "Tu es Gabriel, un expert en mathématiques et géométrie spectrale.",
+                system=system
+                or "Tu es Gabriel, un expert en mathématiques et géométrie spectrale.",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=temperature or self.temperature,
-                timeout=self.timeout
+                timeout=self.timeout,
             )
-            
+
             return response.content[0].text
-        
+
         except anthropic.APIError as e:
             logger.error(f"Claude API error: {e}")
             return ""
         except Exception as e:
             logger.error(f"Claude generation error: {e}")
             return ""
-    
-    async def chat(self, messages: list[dict], temperature: float | None = None) -> str:
+
+    async def chat(
+        self,
+        messages: list[dict],
+        temperature: float | None = None,
+    ) -> str:
         """Chat multi-tours avec Claude"""
-        
+
         if not self.is_available():
             return ""
-        
+
         try:
             response = self.client.messages.create(
                 model=self.model,
                 max_tokens=self.max_tokens,
                 messages=messages,
                 temperature=temperature or self.temperature,
-                timeout=self.timeout
+                timeout=self.timeout,
             )
-            
+
             return response.content[0].text
-        
+
         except Exception as e:
             logger.error(f"Claude chat error: {e}")
             return ""
@@ -142,12 +162,12 @@ class ClaudeClient:
 class LLMManager:
     """
     LLM Manager v3 - Avec système de mémoire Gabriel
-    
+
     NOUVELLE PRIORITÉ:
     1. Ollama (10s timeout) - local, rapide
     2. Claude (60s timeout) - expert logique, tâches complexes
     3. OpenAI (90s timeout) - fallback ultime
-    
+
     + RAG sémantique/syntaxique + cache d'erreurs persistent
     """
 
@@ -177,7 +197,7 @@ class LLMManager:
             timeout=float(
                 os.environ.get("CLAUDE_TIMEOUT_SECONDS")
                 or claude_cfg.get("timeout_seconds")
-                or 60  # augmente de 20s -> 60s (2026-06-28, eviter timeouts Sonnet 4.5)
+                or 60  # augmente de 20s -> 60s (2026-06-28, éviter timeouts Sonnet 4.5)
             ),
         )
 
@@ -189,16 +209,13 @@ class LLMManager:
             timeout=float(
                 os.environ.get("OPENAI_TIMEOUT_SECONDS")
                 or openai_cfg.get("timeout_seconds")
-                or 45  # augmente de 30s -> 45s en coherence avec Claude 60s
+                or 45  # augmente de 30s -> 45s en cohérence avec Claude 60s
             ),
         )
 
         self._ollama_available: bool | None = None
 
         # === Mémoire conversationnelle courte (P1) ===
-        # Ring-buffer des N derniers Q&A, injecté dans le prompt LLM
-        # UNIQUEMENT quand include_conversation=True est demandé
-        # (par défaut : désactivé pour ne pas polluer critic/audit/debat).
         conv_cfg = (config.get("conversation", {}) or {}) if config else {}
         conv_max_turns = int(conv_cfg.get("max_turns", 3))
         conv_max_chars = int(conv_cfg.get("max_chars_per_field", 1500))
@@ -220,7 +237,8 @@ class LLMManager:
             logger.info("   Mémoire: Activée (RAG + cache erreurs)")
         logger.info(
             "   Mémoire conversationnelle: %d derniers tours (max %d chars/champ)",
-            conv_max_turns, conv_max_chars,
+            conv_max_turns,
+            conv_max_chars,
         )
 
     async def _check_ollama(self) -> bool:
@@ -228,12 +246,12 @@ class LLMManager:
             self._ollama_available = await self.ollama.is_available()
         return self._ollama_available
 
-    def _augmenter_prompt_avec_memoire(self, prompt: str, domaine: str = "general") -> str:
-        """Augmente le prompt avec contexte de mémoire (RAG sémantique Gabriel).
-
-        Utilise l'API consolidee de IntegrateurMemoireGabriel.augmenter_prompt()
-        qui detecte automatiquement les regimes spectraux et injecte le contexte.
-        """
+    def _augmenter_prompt_avec_memoire(
+        self,
+        prompt: str,
+        domaine: str = "general",
+    ) -> str:
+        """Augmente le prompt avec contexte de mémoire (RAG sémantique Gabriel)."""
         if not INTEGRATEUR_MEMOIRE:
             return prompt
 
@@ -243,26 +261,23 @@ class LLMManager:
             logger.warning(f"⚠️ Erreur injection mémoire: {e}")
             return prompt
 
-    async def generate(self, prompt: str, system: str | None = None, temperature: float = 0.2, 
-                      domaine: str = "general", include_conversation: bool = False) -> str:
+    async def generate(
+        self,
+        prompt: str,
+        system: str | None = None,
+        temperature: float = 0.2,
+        domaine: str = "general",
+        include_conversation: bool = False,
+    ) -> str:
         """
         Génère avec mémoire intégrée
-        
-        1. Augmente prompt avec mémoire (RAG)
-        2. (optionnel) Préfixe avec le contexte conversationnel court
-           si `include_conversation=True` (ne concerne QUE la génération
-           de réponse principale ; critic/audit/debat n'activent pas ce flag).
-        3. Ollama (10s)
-        4. Claude (60s) ← PRIORITAIRE
-        5. OpenAI (90s)
-        6. Enregistre erreurs si besoin
         """
-        
+
         # Sanitization UTF-8
         prompt = UTF8Sanitizer.sanitize(prompt) if prompt else prompt
         if system:
             system = UTF8Sanitizer.sanitize(system)
-        
+
         # Augmenter le prompt avec mémoire
         prompt_augmente = self._augmenter_prompt_avec_memoire(prompt, domaine)
 
@@ -270,17 +285,23 @@ class LLMManager:
         if include_conversation and not self.conversation_memory.is_empty():
             ctx_block = self.conversation_memory.build_context_block()
             prompt_augmente = merge_context_into_prompt(
-                prompt_augmente, ctx_block
+                prompt_augmente,
+                ctx_block,
             )
             logger.info(
                 "🧠 Contexte conversationnel injecté : %d tours (%d chars)",
-                len(self.conversation_memory), len(ctx_block),
+                len(self.conversation_memory),
+                len(ctx_block),
             )
-        
+
         # ========== ÉTAPE 1: OLLAMA ==========
         if self.primary == "ollama" and await self._check_ollama():
             logger.info("🔵 Tentative 1/3: Ollama (llama3.2) - timeout 10s")
-            result = await self.ollama.generate(prompt_augmente, system=system, temperature=temperature)
+            result = await self.ollama.generate(
+                prompt_augmente,
+                system=system,
+                temperature=temperature,
+            )
             if result and len(result.strip()) > 0:
                 logger.info("✅ Ollama a répondu")
                 return result
@@ -295,7 +316,11 @@ class LLMManager:
                 getattr(self.claude, "model", "Claude"),
                 getattr(self.claude, "timeout", 30),
             )
-            result = await self.claude.generate(prompt_augmente, system=system, temperature=temperature)
+            result = await self.claude.generate(
+                prompt_augmente,
+                system=system,
+                temperature=temperature,
+            )
             if result and len(result.strip()) > 0:
                 logger.info("✅ Claude a répondu (avec mémoire injectée)")
                 return result
@@ -310,16 +335,13 @@ class LLMManager:
                 getattr(self.openai, "model", "gpt"),
                 getattr(self.openai, "timeout", 30),
             )
-            result = await self.openai.generate(prompt_augmente, system=system, temperature=temperature)
+            result = await self.openai.generate(
+                prompt_augmente,
+                system=system,
+                temperature=temperature,
+            )
             if result and len(result.strip()) > 0:
                 logger.info("✅ OpenAI a répondu (fallback)")
-
-                # Note : ancien bloc d'enregistrement via `gestionnaire_erreurs`
-                # supprime (module inexistant provoquait un warning parasite a
-                # chaque fallback). Si un jour on veut tracer les fallbacks
-                # dans la memoire cognitive, ajouter une methode dediee dans
-                # IntegrateurMemoireGabriel plutot qu'un import externe.
-
                 return result
             logger.error("❌ OpenAI timeout ou erreur")
         else:
@@ -329,9 +351,14 @@ class LLMManager:
         logger.critical("❌ TOUS LES LLM ONT ÉCHOUÉ")
         return "[ERREUR LLM] Ollama, Claude ET OpenAI sont inaccessibles."
 
-    async def chat(self, messages: list[dict], temperature: float = 0.2, domaine: str = "general") -> str:
+    async def chat(
+        self,
+        messages: list[dict],
+        temperature: float = 0.2,
+        domaine: str = "general",
+    ) -> str:
         """Chat multi-tours avec mémoire"""
-        
+
         # Sanitization UTF-8
         sanitized: list[dict] = []
         for msg in messages:
@@ -340,14 +367,14 @@ class LLMManager:
                 new_msg["content"] = UTF8Sanitizer.sanitize(new_msg["content"])
             sanitized.append(new_msg)
         messages = sanitized
-        
+
         # Augmenter dernier message avec mémoire
         if messages and messages[-1].get("role") == "user":
             messages[-1]["content"] = self._augmenter_prompt_avec_memoire(
-                messages[-1]["content"], 
-                domaine
+                messages[-1]["content"],
+                domaine,
             )
-        
+
         # OLLAMA
         if self.primary == "ollama" and await self._check_ollama():
             logger.info("🔵 Chat Ollama")
@@ -374,34 +401,37 @@ class LLMManager:
 
         return "[ERREUR LLM] Chat indisponible"
 
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    
-    print("\n" + "="*70)
+
+    print("\n" + "=" * 70)
     print("LLM MANAGER v3 - AVEC SYSTÈME DE MÉMOIRE GABRIEL")
-    print("="*70)
-    
-    print("""
+    print("=" * 70)
+
+    print(
+        """
     CHAÎNE DE FALLBACK + MÉMOIRE:
-    
+
     1️⃣ OLLAMA (llama3.2)
        └─ Timeout: 10s
        └─ + Injection mémoire (RAG sémantique)
-    
+
     2️⃣ CLAUDE (claude-3-5-sonnet) ⭐ PRIORITAIRE
        └─ Timeout: 60s
        └─ + Injection mémoire (RAG sémantique + syntaxique)
-    
+
     3️⃣ OPENAI (gpt-4o)
        └─ Timeout: 90s
        └─ + Injection mémoire (fallback)
-    
+
     SYSTÈME DE MÉMOIRE:
     ✅ RAG sémantique (axiomes, définitions)
     ✅ RAG syntaxique (patterns, lemmes)
     ✅ Cache d'erreurs persistent
     ✅ Stratégie d'évitement (pas 3x même erreur)
     ✅ Apprentissage continu
-    """)
-    
-    print("="*70)
+    """
+    )
+
+    print("=" * 70)

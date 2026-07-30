@@ -105,7 +105,7 @@ def _extract_numbers(text: str) -> list[int]:
     cleaned = re.sub(r'\b13\s*/\s*\d+\b', ' ', cleaned)
     cleaned = re.sub(r'\b3\.25\s*/\s*\d+\b', ' ', cleaned)
     cleaned = re.sub(r'\b6\.5\s*/\s*\d+\b', ' ', cleaned)
-    return [int(m) for m in re.findall(r'(?<![\d.])-?\d+(?![\d.])', cleaned)]
+    return [int(m) for m in re.findall(r'\b-?\d+\b', cleaned)]
 
 
 def _split_objective_chunks(text: str) -> list[str]:
@@ -171,11 +171,11 @@ def _detect_intent(text: str) -> str:
     if contextual_statement and not explicit_request:
         return "conversation"
 
-    if re.search(r"reconstr|p-?i[èe]me|p\s+i[èe]me|determine.*digamma", t):
+    if re.search(r"reconstr|p-?i[èe]me|p\s+i[èe]me|déterminer.{0,200}?digamma", t):
         return "reconstruction"
     if re.search(r"rapport|ratio|asym[ée]trique|sym[ée]trique|chaotique", t):
         return "ratio"
-    if re.search(r"\becart\b|\bgap\b|quantit[eé].*(?:terme|entier|nombre)", t):
+    if re.search(r"\becart\b|\bgap\b|quantit[eé].{0,200}?(?:terme|entier|nombre)", t):
         return "gap"
     if re.search(r"riemann|hypoth[èe]se|z[êe]ta", t):
         return "riemann_link"

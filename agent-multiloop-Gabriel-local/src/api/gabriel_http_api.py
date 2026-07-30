@@ -19,6 +19,7 @@ from pathlib import Path
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from werkzeug.utils import secure_filename
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -58,7 +59,7 @@ def query():
     Reponse: {"answer": "...", "confidence": 0.95, "source": "Gabriel"}
     """
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         question = data.get("question")
         source = data.get("source", "unknown")
         
@@ -83,8 +84,9 @@ def query():
         }), 200
     
     except Exception as e:
-        logger.error(f"Query error: {e}")
-        return jsonify({"error": str(e)}), 500
+        # Correction Alerte CodeQL (py/stack-trace-exposure)
+        logger.error(f"Query error: {e}", exc_info=True)
+        return jsonify({"error": "An internal error occurred during query processing."}), 500
 
 
 # ============================================================
@@ -104,7 +106,7 @@ def isabelle_verify():
     Reponse: {"stored": true, "file_path": "..."}
     """
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         theory_file = data.get("theory_file", "unknown")
         status = data.get("status", "unknown")
         output = data.get("output", "")
@@ -132,8 +134,9 @@ def isabelle_verify():
         }), 200
     
     except Exception as e:
-        logger.error(f"Isabelle verify error: {e}")
-        return jsonify({"error": str(e)}), 500
+        # Correction Alerte CodeQL (py/stack-trace-exposure)
+        logger.error(f"Isabelle verify error: {e}", exc_info=True)
+        return jsonify({"error": "An error occurred while processing Isabelle verification."}), 500
 
 
 # ============================================================
@@ -173,8 +176,12 @@ def sync_universestaucarre():
     }
     """
     try:
-        data = request.get_json()
-        session_id = data.get("session_id", "unknown")
+        data = request.get_json() or {}
+        
+        # Securisation de session_id contre les attaques Path Traversal (CodeQL py/path-injection)
+        raw_session_id = data.get("session_id", "unknown")
+        session_id = secure_filename(str(raw_session_id)) or "unknown"
+        
         question = data.get("question")
         results = data.get("results", {})
         
@@ -223,8 +230,9 @@ def sync_universestaucarre():
         }), 200
     
     except Exception as e:
-        logger.error(f"Sync error: {e}")
-        return jsonify({"error": str(e)}), 500
+        # Correction Alerte CodeQL (py/stack-trace-exposure)
+        logger.error(f"Sync error: {e}", exc_info=True)
+        return jsonify({"error": "An error occurred during synchronization."}), 500
 
 
 # ============================================================
@@ -237,7 +245,7 @@ def stream_query():
     (Pour sites comme www.universestaucarre.com)
     """
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         question = data.get("question")
         
         if not question:
@@ -254,8 +262,9 @@ def stream_query():
         }), 200
     
     except Exception as e:
-        logger.error(f"Stream error: {e}")
-        return jsonify({"error": str(e)}), 500
+        # Correction Alerte CodeQL (py/stack-trace-exposure)
+        logger.error(f"Stream error: {e}", exc_info=True)
+        return jsonify({"error": "An error occurred while processing the stream."}), 500
 
 
 def run_gabriel_api(host="0.0.0.0", port=8000, debug=False):

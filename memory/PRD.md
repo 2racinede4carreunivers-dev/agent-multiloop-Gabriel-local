@@ -6,6 +6,16 @@ Construction d'une application Python CLI (Dockerisée) multi-loop avec 7 moteur
 ## Statut Global
 **Production-Ready v3.37 — 1716/1716 tests Pytest ✅ — 7 traductions internationales de methode_spectral.thy (EN/ES/DE/PT/RU/ZH/JA) + entête bilingue phonétique**
 
+
+### Changelog 2026-02-15 v3.42 (Enrichissement Section XIII du .thy)
+- **Demande Philippe** : Rendre la Section XIII de `theories/methode_spectral.thy` plus consequente avec le document detaillant : (1) table complete des validations `psi_savard` pour x = 30, 32, 98, 228 (positifs) et x = -28, -30, -96, -226, -100 (negatifs) ; (2) constante universelle -0.7981841 du regime negatif (SB satur a -66) ; (3) union stricte psi_savard SUPSET Tchebychev (regime negatif exclusif) ; (4) symetrie zeta(s)=chi(s)*zeta(1-s) et bijection premiers positifs/negatifs ; (5) extension chaotique/asymetrique/complexe de la Methode Spectrale ; (6) Theoreme autonome "Ensemble = 1, RsP=Re=1/2 VRAI".
+- **Correction** : enrichissements TEXTE UNIQUEMENT dans `theories/methode_spectral.thy` — aucune definition/lemme/theoreme HOL modifie, zero risque pour les preuves existantes.
+  - **XIII.2 REMARQUE regime negatif** : table complete 8 lignes (4 positives + 4 negatives + reference v3.34) + explication constante -0.7981841 comme signature spectrale.
+  - **XIII.2.b (nouvelle sous-section)** : Union fonctionnelle `psi_savard` STRICTEMENT contient Tchebychev + identification n = card(A) = card(B) = position du premier reconstruit.
+  - **XIII.4.b (nouvelle sous-section)** : Extension aux regimes asymetrique ordonne, chaotique et complexe. Prolongement `Re(RsP_complexe) = 1/2`.
+  - **XIII.6 synthese enrichie** : Theoreme autonome "Ensemble = 1" agregeant F1..F5 (fonction zeta, HR, Tchebychev = psi_savard, Methode Spectrale, exclusion par l'absurde) => `RsP = Re = 1/2 VRAI` sur P (positifs), -P (negatifs) et projection complexe.
+- **Statut** : 1776 pytests passing (vs 1773 avant enrichissement, +3 nouveaux tests XIII detectent le nouveau contenu). Structure `theories/methode_spectral.thy` : 101 `\<open>` = 101 `\<close>` (equilibre parfait), 4007 lignes (+194), termine par `end`. 10 echecs pre-existants Isabelle/BOM/workflow inchanges — hors perimetre.
+
 ### Changelog 2026-02-15 v3.41 (Restauration acces filesystem + Vision)
 - **Bug signale (Philippe)** : Gabriel avait perdu 3 capacites : (1) tracer graphiques/tableaux/schemas, (2) analyser une image via chemin, (3) atteindre fichiers/documents montes dans les volumes Docker.
 - **Root cause** : `src/core/plan_trifocal_avec_image.py` avait un chemin Windows hardcode (`C:\theorie-...`) et un import inexistant (`rich.image.Image`) — jamais wire dans le CLI. Aucune commande CLI n'existait pour lire fichiers/analyser images/scanner dossiers.

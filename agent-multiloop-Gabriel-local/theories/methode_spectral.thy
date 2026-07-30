@@ -1634,12 +1634,16 @@ text \<open>
   (theoreme RsP_un_demi_general). Le rapport de blocs RsP_bloc(k) et
   ses variantes definis ci-dessus decrivent une observable
   spectrale DIFFERENTE (comparaison de blocs entiers). Leur valeur
-  numerique depend des suites (a, b) choisies et n'est PAS forcee a
-  1/2 par la construction. Aucun lemme HOL ne pretend le contraire.
+  numerique depend des suites (a, b) choisies et n'est PAS forcee a 1/2
+  par la construction. Aucun lemme HOL ne pretend le contraire.
 \<close>
 
-(* Ancrage explicite : quand a = SA et b = SB, la version blocs vit
-   dans le meme regime central que RsP. *)
+(* Ancrage syntaxique : quand a = SA et b = SB, les blocs se
+   deplient en listes explicites de SA et SB (pure identite de map).
+   ATTENTION : ceci ne signifie PAS que RsP_bloc(k) sur SA/SB vaut
+   1/2 (contre-exemple exact a k=1 : RsP_bloc(1) = -91/90). Le
+   regime central 1/2 est etabli EXCLUSIVEMENT par RsP_un_demi_general
+   pour la forme de difference historique (SA(n1)-SA(n2))/(SB(n1)-SB(n2)). *)
 lemma bloc_A_k_pour_SA:
   "bloc_A_k SA k = map SA [1..<k+1]"
   by (simp add: bloc_A_k_def)

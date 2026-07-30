@@ -27,11 +27,20 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "${SCRIPT_DIR}")"
 
-# Cibler soit le(s) fichier(s) passe(s) en argument, soit tous les .tex de theories/tex/
+# Cibler soit le(s) fichier(s) passe(s) en argument, soit UNIQUEMENT le .tex
+# courant destine a la compilation (geometrie_gabriel_savard_13.tex).
+# v3.45-fix : eviter de bloquer sur les .tex historiques (v10/v11/v12) qui
+# contiennent volontairement les anciennes formes non-corrigees.
 if [[ $# -gt 0 ]]; then
   FILES=("$@")
 else
-  mapfile -t FILES < <(find "${REPO_ROOT}/theories/tex" -maxdepth 2 -name "*.tex" 2>/dev/null)
+  # Fichier canonique (le seul destine a la compilation actuelle)
+  DEFAULT_TEX="${REPO_ROOT}/theories/tex/geometrie_gabriel_savard_13.tex"
+  if [[ -f "${DEFAULT_TEX}" ]]; then
+    FILES=("${DEFAULT_TEX}")
+  else
+    mapfile -t FILES < <(find "${REPO_ROOT}/theories/tex" -maxdepth 2 -name "*.tex" 2>/dev/null)
+  fi
 fi
 
 if [[ ${#FILES[@]} -eq 0 ]]; then
@@ -64,18 +73,37 @@ except UnicodeDecodeError as exc:
     print(f"  FAIL : UTF-8 strict -> {exc}")
     sys.exit(1)
 
-# ligne active = non commentee (ligne dont le premier char non-blanc n'est pas %)
-active = "\n".join(l for l in txt.splitlines() if not l.lstrip().startswith('%'))
+# ligne active = supprime les commentaires (y compris inline `... % ...`).
+# Une contre-barre echappee `\%` n'est PAS un commentaire.
+def _strip_inline_comments(line: str) -> str:
+    out = []
+    i = 0
+    while i < len(line):
+        c = line[i]
+        if c == '\\' and i + 1 < len(line):
+            out.append(line[i:i+2])
+            i += 2
+            continue
+        if c == '%':
+            break
+        out.append(c)
+        i += 1
+    return ''.join(out)
+
+active = "\n".join(_strip_inline_comments(l) for l in txt.splitlines())
 
 BOM = b'\xef\xbb\xbf'
 bibitems = re.findall(r'\\bibitem\[[^\]]*\]\{([^}]+)\}', active)
 labels   = re.findall(r'\\label\{([^}]+)\}', active)
-starred_secs = re.findall(r'^\\(?:sub){0,2}section\*|^\\paragraph\*', active, re.MULTILINE)
+# v3.45-fix : detecter les starred sections AILLEURS que colonne 1 (indentation
+# ou apres blanc) pour eviter le contournement `  \section*{...}`.
+starred_secs = re.findall(r'(?:^|\s)\\(?:sub){0,2}section\*|(?:^|\s)\\paragraph\*', active)
 
 checks = [
     ("BOM absent (UTF-8 sans BOM)",         not raw.startswith(BOM)),
     ("UTF-8 strict",                        True),
-    ("LF-only (aucun CRLF)",                raw.count(b'\r\n') == 0),
+    # v3.45-fix : rejeter TOUT byte \r (CRLF ET CR seuls, ancien Mac)
+    ("Aucun caractere CR (\\r)",            raw.count(b'\r') == 0),
     ("Aucun octet NUL",                     raw.count(b'\x00') == 0),
     ("Aucun caractere de controle illegal", not [i for i,c in enumerate(txt) if ord(c)<32 and c not in '\n\r\t']),
     ("NFC normalized",                      txt == unicodedata.normalize('NFC', txt)),

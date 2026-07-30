@@ -49,6 +49,38 @@ def test_lire_fichier_absent(tmp_path: Path) -> None:
         fa.lire_fichier(str(tmp_path / "n_existe_pas.txt"))
 
 
+# ------------------------------------------------------------------
+# Windows path translation (regression : bug rapporte par Philippe)
+# ------------------------------------------------------------------
+
+def test_windows_path_non_mappe_leve_erreur_claire(monkeypatch) -> None:
+    """Un chemin C:\\... sans mount doit lever FileNotFoundError avec
+    un message d'aide clair (pas de fallback silencieux)."""
+    monkeypatch.delenv("WINDOWS_MOUNT_MAP", raising=False)
+    with pytest.raises(FileNotFoundError, match="Chemin Windows detecte"):
+        fa.voir_image(r"C:\Users\Philippe\image_qui_nexiste_pas.png")
+
+
+def test_windows_mount_map_env(tmp_path: Path, monkeypatch) -> None:
+    """WINDOWS_MOUNT_MAP='C:=/tmp/mon-mount' doit rediriger C:\\... vers /tmp/mon-mount/..."""
+    (tmp_path / "sub").mkdir()
+    f = tmp_path / "sub" / "test.md"
+    f.write_text("hello", encoding="utf-8")
+    monkeypatch.setenv("WINDOWS_MOUNT_MAP", f"C:={tmp_path}")
+    r = fa.lire_fichier("C:\\sub\\test.md")
+    assert r.content.strip() == "hello"
+
+
+def test_windows_theorie_savard_convention(tmp_path: Path, monkeypatch) -> None:
+    """Le dossier canonique theorie-mathematique-philippe-thomas-savard-2026
+    doit lever une erreur claire si aucun mount n'existe."""
+    monkeypatch.delenv("WINDOWS_MOUNT_MAP", raising=False)
+    with pytest.raises(FileNotFoundError, match="theorie-savard"):
+        fa.voir_image(
+            r"C:\theorie-mathematique-philippe-thomas-savard-2026\assets\images\x.png"
+        )
+
+
 def test_lire_fichier_refuse_binaire(tmp_path: Path) -> None:
     f = tmp_path / "binaire.dat"
     f.write_bytes(b"\x00\x01\x02\x03\x00" * 100)

@@ -86,11 +86,62 @@ class ImagePreviewResult:
 # ------------------------------------------------------------------
 
 def _resolve(chemin: str) -> Path:
-    """Normalise un chemin utilisateur. Refuse les chemins vides."""
+    """Normalise un chemin utilisateur. Refuse les chemins vides.
+
+    Traduit automatiquement les chemins Windows (C:\\..., D:\\...) vers les
+    mounts Docker correspondants si la variable d'environnement
+    WINDOWS_MOUNT_MAP est definie (format : 'C:=/host/c;D:=/host/d').
+    Sinon, tente de mapper 'C:\\theorie-mathematique-philippe-thomas-savard-2026'
+    vers /home/agent/app/theorie-savard/ (convention Gabriel).
+    """
     if not chemin or not chemin.strip():
         raise ValueError("Chemin vide.")
-    p = Path(chemin).expanduser()
-    return p
+
+    raw = chemin.strip().strip('"').strip("'")
+
+    # Detection chemin Windows (C:\..., c:/..., D:\...) et traduction
+    if len(raw) >= 3 and raw[1:3] in (":\\", ":/"):
+        drive = raw[0].upper()
+        rest = raw[3:].replace("\\", "/")
+        # 1. Table de mapping depuis env
+        env_map = os.environ.get("WINDOWS_MOUNT_MAP", "")
+        mapping: dict[str, str] = {}
+        for pair in env_map.split(";"):
+            if "=" in pair:
+                key, val = pair.split("=", 1)
+                mapping[key.strip().rstrip(":").upper()] = val.strip()
+        if drive in mapping:
+            return Path(mapping[drive]) / rest
+        # 2. Heuristique connue : dossier canonique de Philippe
+        low = rest.lower()
+        canonical_root = "theorie-mathematique-philippe-thomas-savard-2026"
+        if low.startswith(canonical_root):
+            sub = rest[len(canonical_root):].lstrip("/\\")
+            # Emplacements possibles montes dans le conteneur
+            for mount in ("/home/agent/app/theorie-savard",
+                          "/home/agent/app/data/theorie-savard",
+                          "/workspace/theorie-savard"):
+                candidate = Path(mount) / sub if sub else Path(mount)
+                if candidate.exists():
+                    return candidate
+            # Aucun mount trouve : leve une erreur explicite (pas de fallback)
+            raise FileNotFoundError(
+                f"Chemin Windows detecte '{raw}' mais aucun volume Docker ne "
+                f"l'expose. Ajoutez dans docker-compose.yml :\n"
+                f"  volumes:\n"
+                f"    - C:/{canonical_root}:/home/agent/app/theorie-savard:ro\n"
+                f"puis relancez : docker-compose down && docker-compose up"
+            )
+        # 3. Chemin Windows generique non mappe : erreur explicite
+        raise FileNotFoundError(
+            f"Chemin Windows detecte '{raw}' mais le lecteur '{drive}:' n'est "
+            f"pas monte dans le conteneur Docker. Options :\n"
+            f"  (a) definissez WINDOWS_MOUNT_MAP='{drive}=/chemin/docker' dans .env\n"
+            f"  (b) ajoutez un volume dans docker-compose.yml exposant ce dossier\n"
+            f"  (c) utilisez le chemin Docker direct (ex: /home/agent/app/...)"
+        )
+
+    return Path(raw).expanduser()
 
 
 def _human_size(n: int) -> str:

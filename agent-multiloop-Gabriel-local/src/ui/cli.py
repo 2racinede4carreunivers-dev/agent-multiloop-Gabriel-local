@@ -423,6 +423,12 @@ class CLIInterface:
             return self._handle_voir_image(cmd)
         if c.startswith("analyser-image ") or c.startswith("analyser "):
             return self._handle_analyser_image(cmd)
+        # Alias 'image <chemin> [question]' -> analyse Claude Vision.
+        # IMPORTANT : ce declencheur DOIT preceder le pipeline naturel du
+        # multiloop pour eviter que 'image C:\...' soit interprete comme
+        # une question spectrale et halluciner une reponse.
+        if c.startswith("image "):
+            return self._handle_analyser_image("analyser-image " + cmd[len("image "):])
         if c.startswith("lire ") or c == "lire":
             return self._handle_lire(cmd)
         if c.startswith("scan ") or c == "scan":
@@ -1281,6 +1287,8 @@ class CLIInterface:
             ("[bold cyan]FICHIERS & IMAGES (volumes montes)[/bold cyan]", [
                 ("voir-image <chemin>",
                  "Apercu ASCII + metadonnees d'une image"),
+                ("image <chemin> [question]",
+                 "Alias rapide : analyse Claude Vision (idem analyser-image)"),
                 ("analyser-image <chemin> [q]",
                  "Analyse Claude Vision (decrit / interprete l'image)"),
                 ("lire <chemin> [n_lignes]",

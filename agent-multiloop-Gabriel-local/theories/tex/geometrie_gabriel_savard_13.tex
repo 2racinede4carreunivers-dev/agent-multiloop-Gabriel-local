@@ -1079,7 +1079,10 @@ vingt-six.
 
 \end{thebibliography}
 
-\end{document}
+%% FIX v3.44 : suppression du `\end{document}` premature qui coupait
+%% le document au milieu, ignorant ~360 lignes (Section Perspectives
+%% futures, appendices, index, glossaire, sections PASJ complementaires).
+%% Le VRAI `\end{document}` est en fin de fichier (ligne finale).
 
 \subsection{Perspectives futures}
 \label{ssec:perspectives}

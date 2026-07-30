@@ -91,6 +91,44 @@ def test_document_boundaries_and_delimiters(tex: str) -> None:
     assert _count_unescaped(clean, "$") % 2 == 0, "Nombre impair de délimiteurs $"
 
 
+
+def test_single_active_document_end_and_restored_tail(tex: str) -> None:
+    """Un seul document actif englobe désormais toute la seconde partie."""
+    clean = _without_comments(tex)
+    assert clean.count(r"\begin{document}") == 1
+    assert clean.count(r"\end{document}") == 1
+    assert [line.strip() for line in clean.splitlines() if line.strip()][-1] == (
+        r"\end{document}"
+    )
+    assert r"\end{document}" in tex.splitlines()[-5:]
+
+    fix_comment = (
+        "%% FIX v3.44 : suppression du `\\end{document}` premature qui coupait\n"
+        "%% le document au milieu, ignorant ~360 lignes (Section Perspectives\n"
+        "%% futures, appendices, index, glossaire, sections PASJ complementaires).\n"
+        "%% Le VRAI `\\end{document}` est en fin de fichier (ligne finale)."
+    )
+    assert fix_comment in tex
+
+    restored_tokens = (
+        r"\subsection{Perspectives futures}",
+        r"\label{ssec:perspectives}",
+        r"\section*{Financement}",
+        r"\section*{Disponibilité des données}",
+        r"\section*{Annexe --- Échange avec un pseudo expert Google}",
+        r"\section*{Note de Validation Externe}",
+        r"\section*{Supplementary data}",
+        r"\section*{Funding}",
+        r"\section*{Data availability}",
+    )
+    future_start = clean.index(restored_tokens[0])
+    document_end = clean.index(r"\end{document}")
+    for token in restored_tokens:
+        assert token in clean, f"Contenu restauré absent : {token}"
+    assert future_start < clean.index(r"\label{ssec:perspectives}", future_start)
+    assert all(clean.rfind(token) < document_end for token in restored_tokens)
+
+
 def test_unnumberedsection_macro_is_complete_and_in_preamble(tex: str) -> None:
     macro_start = tex.index(r"\newcommand{\unnumberedsection}")
     document_start = tex.index(r"\begin{document}")

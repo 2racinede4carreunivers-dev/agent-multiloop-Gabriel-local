@@ -177,22 +177,29 @@ class TestBlocSectionV343:
         assert "se reduisent numeriquement au meme regime central : RsP = 1/2" not in section_v343
 
     def test_failed_proof_regression_uses_nat_numeral_rewrite(self, section_v343: str):
+        # v3.45.1 : preuves directes avec numeral_2_eq_2 (les tentatives
+        # precedentes via eval_nat_numeral + bloc_B_1_paire cascade avaient
+        # echoue en compilation Isabelle reelle sur GitHub Actions).
         assert re.search(
-            r"lemma bloc_B_1_paire:.*?by \(simp add: upt_conv_Cons eval_nat_numeral\)",
+            r"lemma bloc_B_1_paire:.*?by \(simp add: bloc_B_k_def numeral_2_eq_2\)",
             section_v343,
             flags=re.DOTALL,
         )
         assert re.search(
-            r"lemma somme_bloc_B_1:.*?by \(simp add: bloc_B_1_paire\)",
+            r"lemma somme_bloc_B_1:.*?by \(simp add: somme_bloc_def bloc_B_k_def numeral_2_eq_2\)",
             section_v343,
             flags=re.DOTALL,
         )
         assert re.search(
             r"lemma RsP_bloc_extreme_at_1:.*?"
-            r"by \(simp add: somme_bloc_B_1 eval_nat_numeral\)",
+            r"by \(simp add: RsP_bloc_extreme_def somme_bloc_def bloc_B_k_def numeral_2_eq_2\)",
             section_v343,
             flags=re.DOTALL,
         )
+        # Garde-fou : les anciennes tactiques fragiles ne doivent PLUS apparaitre
+        assert "upt_conv_Cons eval_nat_numeral" not in section_v343
+        assert "simp add: bloc_B_1_paire)" not in section_v343
+        assert "simp add: somme_bloc_B_1 eval_nat_numeral" not in section_v343
 
     def test_corrective_warning_counterexample_and_anchor_are_intact(self, section_v343: str):
         assert "RsP_bloc(1) = -91/90" in section_v343

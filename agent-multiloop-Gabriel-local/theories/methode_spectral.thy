@@ -1506,20 +1506,20 @@ lemma bloc_A_1_singleton: "bloc_A_k a 1 = [a 1]"
   unfolding bloc_A_k_def by simp
 
 lemma bloc_B_1_paire: "bloc_B_k b 1 = [b 1, b 2]"
-  unfolding bloc_B_k_def
-  by (simp add: upt_conv_Cons eval_nat_numeral)
+  by (simp add: bloc_B_k_def numeral_2_eq_2)
 
-(* Somme du bloc B a l'ordre 1 : somme_bloc [b 1, b 2] = b 1 + b 2 *)
+(* Somme du bloc B a l'ordre 1 : somme_bloc [b 1, b 2] = b 1 + b 2.
+   Preuve directe (unfolding complet) pour eviter la dependance
+   transitive a bloc_B_1_paire qui pouvait etre fragile en simp. *)
 lemma somme_bloc_B_1: "somme_bloc (bloc_B_k b 1) = b 1 + b 2"
-  unfolding somme_bloc_def
-  by (simp add: bloc_B_1_paire)
+  by (simp add: somme_bloc_def bloc_B_k_def numeral_2_eq_2)
 
 (* Identite du rapport extreme pour k=1 *)
 lemma RsP_bloc_extreme_at_1:
   assumes "b 1 + b 2 \<noteq> 0"
   shows "RsP_bloc_extreme a b 1 = (a 1 - b 2) / (b 1 + b 2)"
-  unfolding RsP_bloc_extreme_def
-  by (simp add: somme_bloc_B_1 eval_nat_numeral)
+  using assms
+  by (simp add: RsP_bloc_extreme_def somme_bloc_def bloc_B_k_def numeral_2_eq_2)
 
 (* -----------------------------------------------------------------------
    FONCTIONNEL SPECTRAL PONDERE (comparaison chaotique)

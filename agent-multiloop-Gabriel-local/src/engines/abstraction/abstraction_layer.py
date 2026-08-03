@@ -105,7 +105,11 @@ def _extract_numbers(text: str) -> list[int]:
     cleaned = re.sub(r'\b13\s*/\s*\d+\b', ' ', cleaned)
     cleaned = re.sub(r'\b3\.25\s*/\s*\d+\b', ' ', cleaned)
     cleaned = re.sub(r'\b6\.5\s*/\s*\d+\b', ' ', cleaned)
-    return [int(m) for m in re.findall(r'\b-?\d+\b', cleaned)]
+    # v3.46 : Regex sans look-behind ReDoS ET sans \b Unicode qui echouait
+    # sur "132eme" / "132ieme" (le e/è etant un char de mot Unicode).
+    # `(?<!\d)-?\d+(?!\d)` = lookarounds a largeur fixe (pas de ReDoS) qui
+    # detectent les frontieres digit/non-digit (accents inclus).
+    return [int(m) for m in re.findall(r'(?<!\d)-?\d+(?!\d)', cleaned)]
 
 
 def _split_objective_chunks(text: str) -> list[str]:

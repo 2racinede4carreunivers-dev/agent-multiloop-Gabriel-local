@@ -2087,7 +2087,6 @@ text \<open>
 definition avant_dernier_terme_savard :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> real" where
   "avant_dernier_terme_savard a1 r n = (r - 1 / r) * (a1 * r ^ (n - 3))"
 
-s
 section "Preuve par l'absurde : la Methode Spectrale exclut strictement les composes"
 
 subsection "Theoreme principal - Aucun compose n'est un prime_i"

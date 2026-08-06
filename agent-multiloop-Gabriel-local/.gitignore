@@ -54,6 +54,24 @@ docker-compose.override.yml
 *.heap
 .isabelle/
 
+# LaTeX / PDF build artifacts
+theories/tex/*.aux
+theories/tex/*.out
+theories/tex/*.toc
+theories/tex/*.listing
+theories/tex/*.log
+theories/tex/*.fls
+theories/tex/*.fdb_latexmk
+theories/tex/*_styled*.pdf
+theories/tex/*_styled*.aux
+theories/tex/*_styled*.out
+theories/tex/*_styled*.toc
+theories/tex/*_styled*.listing
+theories/tex/*_styled*.log
+theories/tex/archives/
+tmp_geometrie_docx/
+theories/tmp_geometrie_docx/
+
 # Secrets
 *.key
 *.pem

@@ -7,9 +7,15 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+TEX_OUTPUT_DIR = REPO_ROOT / "theories" / "tex"
 
 
 def check(condition: bool, message: str, failures: list[str]) -> None:
@@ -130,15 +136,51 @@ def run(tex_path: Path) -> int:
     return 0
 
 
-def main() -> int:
-    if len(sys.argv) != 2:
-        print("Usage: python scripts/tex_healthcheck.py <fichier.tex>")
-        return 2
+def compile_pdf(tex_path: Path) -> int:
+    """Compile a TeX file and always write PDF artifacts under theories/tex."""
+    engine = "pdflatex"
+    if shutil.which(engine) is None:
+        engine = "miktex-pdflatex"
+    if shutil.which(engine) is None:
+        print("Erreur: pdflatex/miktex-pdflatex introuvable dans le PATH.")
+        return 127
 
-    tex_path = Path(sys.argv[1])
+    completed = subprocess.run(
+        [
+            engine,
+            "-interaction=nonstopmode",
+            "-halt-on-error",
+            "-file-line-error",
+            "-output-directory",
+            str(TEX_OUTPUT_DIR),
+            str(tex_path),
+        ],
+        check=False,
+        cwd=str(REPO_ROOT),
+    )
+    return completed.returncode
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Healthcheck statique pour documents TeX")
+    parser.add_argument("tex_file", help="Chemin du fichier .tex a verifier")
+    parser.add_argument(
+        "--compile-pdf",
+        action="store_true",
+        help="Compiler le .tex apres healthcheck et ecrire le PDF dans theories/tex",
+    )
+    args = parser.parse_args()
+
+    tex_path = Path(args.tex_file)
     if not tex_path.is_absolute():
         tex_path = Path.cwd() / tex_path
-    return run(tex_path)
+
+    code = run(tex_path)
+    if args.compile_pdf:
+        compile_code = compile_pdf(tex_path)
+        if compile_code != 0:
+            return compile_code
+    return code
 
 
 if __name__ == "__main__":

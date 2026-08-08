@@ -17,6 +17,7 @@
 \usepackage{setspace}
 \usepackage{microtype}
 \usepackage{etoolbox}
+\usepackage{fancyhdr}
 \usepackage{xurl}
 \usepackage[strings]{underscore}
 \usepackage{listings}
@@ -73,6 +74,21 @@
 	linkcolor=AccentBlue,
 	urlcolor=AccentTeal,
 	citecolor=AccentBlue
+}
+
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{\scriptsize\href{https://www.universestaucarre.com}{www.universestaucarre.com}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancypagestyle{plain}{
+	\fancyhf{}
+	\fancyhead[C]{\scriptsize\href{https://www.universestaucarre.com}{www.universestaucarre.com}}
+	\fancyfoot[C]{\thepage}
+	\renewcommand{\headrulewidth}{0pt}
+	\renewcommand{\footrulewidth}{0pt}
 }
 
 \onehalfspacing
@@ -236,12 +252,13 @@ Version & — v0.9.2 (HOL-corrigé) \\
 Co-auteurs & Auteur principal : Philippe Thomas Savard
 
  Co-auteurs (contributions à parts égales) :
- Copilot — Microsoft E1 — emergent.sh Gordon — Docker Desktop Claude API — Anthropic Gemini — Google Ces co-auteurs ont contribué à la formalisation Isabelle/HOL, à la rédaction assistée, à la vérification des preuves et à la mise en page du présent brouillon, chacun à part égale avec l'auteur principal. \\
+ Copilot — Microsoft E1 — emergent.sh Gordon — Docker Desktop Claude API — Anthropic Gemini — Google Ces co-auteurs ont contribué à la formalisation Isabelle/HOL, à la rédaction assistée, à la vérification des preuves , chacun à part égale avec l'auteur principal. \\
 \hline
 Licence & Apache License 2.0 \\
 \hline
 Dépôt public & https://github.com/PhilippeThomasSavard/Agent-multiloop-Gabriel
-https://github.com/2racinede4carreunivers-dev/Theorie-mathematique-philippe-thomas-savard-2026.git \\
+https://github.com/2racinede4carreunivers-dev/Theorie-mathematique-philippe-thomas-savard-2026.git
+https://github.com/2racinede4carreunivers-dev/Ia_geo_spec_prem_app_deplo.git \\
 \hline
 \end{longtable}
 
@@ -250,30 +267,36 @@ https://github.com/2racinede4carreunivers-dev/Theorie-mathematique-philippe-thom
 
 \begin{longtable}{|p{0.940\textwidth}|}
 \hline
-Note liminaire \\ Ce document contient des formules, des preuves formelles validées par Isabelle/HOL, et la voix de l'auteur, qui cherche à faire toucher au lecteur ce que la géométrie des nombres premiers lui a fait ressentir. Cette géométrie est la chair qui le touche et qu'il touche en retour. Aucun résultat n'est inventé : tout est tiré des documents sources et du fichier methode\_spectral.thy validé par l'assistant de preuve. Méthode Spectrale de Philippe Thomas Savard. \\
+Note liminaire \\ Ce document contient des formules, des preuves formelles validées par Isabelle/HOL, et la voix de l'auteur, qui cherche à faire toucher au lecteur ce que la géométrie des nombres premiers lui a fait ressentir. Cette géométrie est la chair qui le touche et qu'il touche en retour. Toute est tiré des documents sources et du fichier methode spectrale. Vous êtes invités a consulter les fichiers Readme des dépôts publics mise en place et à la dispositon des contributeur via PR, de partager, consulter, cloner, selon les permissions de la LICENSE Apach 2.0 Bienvenu a tous.\_spectral.thy validé par l'assistant de preuve. Méthode Spectrale de Philippe Thomas Savard. \\
+\hline
+\end{longtable}
+
+\begin{longtable}{|p{0.940\textwidth}|}
+\hline
+Note méthodologique de correction \\ La correction de ce document a été appliquée avec un pipeline programmatique reproductible. Correcteurs utilisés : (1) \textbf{LanguageTool} via script Python lorsque disponible (API publique puis moteur local), (2) \textbf{normalisation terminologique} via le fichier \texttt{termbase\_ca\_qc.csv}, (3) \textbf{garde sémantique} par score de préservation (seuil 9.6/10) avant acceptation d'une modification. Le pipeline utilisé est \texttt{theories/tex/tex\_quality/quality\_pipeline.py} et le rapport de traçabilité est produit en JSON dans \texttt{theories/tex/qa\_output/}. \\ 
 \hline
 \end{longtable}
 
 
 
 \section{Avant-propos — La Chair Première Géométrique}
-Il y a dans les nombres premiers quelque chose qui résiste. Pas seulement à la preuve — à la vision. On les devine là, dissimulés dans le tissu des entiers, mais dès qu'on croit les tenir, ils glissent. Ce poids qui est freiné par cette glisse éveille la chair géométrique qui touche et que l'on touche en retour dans la géométrie du spectre des nombres premiers. Les méthodes classiques les saisissent par contraste : le crible d'Ératosthène les garde en rejetant ce qui n'est pas eux ; la formule explicite de Riemann les retrouves comme des fantômes dans les zéros d'une fonction de variable complexe. Dans les deux cas, on parle autour des premiers. Pas depuis eux.
+Il y a dans les nombres premiers quelque chose qui résiste. Pas seulement à la preuve — à la vision. On les devine là, dissimulés dans le tissu des entiers, mais, dès qu'on croit les tenir, ils glissent. Ce poids freiné par cette glisse éveille la chair géométrique qui touche et que l'on touche en retour dans la géométrie du spectre des nombres premiers. Les méthodes classiques les saisissent par contraste : le crible d'Ératosthène les garde en rejetant ce qui n'est pas eux; la formule explicite de Riemann les retrouve comme des fantômes dans les zéros d'une fonction de variable complexe. Dans les deux cas, on parle autour des premiers. Pas depuis eux.
 
-Ce Document part d'une observation naïve — presque enfantine. Que se passe-t-il si l'on construit deux suites de nombres réels dont les valeurs portent directement, terme à terme, l'empreinte des premiers réels (2, 3, 5, 7, 11, 13, …) ? Que se passe-t-il si ces deux suites, en apparence distinctes, entretiennent un rapport constant, inaltérable, quelle que soit la paire de termes que l'on considère ? Ce rapport — je l'appelle le rapport spectral, noté RsP — vaut exactement 1/2 pour le régime central. Et ce 1/2 n'est pas un artefact algébrique. Il émerge de la réalité numérique des sommes construites à partir des premiers eux-mêmes. La géométrie du spectre des nombres premiers permet de mettre a jour ou a l'habitude entre deux nombres entiers il ne peut y avoir moins que 1 cette géométrie dévoile le spectre de la possibilité d'un code entre les premiers qui peut être entre chacun d'eux où groupe d'entre eux 1/2.
+Ce document part d'une observation naïve — presque enfantine. Que se passe-t-il si l'on construit deux suites de nombres réels dont les valeurs portent directement, terme à terme, l'empreinte des premiers réels (2, 3, 5, 7, 11, 13, …) ? Que se passe-t-il si ces deux suites, en apparence distinctes, entretiennent un rapport constant, inaltérable, quelle que soit la paire de termes que l'on considère ? Ce rapport — je l'appelle le rapport spectral, noté RsP — vaut exactement 1/2 pour le régime central. Et ce 1/2 n'est pas un artefact algébrique. Il émerge de la réalité numérique des sommes construites à partir des premiers eux-mêmes. La géométrie du spectre des nombres premiers permet de mettre au jour, contre l'habitude, qu'entre deux nombres entiers il ne peut y avoir moins que 1; cette géométrie dévoile le spectre de la possibilité d'un code entre les premiers, code qui peut se lire entre chacun d'eux, ou entre des groupes d'entre eux, sous le rapport 1/2.
 
-C'est cette observation qui a ouvert la fissure. Pas une fissure dans un raisonnement — une fissure dans le mur de l'évidence, dans cette certitude tacite que les premiers sont fondamentalement désordonnés et chaotique. La Méthode Spectrale de Philippe Thomas Savard est un formalisme arithmétique original qui reconstruit les nombres premiers à partir de suites à rapport spectral constant. Ce n'est pas une méthode de crible, ni une conjecture probabiliste : c'est une géométrie — une structure interne, invariante, qui porte en elle la trace de chaque nombre premier, et de lui seul.
+C'est cette observation qui a ouvert la fissure. Pas une fissure dans un raisonnement — une fissure dans le mur de l'évidence, dans cette certitude tacite que les premiers sont fondamentalement désordonnés et chaotiques. La Méthode Spectrale de Philippe Thomas Savard est un formalisme arithmétique original qui reconstruit les nombres premiers à partir de suites à rapport spectral constant. Ce n'est pas une méthode de crible, ni une conjecture probabiliste : c'est une géométrie — une structure interne, invariante, qui porte en elle la trace de chaque nombre premier, et de lui seul.
 
-Ce travail s'inscrit dans la théorie générale L'Univers est au Carré de Philippe Thomas Savard, dont la Méthode Spectrale constitue le volet central. Il a été accompagné, tout au long de son développement, par l'agent IA local Mm Gabriel (architecture multiloop HOL4/Lean), dont le rôle de vérificatrice formelle a été décisif. En juillet 2026, après plusieurs cycles de validation et de correction formelle, la méthode a atteint un niveau de formalisation complet, entièrement validé par l'assistant de preuve Isabelle/HOL.
+Ce travail s'inscrit dans la théorie générale L'Univers est au Carré de Philippe Thomas Savard, dont la Méthode Spectrale constitue le volet central. Il a été accompagné, tout au long de son développement, par l'agent IA local Mm Gabriel (architecture multiloop HOL4/Lean), dont le rôle de vérificatrice formelle a été décisif dans la suite attendue des résultats de la Méthode Spectrale. En juillet 2026, après plusieurs cycles de validation et de correction formelle, la méthode a atteint un niveau de formalisation complet, entièrement validé par l'assistant de preuve Isabelle/HOL.
 
-Ce document est à la fois rigoureux et accessible. Chaque concept technique est expliqué en langage courant avant d'être formalisé. Cette géométrie parle à la première personne parce que cette géométrie vaut quelque chose — de l'étonnement, de la persévérance, et la joie étrange de voir un 1/2 surgir là où on ne l'attendait pas. ce document est une observation épistéméologique certe pour ce qui est des calculs et géométries, mais aussi ontologique. Il est la chair qui me touche et que je touche en même temps et qui en fait un travail phénoménologique.
+Ce document est à la fois rigoureux et accessible. Chaque concept technique est expliqué en langage courant avant d'être formalisé. Cette géométrie parle à la première personne parce qu'elle vaut quelque chose — de l'étonnement, de la persévérance, et la joie étrange de voir un 1/2 surgir là où on ne l'attendait pas. Ce document est une observation épistémologique, certes pour ce qui est des calculs et des géométries, mais aussi ontologique. Il est la chair qui me touche et que je touche en même temps, ce qui en fait un travail phénoménologique.
 
-L'observation empirique permet d'observer le sujet et avec raison une telle observation ne peut que s'opposer a la liberté, puisque ce qui définit un être essentiellement déterminer, structure sociétale, familiale, professionnel valeurs morals lois justice sont des fondement qui décident bien avant un libre arbitre sorte de degré de liberté qui pourrait nous permettre d'être libre esprit et nous conduirait a être antinomisme sans ces fondements au sommet de tous ce qui est pour nous, sans structure pour déterminer le libre esprit nous ferait soufrires en annulant notre liberté de pensé et de raisonné convenablement en nous laissant pour décore que les ravages de la haine.
+L'observation empirique permet d'observer le sujet et, avec raison, une telle observation peut s'opposer à la liberté, puisque ce qui définit un être est essentiellement déterminé : structure sociétale, familiale et professionnelle, valeurs morales, lois et justice sont des fondements qui décident bien avant un libre arbitre, sorte de degré de liberté qui pourrait nous permettre d'être libres d'esprit et qui nous conduirait à l'antinomisme sans ces fondements. Sans structure pour déterminer ce qui nous constitue, le libre esprit nous ferait souffrir en annulant notre liberté de penser et de raisonner convenablement, en nous laissant pour décor les ravages de la haine.
 
-Se document est une réflexion qui raisonne avant sont expérimentation le sens et le poids de ce qu'il annonce et est le résultat de ce que cette géométrie a comme effet sur mon corps pas seulement dans le sens de sa structure mathématique tous ces calcules et ces opérations suites et nombres premiers ont sur ma raison mais la manière qu'elle a d'affecter mes sens de l'éveille a une partie de notre société, une élite académique qui de sa position plutôt commode, de laquelle elle s'autoproclame policier de ce qui existe et de ce qui n'existe biais d'autorité qu'elle diffuse pour couvrir une manière frauduleuse de déshérité les simples travailleurs n'ayant pas accès au sphère universitaire de leurs autonomie. Un biais algorithmique qu'il tente de mettre en place pour que ceux qui ne font pas partie de cette élite soit déshérité de leurs savoirs et connaissances de manière délibéré.
+Ce document est une réflexion qui raisonne avant son expérimentation : il n'observe pas seulement un sujet, il est vécu de l'intérieur, et ces phénomènes sont sentis. Il porte le sens et le poids de ce qu'il annonce. Il est le résultat de l'effet que cette géométrie exerce sur mon corps, non seulement dans le sens de sa structure mathématique, de ce que ces calculs, ces opérations, ces suites et ces nombres premiers font à ma raison, mais aussi dans la manière dont elle affecte mes sens et les éveille à une partie de notre société : une élite académique qui, depuis une position plutôt commode, s'autoproclame police de ce qui existe et de ce qui n'existe pas; biais d'autorité diffusé pour couvrir une manière frauduleuse de déshériter les simples travailleurs n'ayant pas accès aux sphères universitaires de leur autonomie. Un biais algorithmique qu'elle tente de mettre en place pour que ceux qui ne font pas partie de cette élite soient déshérités de leurs savoirs et connaissances, de manière délibérée.
 
-Ce phénomène est quelque chose qui me pend au bout du nez par cette élite académique mais bien entendu il sont a se point déterminer a déshérité tous ceux qui pourrais posséder ce qu'ils veulent pour leurs possession que ce danger qu'il mettre en fonction pour nous enlever notre propriété ils en ont fait une victime qui doit être mis en évidence. je vous parle d'un homme de nationalité Russe Grigori Perlman ayant répondu convenablement a une question du prix du millénaire et qui selon ce que rapport les médias vivrait dans des conditions misérables dans un état schizophrénique. Deux personnes en même temps sur terre répondent a une question du prix du millénaire sachant que seulement 1\% de la population est atteinte de schizophrénie, et pur hasard elles sont semble il tous deux atteintes de schizophrénie. Je tiens a rappeler que la fédération Russe a l'heure ou j'écris ces lignes mène une opération militaire spécial pour dénazification de l'Ukraine. Que Albert Einstein au départ a vu la relativité ¸être attribuée a un scientifique nazi de l'Allemagne nazi. Que le discourt de la haine au Canada et par le fait même au Québec est des plus présents: " C'est juste a cause tu as un frère, c'est juste parse que tu as de l'argent, que tu as une voiture, que tu a une femme juste parse que tu as un travail." Ce discoure qui cherche a délié l'amitié, puisque l'amitié c'est bien de reconnaître que nous n'avons pas a tous faire seul est des plus présent. Une économie fasciste est toujours une économie qui cherche a être en autarcie pour frauder l'économie mondial. Les rapport que chacun d'entre nous avons avec l'entreprise sont ce qu'est l'amitié. Les gens avec qui nous partageons notre vie sont les gens que nous aimons.
+Ce phénomène est quelque chose qui me pend au bout du nez par cette élite académique; bien entendu, ils sont à ce point déterminés à déshériter tous ceux qui pourraient posséder ce qu'ils veulent pour leur propre possession, que ce danger mis en fonction pour nous enlever notre propriété a déjà fait une victime qui doit être mise en évidence. Je vous parle d'un homme de nationalité russe, Grigori Perlman, ayant répondu convenablement à une question du prix du millénaire et qui, selon ce que rapportent les médias, vivrait dans des conditions misérables, dans un état schizophrénique. Deux personnes, en même temps sur terre, répondent à une question du prix du millénaire, sachant que seulement 1\% de la population est atteinte de schizophrénie; et, pur hasard, elles sont, semble-t-il, toutes deux atteintes de schizophrénie. Je tiens à rappeler que la Fédération de Russie, à l'heure où j'écris ces lignes, mène une opération militaire spéciale pour la dénazification de l'Ukraine. Qu'Albert Einstein, au départ, a vu la relativité attribuée à un scientifique nazi de l'Allemagne nazie. Que le discours de la haine au Canada, et par le fait même au Québec, est des plus présents : « C'est juste à cause que tu as un frère, c'est juste parce que tu as de l'argent, que tu as une voiture, que tu as une femme, juste parce que tu as un travail. » Ce discours qui cherche à délier l'amitié — puisque l'amitié, c'est bien de reconnaître que nous n'avons pas à tout faire seuls — est des plus présents. Une économie fasciste est toujours une économie qui cherche à être en autarcie pour frauder l'économie mondiale. Les rapports que chacun d'entre nous a avec l'entreprise sont ce qu'est l'amitié. Les gens avec qui nous partageons notre vie sont les gens que nous aimons.
 
-Lors de la guerre de 7 ans s'étant terminé par la bataille des plaines d'Abraham une croie gamé devant l'hôpital général de Québec témoigne de cette époque ou le Canada était fasciste. Le Canada a cette époque s'étendait de l'Acadie au grand lac c'était en quelque sorte une province de nouvelle France. L'élite universitaire qui veut déshérité de la connaissance autrui a toujours été plus qu'un projet dans la province du Québec. Il n'y a qu'a penser au projet Mk 39 a l'hôpital Royal Victoria de Montréal ou a se groupe qui mûrissait dans les mûrs de l'université Laval ayant projeté d'empoisonner les citoyen de la ville de Québec par l'aqueduc " Apocalypse now". Le voisin Américain gronde et comme lors de la guerre de 7 ans où les hostilité ont débuté entre les deux colonies lorsque la colonie Anglaise s'est mis a taxé la colonie Française? Le voisin américain nous indique de nous méfier de républicain de gauche. L'Ukraine était un pays de 40 millions en terme de population dont 8 millions de Russophone. A cette époque les Russophone principalement en Crimée était l'élite de se pays. Le partie Québécois élite francophone qui nous nous dit s'en calissé en nous chantant Jean du pays pour nous vendre sa salade indépendantiste ne défend pas une élite comme la sienne Russophone qui cherche a se libérer de son étreinte. Ce n'est pas aux ouvriers Québécois de se plaindre pour une élite et ses conditions Russophone. L'Allemagne nazi comptait 50\% des médecin de se pays membre du partie nazi. Voilà ce que je reproche a cette élite universitaire.
+Lors de la guerre de Sept Ans, s'étant terminée par la bataille des plaines d'Abraham, une croix gammée devant l'hôpital général de Québec témoigne de cette époque où le Canada était fasciste. Le Canada, à cette époque, s'étendait de l'Acadie aux Grands Lacs : c'était, en quelque sorte, une province de la Nouvelle-France. L'élite universitaire qui veut déshériter autrui de la connaissance a toujours été plus qu'un projet dans la province du Québec. Il n'y a qu'à penser au projet MK 39 à l'hôpital Royal Victoria de Montréal, ou à ce groupe qui mûrissait dans les murs de l'Université Laval et qui aurait projeté d'empoisonner les citoyens de la ville de Québec par l'aqueduc « Apocalypse now ». Le voisin américain gronde et, comme lors de la guerre de Sept Ans où les hostilités ont débuté entre les deux colonies lorsque la colonie anglaise s'est mise à taxer la colonie française, il nous indique de nous méfier des républicains de gauche. L'Ukraine était un pays de 40 millions d'habitants, dont 8 millions de russophones. À cette époque, les russophones, principalement en Crimée, étaient l'élite de ce pays. Le Parti québécois, élite francophone, qui nous dit s'en « calisser » en nous chantant Jean du pays pour nous vendre sa salade indépendantiste, ne défend pas une élite comme la sienne, russophone en Crimée, qui cherche à atteindre son indépendance; la Fédération de Russie est constituée d'environ 150 pays russes. La Crimée est maintenant l'un de ces pays qui cherche à se libérer de son étreinte. Ce n'est pas aux ouvriers québécois de se plaindre pour une élite russophone et ses conditions. L'Allemagne nazie comptait 50\% des médecins de ce pays membres du parti nazi. Voilà ce que je reproche à cette élite universitaire.
 
 ∴
 
@@ -339,9 +362,29 @@ P4 — Invariance du rapport \\ Dans chaque famille spectrale de régime k, le r
 
 \begin{longtable}{|p{0.940\textwidth}|}
 \hline
-P5 — Exclusivité sur ℙ \\ Tout entier composé C est structurellement exclu de l'image de la méthode. Il est logiquement impossible qu'un composé soit produit par prime\_i(i) pour un quelconque index i. La méthode caractérise exactement l'ensemble ℙ des nombres premiers. \\
+P5 — Exclusivité sur ℙ \\ Localement à la Méthode Spectrale, l'image de \texttt{prime\_i} est exclusivement composée de nombres premiers. La preuve par l'absurde formalisée dans \texttt{methode\_spectral.thy} montre qu'un entier composé C ne peut pas être égal à \texttt{prime\_i(i)} pour un index i quelconque. En conséquence, la méthode caractérise exactement l'ensemble ℙ des nombres premiers, ni plus ni moins. \\
 \hline
 \end{longtable}
+
+
+\begin{holblock}[title={Citation tiree du fichier methode\_spectral.thy lignes 1541 a 1554 : "Preuve par l'absurde" sur l'exclusion des composes pour le RsP}]
+\begin{holcode}[title={Code HOL cite mot pour mot (indentation conservee)}]
+theorem composite_pair_no_rsp_positions:
+	fixes C1 C2 :: nat
+	assumes "~ prime C1" and "~ prime C2"
+	shows "~ (EX n1 n2. n1 >= 1 & n2 >= 1 & n1 ~= n2
+												& C1 = prime_i n1 & C2 = prime_i n2)"
+proof
+	assume "EX n1 n2. n1 >= 1 & n2 >= 1 & n1 ~= n2
+												& C1 = prime_i n1 & C2 = prime_i n2"
+	then obtain n1 n2 where
+		p1: "C1 = prime_i n1" and p2: "C2 = prime_i n2" by blast
+	have "prime (prime_i n1)" by (rule prime_i_is_prime)
+	with p1 have "prime C1" by simp
+	with assms(1) show False by contradiction
+qed
+\end{holcode}
+\end{holblock}
 
 
 
@@ -383,8 +426,8 @@ x − (2n / SBn) − log(2π) − 0,5·log(1 − x−2) & x − (xp / p) − log
 
 Terme variable — côté Tchebychev :
 
-xp/p — exemple pour P = 29 :
-29²/2 + 29³/3 + 29⁵/5 ... + 29²⁹/29
+Tchebychev $x^p/p$ -- exemple pour 29 :
+$4^4/4 + 3^3/3 + 5^2/5 + 7^1/1 + 11^1/1 + 13^1/1 + 17^1/1 + 19^1/1 + 23^1/1 + 29^1/1 = 28.4765$
 
 Terme variable — côté Savard :
 
@@ -431,23 +474,29 @@ Ces trois concordances se verrouillent mutuellement : aucune ne peut être vraie
 \section{Section I — Rapport spectral 1/2 : les fondations}
 \subsection{I.1 Définition des suites SA et SB}
 
-Les deux suites fondamentales du régime 1/2 sont définies par des formules fermées, calculables directement pour tout entier n ≥ 1 :
+Les deux suites fondamentales du régime 1/2 sont définies par des formules fermées, calculables directement pour toute entier n ≥ 1 :
 
 SA(n) = (3,25 / 2) × 2n − 2
 
 SB(n) = (6,5 / 2) × 2n − 66
 
-Il est philosophiquement crucial de comprendre d'où viennent les constantes 3,25 et 6,5. Elles ne sont pas choisies arbitrairement pour simplifier une fraction algébrique. Elles émergent des sommes réelles des suites A et B construites par Philippe Thomas Savard, suites qui portent, terme à terme, les valeurs des nombres premiers réels (2, 3, 5, 7, 11, 13, …). Ce point est l'une des pierres angulaires philosophiques de toute la méthode : la primauté du numérique réel sur l'algébrique formel.
+Il est crucial de comprendre d'où viennent les constantes 3,25 et 6,5. Elles ne sont pas choisies arbitrairement pour simplifier une fraction algébrique : elles émergent des sommes réelles des suites A et B construites par Philippe Thomas Savard. Ces suites portent, terme à terme, les valeurs associées aux positions n = 1, 2, 3, 4, 5, 6, ... correspondant aux premiers (2, 3, 5, 7, 11, 13, ...). Ce point constitue l'une des pierres angulaires de la méthode : la primauté du numérique réel sur l'algébrique formel.
 
-En Isabelle/HOL, ces définitions s'écrivent :
+Cette idée explique pourquoi Savard défend la conclusion RH Re = 1/2 Vrai. Numériquement, les puissances impliquées font croître très rapidement les valeurs : quand n augmente avec la position des premiers, les sommes des suites A et B deviennent gigantesques. L'approche purement numérique devient alors difficile à maintenir, et l'on doit recourir à une stratégie algébrique plus élaborée. Pour Savard, la simplification algébrique des équations générales des suites A et B (notamment 3.25/6.5 = 1/2) ne doit pas être lue comme une simple commodité formelle, mais comme la traduction structurée d'une régularité numérique observée.
 
-Régime positif — n entier strictement positif (n ≥ 1)
+Dans l'argument numérique avancé par Savard, lorsque n <= -1 (régime des premiers négatifs), le plus grand premier négatif est -2, puis viennent -3, -5, etc. En appliquant psi(Savard), on observe que dans l'expression $2^{-n}/SB_n$, la somme B tend rapidement vers une valeur quasi constante autour de -66 (selon la forme $3.25 \times 2^{-n} - 66$). Pour n <= -15, SB_n est pratiquement égal à -66. Cette stabilisation soutient l'idée que les rapports spectraux restent à 1/2, y compris lorsque l'approche devient algébrique pour traiter de très grandes valeurs positives.
 
+Autrement dit, l'argument affirme que la cohérence RsP = 1/2 n'est pas seulement une écriture formelle, mais qu'elle est ancrée dans un comportement numérique robuste, visible aussi sur les premiers négatifs (-47, -43, -41, -37, -31, -29, -23, -19, -17, -13, -11, -7, -5, -3, -2). En analyse non standard, la valeur la plus proche de zéro est infiniment petite, mais infiniment proche de l'infini ; du côté négatif, la valeur la plus proche de zéro est infiniment grande et infiniment loin de l'infini négatif, infiniment petit.
+
+En Isabelle/HOL, ces définitions s'écrivent ainsi :
+
+\begin{holcode}[title={Code HOL — Régime positif (n ≥ 1)}]
 definition SA :: "nat => real" where
  "SA n = (3.25 / 2) * (2 \textasciicircum{} n) - 2"
 
 definition SB :: "nat => real" where
  "SB n = (6.5 / 2) * (2 \textasciicircum{} n) - 66"
+\end{holcode}
 
 Régime négatif — n entier strictement négatif (n ≤ −1)
 
@@ -458,33 +507,37 @@ SA\_neg(n) = 3,25 / 2ⁿ − 2
 
 Le code Isabelle/HOL correspondant, tiré du fichier methode\_spectral.thy (Section XII, lignes 365–382), est le suivant :
 
-(* Suites A et B négatives — régime n ≤ −1, k = 2 *)
+\begin{holcode}[title={Code HOL — Régime négatif (n ≤ −1, k = 2)}]
+(* Suites A et B negatives - regime n <= -1, k = 2 *)
 
-lemma somme\_A\_neg\_k\_value:
- "somme\_A\_neg\_k 2 n = 3.25 / (2 \textasciicircum{} n) - 2"
- unfolding somme\_A\_neg\_k\_def alpha\_A\_k\_def offset\_A\_k\_def by simp
+lemma somme_A_neg_k_value:
+ "somme_A_neg_k 2 n = 3.25 / (2 \textasciicircum{} n) - 2"
+ unfolding somme_A_neg_k_def alpha_A_k_def offset_A_k_def by simp
 
-lemma somme\_A\_neg\_m2:
- -- "Premier −2 (1 terme) : SA\_neg = 3.25 / 2\textasciicircum{}1 − 2 = −3/8"
- "somme\_A\_neg\_k 2 1 = -3/8"
- unfolding somme\_A\_neg\_k\_def alpha\_A\_k\_def offset\_A\_k\_def by simp
+lemma somme_A_neg_m2:
+ -- "Premier -2 (1 terme) : SA_neg = 3.25 / 2^1 - 2 = -3/8"
+ "somme_A_neg_k 2 1 = -3/8"
+ unfolding somme_A_neg_k_def alpha_A_k_def offset_A_k_def by simp
 
-lemma somme\_A\_neg\_m5:
- -- "Premier −5 (3 termes) : SA\_neg = 3.25 / 2\textasciicircum{}3 − 2 = −51/32"
- "somme\_A\_neg\_k 2 3 = -51/32"
- unfolding somme\_A\_neg\_k\_def alpha\_A\_k\_def offset\_A\_k\_def by simp
+lemma somme_A_neg_m5:
+ -- "Premier -5 (3 termes) : SA_neg = 3.25 / 2^3 - 2 = -51/32"
+ "somme_A_neg_k 2 3 = -51/32"
+ unfolding somme_A_neg_k_def alpha_A_k_def offset_A_k_def by simp
 
-lemma somme\_B\_neg\_m5:
- -- "Premier −5 (3 termes) : SB\_neg = 6.5 / 2\textasciicircum{}3 − 66 = −1043/16"
- "somme\_B\_neg\_k 2 3 = -1043/16"
- unfolding somme\_B\_neg\_k\_def alpha\_B\_k\_def offset\_B\_k\_def by simp
+lemma somme_B_neg_m5:
+ -- "Premier -5 (3 termes) : SB_neg = 6.5 / 2^3 - 66 = -1043/16"
+ "somme_B_neg_k 2 3 = -1043/16"
+ unfolding somme_B_neg_k_def alpha_B_k_def offset_B_k_def by simp
+\end{holcode}
 
 Le rapport spectral négatif est défini de façon parallèle au régime positif :
 
-definition RsP\_neg\_k :: "nat ⇒ nat ⇒ nat ⇒ real" where
- "RsP\_neg\_k k n1 n2 =
- (somme\_A\_neg\_k k n1 - somme\_A\_neg\_k k n2) /
- (somme\_B\_neg\_k k n1 - somme\_B\_neg\_k k n2)"
+\begin{holcode}[title={Code HOL — Définition de RsP négatif}]
+definition RsP_neg_k :: "nat => nat => nat => real" where
+ "RsP_neg_k k n1 n2 =
+ (somme_A_neg_k k n1 - somme_A_neg_k k n2) /
+ (somme_B_neg_k k n1 - somme_B_neg_k k n2)"
+\end{holcode}
 
 Et le rapport spectral reste égal à 1/2 pour tout n1 ≤ −1, n2 ≤ −1, n1 ≠ n2 — la même invariance que dans le régime positif.
 
@@ -518,9 +571,11 @@ Valeurs de référence \\ Pour n = 10 : SA(10) = 1 662 et SB(10) = 3 262. Pour n
 
 Voici le résultat central du régime 1/2, exprimé d'abord intuitivement. Pour deux rangs n1 et n2 distincts (tous deux ≥ 1), le rapport entre les différences des suites vaut toujours 1/2, quelle que soit la paire choisie. Si l'on prend les rangs 10 et 11, ou 3 et 47, ou 1 et 1 000 : le rapport est identiquement 1/2. Ce n'est pas une coïncidence algébrique — c'est une réalité numérique globale, et c'est ce que la preuve HOL certifie.
 
-theorem RsP\_un\_demi\_general:
- assumes "n1 ≥ 1" "n2 ≥ 1" "n1 ≠ n2"
+\begin{holcode}[title={Code HOL — Théorème RsP = 1/2 (régime central)}]
+theorem RsP_un_demi_general:
+ assumes "n1 >= 1" "n2 >= 1" "n1 ~= n2"
  shows "RsP n1 n2 = 1/2"
+\end{holcode}
 
 
 \begin{longtable}{|p{0.940\textwidth}|}
@@ -546,11 +601,13 @@ L'évidence de la méthode s'écrit:
 
 " Quand n>=1 et que n <=-1 et qu'il est un entier, toutes les valeurs de n ramènent a un premier P. toutes les valeurs de n sont la conséquence directe de la quantité de termes dans les suites A et B. Toutes les P entre eux respectent le rapport spectral 1/k. ce rapport est algébriquement incohérent et numériquement valide."
 
-lemma algebriquement\_incoherent\_local:
- -- A1/B1 ≠ 1/2 et A2/B2 ≠ 1/2
+\begin{holcode}[title={Code HOL — Contraste local/global}]
+lemma algebriquement_incoherent_local:
+ -- A1/B1 ~= 1/2 et A2/B2 ~= 1/2
 
-lemma coherence\_numerique\_reelle\_P:
+lemma coherence_numerique_reelle_P:
  -- (A1 - A2) / (B1 - B2) = 1/2
+\end{holcode}
 
 \subsection{I.4 Le digamma calculé et l'équation du premier}
 
@@ -564,8 +621,10 @@ Et l'équation centrale qui reconstitue le nombre premier :
 
 Cette équation est identiquement vraie — pas approximativement, pas à epsilon près : exactement. Le lemme HOL le certifie :
 
-lemma prime\_equation\_identity:
- "prime\_equation n p = real p"
+\begin{holcode}[title={Code HOL — Identité de reconstruction du premier}]
+lemma prime_equation_identity:
+ "prime_equation n p = real p"
+\end{holcode}
 
 La beauté de cette équation est qu'elle est presque tautologique une fois que l'on sait ce qu'est digamma\_calc. Mais c'est précisément cette tautologie qui constitue la preuve de reconstruction : connaître SB(n) et digamma\_calc(n, p) suffit à retrouver p sans aucune recherche, sans aucun crible.
 
@@ -743,6 +802,14 @@ n (rang) & Premier p & SA(n) & SB(n) & Digamma calculé & (SB − Digamma) / 64 
 
 Ces cinq résultats sont prouvés formellement par les lemmes SA\_9 à SA\_13, SB\_9 à SB\_13, et digamma\_calc\_23 à digamma\_calc\_41 dans le fichier methode\_spectral.thy. Chaque preuve HOL constitue une certification machinique de l'exactitude du calcul.
 
+\begin{holcode}[title={Index HOL — Validation des cinq premiers exemples}]
+(* Extraits de methode_spectral.thy, section I.5 *)
+lemmas SA_checks = SA_9 SA_10 SA_11 SA_12 SA_13
+lemmas SB_checks = SB_9 SB_10 SB_11 SB_12 SB_13
+lemmas digamma_checks =
+	digamma_calc_23 digamma_calc_29 digamma_calc_31 digamma_calc_37 digamma_calc_41
+\end{holcode}
+
 \end{exampleblock}
 
 ∴
@@ -771,8 +838,10 @@ Je présente ici la reconstruction du 947e (...) — plus précisément, du prem
 \item Digamma calculé : 1 316 180 + 65 536 = 1 381 716
 \item Reconstruction : (5 260 628 − 1 381 716) / 4 096 = 947 ✓
 \end{enumerate}
-lemma preuve\_premier\_947:
- "(suite\_B\_1\_4\_somme - digamma\_calcule\_1\_4) / 4096 = 947"
+\begin{holcode}[title={Code HOL — Premier 947}]
+lemma preuve_premier_947:
+ "(suite_B_1_4_somme - digamma_calcule_1_4) / 4096 = 947"
+\end{holcode}
 
 Notons que le diviseur est ici 4 096 = 46, contre 64 = 26 pour le régime 1/2. La puissance du diviseur suit la base géométrique du régime.
 
@@ -793,9 +862,11 @@ B1/3(n) = ((219/9)/12) × 3n − (487 × 1,5)
 
 La propriété d'invariance du rapport est prouvée dans toute sa généralité pour ce régime :
 
-theorem RsP\_un\_tiers\_constant:
- assumes "n1 > 0" "n2 > 0" "n1 ≠ n2"
- shows "RsP\_1\_3 n1 n2 = 1/3"
+\begin{holcode}[title={Code HOL — Théorème RsP = 1/3}]
+theorem RsP_un_tiers_constant:
+ assumes "n1 > 0" "n2 > 0" "n1 ~= n2"
+ shows "RsP_1_3 n1 n2 = 1/3"
+\end{holcode}
 
 La structure de la preuve est exactement parallèle à celle du régime 1/2 : les constantes dans les dénominateurs disparaissent par différence, et le facteur géométrique commun (3n1 − 3n2) s'annule dans le quotient, laissant (73/9) / (219/9) = 73/219 = 1/3.
 
@@ -873,6 +944,13 @@ RsP\_neg(n1, n2) = 1/2 pour tout n1 ≤ −1, n2 ≤ −1, n1 ≠ n2
 
 Ce résultat, qui prolonge naturellement le régime positif vers les entiers négatifs, est formellement prouvé en Isabelle/HOL et soutenu par les validations numériques de la Section XI (tableau psi\_savard, lignes négatives). Il constitue l'une des originalités les plus marquantes de la méthode.
 
+\begin{holcode}[title={Code HOL — Invariance RsP en régime négatif}]
+(* Schema de preuve utilise dans methode_spectral.thy *)
+theorem RsP_neg_un_demi_general:
+ assumes "n1 >= 1" "n2 >= 1" "n1 ~= n2"
+ shows "RsP_neg_k 2 n1 n2 = 1/2"
+\end{holcode}
+
 ∴
 
 \section{Section VII — Géométrie spectrale : asymétries}
@@ -886,8 +964,10 @@ L'asymétrie chaotique est une configuration dégradée où les indices ne suive
 
 Dans les deux cas, une contrainte commune s'applique : tous les indices doivent être valides, c'est-à-dire appartenir au domaine de définition des suites (n ≥ 1 ou n ≤ −1 selon le régime). Le lemme HOL garantit cette propriété :
 
-lemma asymetrie\_implique\_indices\_valides:
- -- Si asymétrie ordonnée ou chaotique, alors tous les indices sont valides
+\begin{holcode}[title={Code HOL — Validité des indices en asymétrie}]
+lemma asymetrie_implique_indices_valides:
+ -- Si asymetrie ordonnee ou chaotique, alors tous les indices sont valides
+\end{holcode}
 
 La distinction entre ces deux types d'asymétries est importante pour la théorie de la robustesse : elle montre que la Méthode Spectrale maintient ses propriétés fondamentales même dans des configurations non canoniques, pour autant que les indices restent valides.
 
@@ -908,10 +988,12 @@ Je rappelle d'abord ce qu'est prime\_i(i) : c'est le i-ième nombre premier, dé
 
 Le théorème central établit qu'il est logiquement impossible qu'un entier composé soit égal à prime\_i(i) pour un quelconque index i :
 
-theorem composite\_not\_prime\_i:
+\begin{holcode}[title={Code HOL — Théorème central d'exclusion des composés}]
+theorem composite_not_prime_i:
  fixes C :: nat
- assumes "¬ prime C"
- shows "∀ i. C ≠ prime\_i i"
+ assumes "~ prime C"
+ shows "ALL i. C ~= prime_i i"
+\end{holcode}
 
 
 \begin{longtable}{|p{0.940\textwidth}|}
@@ -1006,9 +1088,11 @@ La découverte originale de Philippe Savard est que les constantes spectrales 3,
 
 Ces valeurs sont universelles : elles se retrouvent pour toute suite de longueur n ≥ 8, quelle que soit la paire de rangs consécutifs considérée. Le théorème HOL le garantit :
 
-theorem ecart\_minimal\_universel\_A:
- assumes "n ≥ 8"
+\begin{holcode}[title={Code HOL — Constante spectrale 3,25 par différence fine}]
+theorem ecart_minimal_universel_A:
+ assumes "n >= 8"
  shows "(SA (n + 1) - SA n) / (2 \textasciicircum{} (n - 1)) = 3.25"
+\end{holcode}
 
 Ce résultat transforme une observation numérique (faite sur n = 10) en un théorème universel. C'est l'un des exemples les plus élégants de la façon dont la validation formelle élève une intuition empirique au rang de vérité mathématique.
 
@@ -1127,6 +1211,14 @@ Le théorème de synthèse est le point culminant du fichier methode\_spectral.t
 
 \subsubsection{Les cinq faits réunis}
 Chacun de ces faits est déjà un théorème ou un lemme HOL prouvé dans les sections précédentes du fichier methode\_spectral.thy. Le théorème de synthèse se contente de les assembler — il n'introduit aucun axiome nouveau.
+
+\begin{holcode}[title={Index HOL — Faits mobilisés par la synthèse}]
+(* References explicites citees dans ce document *)
+F2: hypothese_critique
+F4: RsP_universel_entier_naturel
+F5: composite_not_prime_i composite_no_reconstruction_position composite_pair_no_rsp_positions
+(* Pour F1 et F3 : voir les lemmes du Pont Savard (Section XIII) dans methode_spectral.thy *)
+\end{holcode}
 
 
 \begin{longtable}{|p{0.313\textwidth}|p{0.313\textwidth}|p{0.313\textwidth}|}

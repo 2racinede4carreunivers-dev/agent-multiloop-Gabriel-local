@@ -17,6 +17,7 @@ def RiemannHypothesis : Prop :=
 def PrimeSpectrum : Set ℕ :=
   {p : ℕ | Nat.Prime p}
 
+
 /-- Gap spectral entre zéros consécutifs -/
 def SpectralGap (n : ℕ) : ℝ :=
   let z_n := nth_riemann_zero n

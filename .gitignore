@@ -155,6 +155,28 @@ build/
 *.so
 *.dylib
 
+# LaTeX artifacts
+*.aux
+*.toc
+*.out
+*.listing
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+
+# LaTeX outputs - dossier theories/tex
+agent-multiloop-Gabriel-local/theories/tex/*.pdf
+agent-multiloop-Gabriel-local/theories/tex/PDF/
+agent-multiloop-Gabriel-local/theories/tex/*.aux
+agent-multiloop-Gabriel-local/theories/tex/*.listing
+agent-multiloop-Gabriel-local/theories/tex/*.log
+agent-multiloop-Gabriel-local/theories/tex/*.out
+agent-multiloop-Gabriel-local/theories/tex/*.toc
+
 # Docker
 .docker/
 docker-compose.override.yml

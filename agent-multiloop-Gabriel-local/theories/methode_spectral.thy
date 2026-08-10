@@ -1807,286 +1807,6 @@ lemma gap_m19_m5:
 (* (ligne 402) et sur la definition prime_i (ligne 408).     *)
 (**************************************************************)
 
-
-(**************************************************************)
-(* SECTION : Postulat spectral d'ecart 1/4                    *)
-(**************************************************************)
-
-text \<open>
-  Postulat spectral d'ecart pour le rapport 1/4 :
-
-  Pour toute paire de nombres premiers (p_high, p_low),
-  et pour leurs valeurs spectrales associees (A_next, B_high, D_high, D_low)
-  construites selon le modele 1/4, l'equation d'ecart donne exactement
-  la quantite de nombres entiers entre ces deux premiers :
-
-      gap_equation_1_4 ... = p_low - p_high
-\<close>
-axiomatization where
-  spectral_gap_postulate_1_4:
-    "!!p_high p_low A_next B_high D_high D_low.
-       prime p_high ==> prime p_low ==>
-       gap_equation_1_4 A_next B_high D_high D_low =
-         real (p_low - p_high)"
-
-
-(**************************************************************)
-(* SECTION : Lemme general pour l'ecart entre deux premiers   *)
-(**************************************************************)
-
-lemma gap_equation_1_4_for_primes:
-  assumes "prime p_high" "prime p_low"
-  shows "gap_equation_1_4 A_next B_high D_high D_low =
-         real (p_low - p_high)"
-  using spectral_gap_postulate_1_4 assms by blast
-
-
-(**************************************************************)
-(* SECTION : Lien avec l'exemple 947 / 881                    *)
-(**************************************************************)
-
-section "Validation de l'exemple 947 / 881 via l'equation generale 1/4"
-
-lemma ecart_947_881_1_4_via_gap_equation:
-  "gap_equation_1_4 SA_883_val SB_947_val D_947_val D_881_val = -65"
-  by (simp add: gap_equation_1_4_def
-                SA_883_val_def SB_947_val_def
-                D_947_val_def D_881_val_def)
-
-
-(**************************************************************)
-(* CHAPITRE DEUXIEME : Axiomatisation analytique (zeta) et spectrale *)
-(**************************************************************)
-
-text \<open>
-  Mise en garde concernant la presente section.
-
-  La section qui suit est fournie exclusivement a titre de reference conceptuelle.
-  Elle ne fait pas partie de l'oeuvre propre de l'auteur Philippe Thomas Savard et
-  n'est employee ici qu'en tant qu'exemple informatif destine a situer certains
-  elements analytiques dans un cadre logique compatible avec Isabelle/HOL.
-
-  Les contenus, notions ou structures evoques dans cette section ne constituent
-  pas une contribution originale de l'auteur et ne doivent pas etre interpretes
-  comme faisant partie integrante de la methode_spectral.thy. Ils ne sont cites
-  qu'a titre d'illustration conceptuelle, sans garantie, sans validation interne
-  et sans pretention a l'exactitude analytique ou historique.
-
-  Il est explicitement affirme que :
-
-    - la presente section ne limite, ne contraint, n'altere ni ne modifie en
-      aucune maniere la nature, la portee, la validite ou l'evolution des
-      references externes auxquelles elle fait allusion ;
-
-    - la methode_spectral.thy demeure une entite autonome, complete dans sa
-      propre structure, et ne depend en aucune maniere des exemples, axiomes ou
-      formulations presentes dans cette section ;
-
-    - la presente section ne cree aucune forme d'autoreference, de dependance
-      circulaire ou d'interaction logique entre la methode spectrale et les
-      references externes : chacune de ces entites demeure independante, valide
-      par elle-meme, et libre dans sa nature propre, sans restriction temporelle
-      ou conceptuelle ;
-
-    - aucune des deux entites - ni la methode_spectral.thy, ni les exemples
-      analytiques presentes ici - ne possede la capacite d'annuler, d'invalider
-      ou de restreindre l'autre, que ce soit par leur contenu, leur structure ou
-      leur interpretation.
-
-  En resume, la presente section constitue un exemple conceptuel independant,
-  sans effet contraignant, sans interaction logique obligatoire, et sans
-  influence sur la validite intrinseque de la methode spectrale ou des
-  references externes auxquelles elle renvoie.
-\<close>
-(**************************************************************)
-(* CHAPITRE DEUXIEME : Axiomatisation analytique (zeta) et spectrale *)
-(**************************************************************)
-
-section "Axiomatisation analytique et geometrique de la position des nombres premiers"
-
-text \<open>
-  Dans cette section, nous introduisons, sous forme axiomatique, le lien classique
-  de la theorie analytique des nombres entre les zeros de la fonction zeta de Riemann
-  et la position des nombres premiers. Cette axiomatisation n'est pas une creation
-  originale de l'auteur de la methode spectrale (Philippe Thomas Savard), mais une
-  abstraction inspiree des formules explicites de la theorie des nombres, telles
-  que celles de Riemann, von Mangoldt et leurs successeurs.
-\<close>
-text \<open>
-  1. Axiomatisation (abstraite) de la fonction zeta et de ses zeros.
-
-  On introduit un type abstrait pour representer les zeros non triviaux de zeta,
-  ainsi qu'une fonction donnant leur partie reelle. On ne formalise pas ici la
-  fonction zeta elle-meme, ni la formule explicite complete, mais on encode le fait
-  que les zeros determinent la position des nombres premiers, comme le suggerent
-  les formules explicites de Riemann/von Mangoldt.
-\<close>
-typedecl zero_zeta
-
-consts
-  Re_zero_zeta :: "zero_zeta => real"
-  Im_zero_zeta :: "zero_zeta => real"
-
-text \<open>
-  La fonction suivante represente, de maniere abstraite, la contribution d'un zero
-  de zeta a la determination de la position du n-ieme nombre premier. Elle est inspiree
-  des formules explicites (de type Riemann/von Mangoldt) qui expriment des fonctions
-  arithmetiques liees aux nombres premiers en termes de sommes sur les zeros de zeta.
-\<close>
-consts
-  prime_position_from_zero :: "zero_zeta => nat => bool"
-
-axiomatization where
-  explicit_formula_axiom:
-    "ALL n. EX r::zero_zeta. prime_position_from_zero r n"
-
-text \<open>
-  Interpretation : pour chaque entier naturel n, il existe au moins un zero non trivial
-  de zeta qui intervient dans la determination de la position du n-ieme nombre premier.
-  Cet axiome formalise, de maniere abstraite, l'idee que les zeros de zeta determinent
-  la position des nombres premiers, telle qu'on la trouve dans la theorie analytique
-  classique (formules explicites).
-\<close>
-text \<open>
-  2. Axiomatisation de l'evidence spectrale issue de la methode de Savard.
-
-  La methode spectrale, telle que developpee dans les sections precedentes, repose
-  sur les faits suivants (formules ici de maniere synthetique) :
-
-  - Quand n >= 1 et n <= -1 (au sens de la structure spectrale consideree),
-    tous les n ramenent a un nombre premier P.
-  - La valeur de n est determinee par la quantite de termes dans les suites A et B.
-  - Tous les nombres premiers P entre eux respectent le rapport spectral 1/k.
-  - Ce rapport 1/k est numeriquement valide mais algebriquement incoherent.
-
-  Nous encapsulons cette evidence sous forme de constantes et d'axiomes abstraits.
-\<close>
-typedecl indice_spectral   (* type abstrait pour les n de la methode spectrale *)
-typedecl premier_spectral  (* type abstrait pour les P de la methode spectrale *)
-consts
-  A_suite_ZeroZeta :: "indice_spectral => nat"
-  B_suite_ZeroZeta :: "indice_spectral => nat"
-  P_spectral       :: "indice_spectral => premier_spectral"
-  rapport_spectral :: "premier_spectral => premier_spectral => rat"
-
-text \<open>
-  Axiome : chaque indice spectral n (dans le domaine considere) ramene a un nombre
-  premier spectral P, et la valeur de n est determinee par la quantite de termes
-  dans les suites A et B. Le detail constructif est donne dans les sections precedentes
-  de la methode spectrale ; ici, nous en donnons une abstraction logique.
-\<close>
-
-axiomatization where
-  spectral_index_to_prime:
-    "ALL n::indice_spectral. EX P::premier_spectral. P_spectral n = P" and
-
-  spectral_index_from_suites:
-    "ALL n::indice_spectral. A_suite_ZeroZeta n + B_suite_ZeroZeta n >= 1"
-
-text \<open>
-  Axiome : tous les nombres premiers spectraux P entre eux respectent un rapport
-  spectral 1/k, numeriquement valide mais algebriquement incoherent. On encode
-  cela en imposant que le rapport entre deux premiers spectraux soit toujours
-  de la forme 1/k pour un certain entier k >= 1.
-\<close>
-
-consts
-  k_spectral :: "premier_spectral => premier_spectral => nat"
-
-axiomatization where
-  rapport_spectral_forme:
-    "ALL P Q::premier_spectral. k_spectral P Q >= 1
-      --> rapport_spectral P Q = 1 / (of_nat (k_spectral P Q))"
-
-text \<open>
-  Interpretation : le rapport spectral entre deux nombres premiers (ou groupes de
-  nombres premiers asymetriques ordonnes ou chaotiques, ou symetriques en paire
-  1*1 ou n*n) spectraux P et Q est toujours de la forme 1/k, avec k un entier
-  naturel >= 1. Ce rapport est numeriquement bien defini (dans Q), mais ne
-  correspond pas a une relation algebrique classique entre nombres premiers,
-  d'ou l'expression algebriquement incoherent dans le texte conceptuel.
-\<close>
-text \<open>
-  3. Axiomatisation du lien entre la fonction zeta et la geometrie spectrale.
-
-  Nous introduisons maintenant un axiome de concordance : la structure spectrale
-  issue de la methode de Savard est compatible, sur le plan conceptuel, avec
-  la structure analytique donnee par les zeros de zeta. Plus precisement, nous
-  postulons qu'a chaque indice spectral n correspond un zero de zeta qui intervient
-  dans la determination de la position du nombre premier associe.
-\<close>
-consts
-  zero_associe :: "indice_spectral => zero_zeta"
-
-axiomatization where
-  concordance_spectrale:
-    "ALL n::indice_spectral.
-       prime_position_from_zero (zero_associe n)
-         (A_suite_ZeroZeta n + B_suite_ZeroZeta n)"
-
-
-text \<open>
-  Interpretation : pour chaque indice spectral n, il existe un zero de zeta (ici
-  represente par \<open>zero_associe n\<close>) qui intervient, via la fonction abstraite
-  \<open>prime_position_from_zero\<close>, dans la determination de la position du nombre
-  premier correspondant (code ici par la quantite de termes A_suite_ZeroZeta n + B_suite_ZeroZeta n).
-
-  Cet axiome formalise le parallele conceptuel entre :
-
-  - la theorie analytique de la fonction zeta de Riemann, ou les zeros determinent
-    la position des nombres premiers (formules explicites) ;
-  - la geometrie du spectre des nombres premiers de la methode de Savard,
-    ou les indices spectraux n, les suites A et B, et le rapport 1/k organisent
-    la position des nombres premiers dans une structure spectrale coherente.
-
-  Cette section ne pretend pas demontrer l'hypothese de Riemann, ni reconstruire
-  la theorie analytique complete de zeta, mais elle etablit, dans le langage
-  d'Isabelle/HOL, une concordance axiomatique entre la methode spectrale et la
-  vision analytique classique de la distribution des nombres premiers.
-\<close>
-(****************************************************************************
- * SECTION XI. REGLES DE CONSTRUCTION DES SUITES A_i / B_i (8+ TERMES)
- * POUR RAPPORT SPECTRAL RsP = 1/k_i
- *
- * Auteur      : Philippe Thomas Savard
- * Date        : 29 juin 2026
- * Lieu        : Lévis, Chaudière-Appalaches, Canada
- * Licence     : Apache 2.0 (Attribution et conservation des mentions requises)
- *
- * REGLES FORMALISEES SANS UTILISATION DE LA TACTIQUE 'RING'
- * Utilisation exclusive de: algebra_simps, field_simps et simplifications directes.
- ****************************************************************************)
-
-section "Section XI : Regles de construction des suites A_i et B_i (Pas de Ring)"
-
-text \<open>
-  Soient :
-    - x1, x2 : les indices spectraux (avec r = x2 / x1 comme raison de base).
-    - La condition terminale multiplicative s'appliquant sur l'avant-dernier
-      et le dernier terme de la famille.
-    - La substitution de la position 6 de la suite B par l'exposant 7 (Saut Zêta).
-\<close>
-
-subsection \<open>XI.1. Definition de la raison et des formes de base\<close>
-
-definition raison_spectrale :: "real \<Rightarrow> real \<Rightarrow> real" where
-  "raison_spectrale x1 x2 = x2 / x1"
-
-subsection \<open>XI.2. Progression simple (Positions 1 a n-2)\<close>
-
-definition progression_simple_terme :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> real" where
-  "progression_simple_terme a1 r i = a1 * (r ^ (i - 1))"
-
-subsection \<open>XI.3. Condition Terminale : Avant-dernier terme (Position n-1)\<close>
-
-text \<open>
-  Règle du manuscrit :
-  (x2/x1 - x1/x2) * terme_precedant_avant_dernier = avant_dernier
-  Soit : (r - 1/r) * (a1 * r^(n-3))
-\<close>
-definition avant_dernier_terme_savard :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> real" where
-  "avant_dernier_terme_savard a1 r n = (r - 1 / r) * (a1 * r ^ (n - 3))"
-
 section "Preuve par l'absurde : la Methode Spectrale exclut strictement les composes"
 
 subsection "Theoreme principal - Aucun compose n'est un prime_i"
@@ -2679,182 +2399,290 @@ lemma gap_equation_1_4_simplifiee:
      (A_next - B_high + D_high - D_low) / 4096"
   unfolding gap_equation_1_4_def by simp
 
-section "Section XII : Construction generalisee pour rapport spectral 1/k_i"
+
+(**************************************************************)
+(* SECTION : Postulat spectral d'ecart 1/4                    *)
+(**************************************************************)
 
 text \<open>
-  Generalisation pour tout rapport spectral 1/k_i (k = 2, 3, 4, ...) :
+  Postulat spectral d'ecart pour le rapport 1/4 :
 
-    somme_A_pos(k, n) = (alpha_A(k) / 2) * k^n - offset_A(k)
-    somme_B_pos(k, n) = (alpha_B(k) / 2) * k^n - offset_B(k)
-    somme_A_neg(k, n) = alpha_A(k) * k^(-n) - offset_A(k)
-    somme_B_neg(k, n) = alpha_B(k) * k^(-n) - offset_B(k)
+  Pour toute paire de nombres premiers (p_high, p_low),
+  et pour leurs valeurs spectrales associees (A_next, B_high, D_high, D_low)
+  construites selon le modele 1/4, l'equation d'ecart donne exactement
+  la quantite de nombres entiers entre ces deux premiers :
 
-  ou les constantes Savard sont :
-    k=2 : alpha_A=3.25,    alpha_B=6.5,    offset_A=2,   offset_B=66
-    k=3 : alpha_A=73/9,    alpha_B=219/9,  offset_A=1.5, offset_B=487*1.5
-    k=4 : alpha_A=241/16,  alpha_B=964/16, offset_A=4/3, offset_B=3073*(4/3)
+      gap_equation_1_4 ... = p_low - p_high
+\<close>
+axiomatization where
+  spectral_gap_postulate_1_4:
+    "!!p_high p_low A_next B_high D_high D_low.
+       prime p_high ==> prime p_low ==>
+       gap_equation_1_4 A_next B_high D_high D_low =
+         real (p_low - p_high)"
+
+
+(**************************************************************)
+(* SECTION : Lemme general pour l'ecart entre deux premiers   *)
+(**************************************************************)
+
+lemma gap_equation_1_4_for_primes:
+  assumes "prime p_high" "prime p_low"
+  shows "gap_equation_1_4 A_next B_high D_high D_low =
+         real (p_low - p_high)"
+  using spectral_gap_postulate_1_4 assms by blast
+
+
+(**************************************************************)
+(* SECTION : Lien avec l'exemple 947 / 881                    *)
+(**************************************************************)
+
+section "Validation de l'exemple 947 / 881 via l'equation generale 1/4"
+
+lemma ecart_947_881_1_4_via_gap_equation:
+  "gap_equation_1_4 SA_883_val SB_947_val D_947_val D_881_val = -65"
+  by (simp add: gap_equation_1_4_def
+                SA_883_val_def SB_947_val_def
+                D_947_val_def D_881_val_def)
+
+
+(**************************************************************)
+(* CHAPITRE DEUXIEME : Axiomatisation analytique (zeta) et spectrale *)
+(**************************************************************)
+
+text \<open>
+  Mise en garde concernant la presente section.
+
+  La section qui suit est fournie exclusivement a titre de reference conceptuelle.
+  Elle ne fait pas partie de l'oeuvre propre de l'auteur Philippe Thomas Savard et
+  n'est employee ici qu'en tant qu'exemple informatif destine a situer certains
+  elements analytiques dans un cadre logique compatible avec Isabelle/HOL.
+
+  Les contenus, notions ou structures evoques dans cette section ne constituent
+  pas une contribution originale de l'auteur et ne doivent pas etre interpretes
+  comme faisant partie integrante de la methode_spectral.thy. Ils ne sont cites
+  qu'a titre d'illustration conceptuelle, sans garantie, sans validation interne
+  et sans pretention a l'exactitude analytique ou historique.
+
+  Il est explicitement affirme que :
+
+    - la presente section ne limite, ne contraint, n'altere ni ne modifie en
+      aucune maniere la nature, la portee, la validite ou l'evolution des
+      references externes auxquelles elle fait allusion ;
+
+    - la methode_spectral.thy demeure une entite autonome, complete dans sa
+      propre structure, et ne depend en aucune maniere des exemples, axiomes ou
+      formulations presentes dans cette section ;
+
+    - la presente section ne cree aucune forme d'autoreference, de dependance
+      circulaire ou d'interaction logique entre la methode spectrale et les
+      references externes : chacune de ces entites demeure independante, valide
+      par elle-meme, et libre dans sa nature propre, sans restriction temporelle
+      ou conceptuelle ;
+
+    - aucune des deux entites - ni la methode_spectral.thy, ni les exemples
+      analytiques presentes ici - ne possede la capacite d'annuler, d'invalider
+      ou de restreindre l'autre, que ce soit par leur contenu, leur structure ou
+      leur interpretation.
+
+  En resume, la presente section constitue un exemple conceptuel independant,
+  sans effet contraignant, sans interaction logique obligatoire, et sans
+  influence sur la validite intrinseque de la methode spectrale ou des
+  references externes auxquelles elle renvoie.
+\<close>
+(**************************************************************)
+(* CHAPITRE DEUXIEME : Axiomatisation analytique (zeta) et spectrale *)
+(**************************************************************)
+
+section "Axiomatisation analytique et geometrique de la position des nombres premiers"
+
+text \<open>
+  Dans cette section, nous introduisons, sous forme axiomatique, le lien classique
+  de la theorie analytique des nombres entre les zeros de la fonction zeta de Riemann
+  et la position des nombres premiers. Cette axiomatisation n'est pas une creation
+  originale de l'auteur de la methode spectrale (Philippe Thomas Savard), mais une
+  abstraction inspiree des formules explicites de la theorie des nombres, telles
+  que celles de Riemann, von Mangoldt et leurs successeurs.
+\<close>
+text \<open>
+  1. Axiomatisation (abstraite) de la fonction zeta et de ses zeros.
+
+  On introduit un type abstrait pour representer les zeros non triviaux de zeta,
+  ainsi qu'une fonction donnant leur partie reelle. On ne formalise pas ici la
+  fonction zeta elle-meme, ni la formule explicite complete, mais on encode le fait
+  que les zeros determinent la position des nombres premiers, comme le suggerent
+  les formules explicites de Riemann/von Mangoldt.
+\<close>
+typedecl zero_zeta
+
+consts
+  Re_zero_zeta :: "zero_zeta => real"
+  Im_zero_zeta :: "zero_zeta => real"
+
+text \<open>
+  La fonction suivante represente, de maniere abstraite, la contribution d'un zero
+  de zeta a la determination de la position du n-ieme nombre premier. Elle est inspiree
+  des formules explicites (de type Riemann/von Mangoldt) qui expriment des fonctions
+  arithmetiques liees aux nombres premiers en termes de sommes sur les zeros de zeta.
+\<close>
+consts
+  prime_position_from_zero :: "zero_zeta => nat => bool"
+
+axiomatization where
+  explicit_formula_axiom:
+    "ALL n. EX r::zero_zeta. prime_position_from_zero r n"
+
+text \<open>
+  Interpretation : pour chaque entier naturel n, il existe au moins un zero non trivial
+  de zeta qui intervient dans la determination de la position du n-ieme nombre premier.
+  Cet axiome formalise, de maniere abstraite, l'idee que les zeros de zeta determinent
+  la position des nombres premiers, telle qu'on la trouve dans la theorie analytique
+  classique (formules explicites).
+\<close>
+text \<open>
+  2. Axiomatisation de l'evidence spectrale issue de la methode de Savard.
+
+  La methode spectrale, telle que developpee dans les sections precedentes, repose
+  sur les faits suivants (formules ici de maniere synthetique) :
+
+  - Quand n >= 1 et n <= -1 (au sens de la structure spectrale consideree),
+    tous les n ramenent a un nombre premier P.
+  - La valeur de n est determinee par la quantite de termes dans les suites A et B.
+  - Tous les nombres premiers P entre eux respectent le rapport spectral 1/k.
+  - Ce rapport 1/k est numeriquement valide mais algebriquement incoherent.
+
+  Nous encapsulons cette evidence sous forme de constantes et d'axiomes abstraits.
+\<close>
+typedecl indice_spectral   (* type abstrait pour les n de la methode spectrale *)
+typedecl premier_spectral  (* type abstrait pour les P de la methode spectrale *)
+consts
+  A_suite_ZeroZeta :: "indice_spectral => nat"
+  B_suite_ZeroZeta :: "indice_spectral => nat"
+  P_spectral       :: "indice_spectral => premier_spectral"
+  rapport_spectral :: "premier_spectral => premier_spectral => rat"
+
+text \<open>
+  Axiome : chaque indice spectral n (dans le domaine considere) ramene a un nombre
+  premier spectral P, et la valeur de n est determinee par la quantite de termes
+  dans les suites A et B. Le detail constructif est donne dans les sections precedentes
+  de la methode spectrale ; ici, nous en donnons une abstraction logique.
 \<close>
 
-(* === XII.1. Constantes Savard parametriques === *)
+axiomatization where
+  spectral_index_to_prime:
+    "ALL n::indice_spectral. EX P::premier_spectral. P_spectral n = P" and
 
-definition alpha_A_k :: "nat \<Rightarrow> real" where
-  "alpha_A_k k =
-     (if k = 2 then 3.25
-      else if k = 3 then 73/9
-      else if k = 4 then 241/16
-      else 0)"
-
-definition alpha_B_k :: "nat \<Rightarrow> real" where
-  "alpha_B_k k =
-     (if k = 2 then 6.5
-      else if k = 3 then 219/9
-      else if k = 4 then 964/16
-      else 0)"
-
-definition offset_A_k :: "nat \<Rightarrow> real" where
-  "offset_A_k k =
-     (if k = 2 then 2
-      else if k = 3 then 1.5
-      else if k = 4 then 4/3
-      else 0)"
-
-definition offset_B_k :: "nat \<Rightarrow> real" where
-  "offset_B_k k =
-     (if k = 2 then 66
-      else if k = 3 then 487 * 1.5
-      else if k = 4 then 3073 * (4/3)
-      else 0)"
-
-(* === XII.2. Formules fermees positives et negatives === *)
-
-definition somme_A_pos_k :: "nat \<Rightarrow> nat \<Rightarrow> real" where
-  "somme_A_pos_k k n = (alpha_A_k k / 2) * (real k) ^ n - offset_A_k k"
-
-definition somme_B_pos_k :: "nat \<Rightarrow> nat \<Rightarrow> real" where
-  "somme_B_pos_k k n = (alpha_B_k k / 2) * (real k) ^ n - offset_B_k k"
-
-definition somme_A_neg_k :: "nat \<Rightarrow> nat \<Rightarrow> real" where
-  "somme_A_neg_k k n = alpha_A_k k / ((real k) ^ n) - offset_A_k k"
-
-definition somme_B_neg_k :: "nat \<Rightarrow> nat \<Rightarrow> real" where
-  "somme_B_neg_k k n = alpha_B_k k / ((real k) ^ n) - offset_B_k k"
-
-(* === XII.3. Lemmes : compatibilite avec SA, SB existantes (k=2 positif) === *)
-
-lemma somme_A_pos_k_eq_SA:
-  "somme_A_pos_k 2 n = SA n"
-  unfolding somme_A_pos_k_def alpha_A_k_def offset_A_k_def SA_def
-  by simp
-
-lemma somme_B_pos_k_eq_SB:
-  "somme_B_pos_k 2 n = SB n"
-  unfolding somme_B_pos_k_def alpha_B_k_def offset_B_k_def SB_def
-  by simp
-
-(* === XII.4. Construction terme-a-terme suite A (positive, k=2)              === *)
-(*   Pour i de 1 a n-2 : a_i = a_1 * r^(i-1) (progression simple, r = k)      *)
-(*   Position n-1 (penultieme) : a_(n-2) * (r - 1/r)                          *)
-(*   Position n (dernier)      : penultieme * r                               *)
-(*   Pour n = 1 : juste a_1                                                   *)
-
-definition terme_A_pos :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
-  "terme_A_pos a1 r n i =
-     (if i = 1 then a1
-      else if (n = 2 \<and> i = 2) then a1 * (r - 1/r)
-      else if (n \<ge> 3 \<and> i \<le> n - 2) then a1 * r ^ (i - 1)
-      else if (n \<ge> 3 \<and> i = n - 1) then a1 * r ^ (n - 3) * (r - 1/r)
-      else if (n \<ge> 3 \<and> i = n) then a1 * r ^ (n - 3) * (r - 1/r) * r
-      else 0)"
-
-(* === XII.5. Suite B : meme construction + substitution position 6 (n >= 8) === *)
-
-definition terme_B_pos :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
-  "terme_B_pos a1 r n i =
-     (if (n < 8) then terme_A_pos a1 r n i
-      else if (i = 1) then a1
-      else if i \<le> 5 then a1 * r ^ (i - 1)
-      else if (i = 6) then a1 * r ^ 6
-      else if i \<le> n - 2 then a1 * r ^ i
-      else if (i = n - 1) then a1 * r ^ (n - 2) * (r - 1/r)
-      else if (i = n) then a1 * r ^ (n - 2) * (r - 1/r) * r
-      else 0)"
-
-(* === XII.6. Validations numeriques cle (k=2, a1=2, r=2)                     === *)
-
-(*  Suite A 1 terme   : [2]                                                   *)
-lemma suite_A_1_terme:
-  "terme_A_pos 2 2 1 1 = 2"
-  unfolding terme_A_pos_def by simp
-
-(*  Suite A 2 termes  : [2, 3]                                                *)
-lemma suite_A_2_termes_pos1:
-  "terme_A_pos 2 2 2 1 = 2"
-  unfolding terme_A_pos_def by simp
-
-lemma suite_A_2_termes_pos2:
-  "terme_A_pos 2 2 2 2 = 3"
-  unfolding terme_A_pos_def by simp
-
-(*  Suite A 3 termes  : [2, 3, 6]                                             *)
-lemma suite_A_3_termes_pos3:
-  "terme_A_pos 2 2 3 3 = 6"
-  unfolding terme_A_pos_def by simp
-
-(*  Suite A 4 termes  : [2, 4, 6, 12] - position 3 = 6 (penultieme)           *)
-lemma suite_A_4_termes_pos3:
-  "terme_A_pos 2 2 4 3 = 6"
-  unfolding terme_A_pos_def by simp
-
-lemma suite_A_4_termes_pos4:
-  "terme_A_pos 2 2 4 4 = 12"
-  unfolding terme_A_pos_def by simp
-
-(*  Suite A 5 termes  : [2, 4, 8, 12, 24]                                     *)
-lemma suite_A_5_termes_pos4:
-  "terme_A_pos 2 2 5 4 = 12"
-  unfolding terme_A_pos_def by simp
-
-lemma suite_A_5_termes_pos5:
-  "terme_A_pos 2 2 5 5 = 24"
-  unfolding terme_A_pos_def by simp
-
-(*  Suite A 7 termes  : [2, 4, 8, 16, 32, 48, 96]                             *)
-lemma suite_A_7_termes_pos6:
-  "terme_A_pos 2 2 7 6 = 48"
-  unfolding terme_A_pos_def by simp
-
-lemma suite_A_7_termes_pos7:
-  "terme_A_pos 2 2 7 7 = 96"
-  unfolding terme_A_pos_def by simp
-
-(*  Suite A 8 termes  : [2, 4, 8, 16, 32, 64, 96, 192]                        *)
-lemma suite_A_8_termes_pos6:
-  "terme_A_pos 2 2 8 6 = 64"
-  unfolding terme_A_pos_def by simp
-
-lemma suite_A_8_termes_pos7:
-  "terme_A_pos 2 2 8 7 = 96"
-  unfolding terme_A_pos_def by simp
-
-lemma suite_A_8_termes_pos8:
-  "terme_A_pos 2 2 8 8 = 192"
-  unfolding terme_A_pos_def by simp
-
-(*  Suite B 8 termes  : [2, 4, 8, 16, 32, 128, 192, 384]                      *)
-(*  Substitution position 6 : 128 = 2 * 64 = position 7 de la suite A         *)
-(*  Positions 7 et 8 suivent la regle penultieme / dernier avec base decalee  *)
-lemma suite_B_8_termes_pos6:
-  "terme_B_pos 2 2 8 6 = 128"
-  unfolding terme_B_pos_def by simp
-
-lemma suite_B_8_termes_pos7:
-  "terme_B_pos 2 2 8 7 = 192"
-  unfolding terme_B_pos_def by simp
-
-lemma suite_B_8_termes_pos8:
-  "tubsection \<open>XI.4. Condition Terminale : Dernier terme (Position n)\<close>
+  spectral_index_from_suites:
+    "ALL n::indice_spectral. A_suite_ZeroZeta n + B_suite_ZeroZeta n >= 1"
 
 text \<open>
+  Axiome : tous les nombres premiers spectraux P entre eux respectent un rapport
+  spectral 1/k, numeriquement valide mais algebriquement incoherent. On encode
+  cela en imposant que le rapport entre deux premiers spectraux soit toujours
+  de la forme 1/k pour un certain entier k >= 1.
+\<close>
+
+consts
+  k_spectral :: "premier_spectral => premier_spectral => nat"
+
+axiomatization where
+  rapport_spectral_forme:
+    "ALL P Q::premier_spectral. k_spectral P Q >= 1
+      --> rapport_spectral P Q = 1 / (of_nat (k_spectral P Q))"
+
+text \<open>
+  Interpretation : le rapport spectral entre deux nombres premiers (ou groupes de
+  nombres premiers asymetriques ordonnes ou chaotiques, ou symetriques en paire
+  1*1 ou n*n) spectraux P et Q est toujours de la forme 1/k, avec k un entier
+  naturel >= 1. Ce rapport est numeriquement bien defini (dans Q), mais ne
+  correspond pas a une relation algebrique classique entre nombres premiers,
+  d'ou l'expression algebriquement incoherent dans le texte conceptuel.
+\<close>
+text \<open>
+  3. Axiomatisation du lien entre la fonction zeta et la geometrie spectrale.
+
+  Nous introduisons maintenant un axiome de concordance : la structure spectrale
+  issue de la methode de Savard est compatible, sur le plan conceptuel, avec
+  la structure analytique donnee par les zeros de zeta. Plus precisement, nous
+  postulons qu'a chaque indice spectral n correspond un zero de zeta qui intervient
+  dans la determination de la position du nombre premier associe.
+\<close>
+consts
+  zero_associe :: "indice_spectral => zero_zeta"
+
+axiomatization where
+  concordance_spectrale:
+    "ALL n::indice_spectral.
+       prime_position_from_zero (zero_associe n)
+         (A_suite_ZeroZeta n + B_suite_ZeroZeta n)"
+
+
+text \<open>
+  Interpretation : pour chaque indice spectral n, il existe un zero de zeta (ici
+  represente par \<open>zero_associe n\<close>) qui intervient, via la fonction abstraite
+  \<open>prime_position_from_zero\<close>, dans la determination de la position du nombre
+  premier correspondant (code ici par la quantite de termes A_suite_ZeroZeta n + B_suite_ZeroZeta n).
+
+  Cet axiome formalise le parallele conceptuel entre :
+
+  - la theorie analytique de la fonction zeta de Riemann, ou les zeros determinent
+    la position des nombres premiers (formules explicites) ;
+  - la geometrie du spectre des nombres premiers de la methode de Savard,
+    ou les indices spectraux n, les suites A et B, et le rapport 1/k organisent
+    la position des nombres premiers dans une structure spectrale coherente.
+
+  Cette section ne pretend pas demontrer l'hypothese de Riemann, ni reconstruire
+  la theorie analytique complete de zeta, mais elle etablit, dans le langage
+  d'Isabelle/HOL, une concordance axiomatique entre la methode spectrale et la
+  vision analytique classique de la distribution des nombres premiers.
+\<close>
+(****************************************************************************
+ * SECTION XI. REGLES DE CONSTRUCTION DES SUITES A_i / B_i (8+ TERMES)
+ * POUR RAPPORT SPECTRAL RsP = 1/k_i
+ *
+ * Auteur      : Philippe Thomas Savard
+ * Date        : 29 juin 2026
+ * Lieu        : Lévis, Chaudière-Appalaches, Canada
+ * Licence     : Apache 2.0 (Attribution et conservation des mentions requises)
+ *
+ * REGLES FORMALISEES SANS UTILISATION DE LA TACTIQUE 'RING'
+ * Utilisation exclusive de: algebra_simps, field_simps et simplifications directes.
+ ****************************************************************************)
+
+section "Section XI : Regles de construction des suites A_i et B_i (Pas de Ring)"
+
+text \<open>
+  Soient :
+    - x1, x2 : les indices spectraux (avec r = x2 / x1 comme raison de base).
+    - La condition terminale multiplicative s'appliquant sur l'avant-dernier
+      et le dernier terme de la famille.
+    - La substitution de la position 6 de la suite B par l'exposant 7 (Saut Zêta).
+\<close>
+
+subsection \<open>XI.1. Definition de la raison et des formes de base\<close>
+
+definition raison_spectrale :: "real \<Rightarrow> real \<Rightarrow> real" where
+  "raison_spectrale x1 x2 = x2 / x1"
+
+subsection \<open>XI.2. Progression simple (Positions 1 a n-2)\<close>
+
+definition progression_simple_terme :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> real" where
+  "progression_simple_terme a1 r i = a1 * (r ^ (i - 1))"
+
+subsection \<open>XI.3. Condition Terminale : Avant-dernier terme (Position n-1)\<close>
+
+text \<open>
+  Règle du manuscrit :
+  (x2/x1 - x1/x2) * terme_precedant_avant_dernier = avant_dernier
+  Soit : (r - 1/r) * (a1 * r^(n-3))
+\<close>
+definition avant_dernier_terme_savard :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> real" where
+  "avant_dernier_terme_savard a1 r n = (r - 1 / r) * (a1 * r ^ (n - 3))"
+
+subsection \<open>XI.4. Condition Terminale : Dernier terme (Position n)\<close>
+
+text \<open>
+
   Règle du manuscrit : dernier = avant_dernier * (x2/x1) = avant_dernier * r
 \<close>
 definition dernier_terme_savard :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> real" where
@@ -3414,7 +3242,181 @@ axiomatization where
   somme_B_eq_SB:
     "n >= 8 \<Longrightarrow> somme_B n = SB n"
 
-erme_B_pos 2 2 8 8 = 384"
+
+section "Section XII : Construction generalisee pour rapport spectral 1/k_i"
+
+text \<open>
+  Generalisation pour tout rapport spectral 1/k_i (k = 2, 3, 4, ...) :
+
+    somme_A_pos(k, n) = (alpha_A(k) / 2) * k^n - offset_A(k)
+    somme_B_pos(k, n) = (alpha_B(k) / 2) * k^n - offset_B(k)
+    somme_A_neg(k, n) = alpha_A(k) * k^(-n) - offset_A(k)
+    somme_B_neg(k, n) = alpha_B(k) * k^(-n) - offset_B(k)
+
+  ou les constantes Savard sont :
+    k=2 : alpha_A=3.25,    alpha_B=6.5,    offset_A=2,   offset_B=66
+    k=3 : alpha_A=73/9,    alpha_B=219/9,  offset_A=1.5, offset_B=487*1.5
+    k=4 : alpha_A=241/16,  alpha_B=964/16, offset_A=4/3, offset_B=3073*(4/3)
+\<close>
+
+(* === XII.1. Constantes Savard parametriques === *)
+
+definition alpha_A_k :: "nat \<Rightarrow> real" where
+  "alpha_A_k k =
+     (if k = 2 then 3.25
+      else if k = 3 then 73/9
+      else if k = 4 then 241/16
+      else 0)"
+
+definition alpha_B_k :: "nat \<Rightarrow> real" where
+  "alpha_B_k k =
+     (if k = 2 then 6.5
+      else if k = 3 then 219/9
+      else if k = 4 then 964/16
+      else 0)"
+
+definition offset_A_k :: "nat \<Rightarrow> real" where
+  "offset_A_k k =
+     (if k = 2 then 2
+      else if k = 3 then 1.5
+      else if k = 4 then 4/3
+      else 0)"
+
+definition offset_B_k :: "nat \<Rightarrow> real" where
+  "offset_B_k k =
+     (if k = 2 then 66
+      else if k = 3 then 487 * 1.5
+      else if k = 4 then 3073 * (4/3)
+      else 0)"
+
+(* === XII.2. Formules fermees positives et negatives === *)
+
+definition somme_A_pos_k :: "nat \<Rightarrow> nat \<Rightarrow> real" where
+  "somme_A_pos_k k n = (alpha_A_k k / 2) * (real k) ^ n - offset_A_k k"
+
+definition somme_B_pos_k :: "nat \<Rightarrow> nat \<Rightarrow> real" where
+  "somme_B_pos_k k n = (alpha_B_k k / 2) * (real k) ^ n - offset_B_k k"
+
+definition somme_A_neg_k :: "nat \<Rightarrow> nat \<Rightarrow> real" where
+  "somme_A_neg_k k n = alpha_A_k k / ((real k) ^ n) - offset_A_k k"
+
+definition somme_B_neg_k :: "nat \<Rightarrow> nat \<Rightarrow> real" where
+  "somme_B_neg_k k n = alpha_B_k k / ((real k) ^ n) - offset_B_k k"
+
+(* === XII.3. Lemmes : compatibilite avec SA, SB existantes (k=2 positif) === *)
+
+lemma somme_A_pos_k_eq_SA:
+  "somme_A_pos_k 2 n = SA n"
+  unfolding somme_A_pos_k_def alpha_A_k_def offset_A_k_def SA_def
+  by simp
+
+lemma somme_B_pos_k_eq_SB:
+  "somme_B_pos_k 2 n = SB n"
+  unfolding somme_B_pos_k_def alpha_B_k_def offset_B_k_def SB_def
+  by simp
+
+(* === XII.4. Construction terme-a-terme suite A (positive, k=2)              === *)
+(*   Pour i de 1 a n-2 : a_i = a_1 * r^(i-1) (progression simple, r = k)      *)
+(*   Position n-1 (penultieme) : a_(n-2) * (r - 1/r)                          *)
+(*   Position n (dernier)      : penultieme * r                               *)
+(*   Pour n = 1 : juste a_1                                                   *)
+
+definition terme_A_pos :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
+  "terme_A_pos a1 r n i =
+     (if i = 1 then a1
+      else if (n = 2 \<and> i = 2) then a1 * (r - 1/r)
+      else if (n \<ge> 3 \<and> i \<le> n - 2) then a1 * r ^ (i - 1)
+      else if (n \<ge> 3 \<and> i = n - 1) then a1 * r ^ (n - 3) * (r - 1/r)
+      else if (n \<ge> 3 \<and> i = n) then a1 * r ^ (n - 3) * (r - 1/r) * r
+      else 0)"
+
+(* === XII.5. Suite B : meme construction + substitution position 6 (n >= 8) === *)
+
+definition terme_B_pos :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
+  "terme_B_pos a1 r n i =
+     (if (n < 8) then terme_A_pos a1 r n i
+      else if (i = 1) then a1
+      else if i \<le> 5 then a1 * r ^ (i - 1)
+      else if (i = 6) then a1 * r ^ 6
+      else if i \<le> n - 2 then a1 * r ^ i
+      else if (i = n - 1) then a1 * r ^ (n - 2) * (r - 1/r)
+      else if (i = n) then a1 * r ^ (n - 2) * (r - 1/r) * r
+      else 0)"
+
+(* === XII.6. Validations numeriques cle (k=2, a1=2, r=2)                     === *)
+
+(*  Suite A 1 terme   : [2]                                                   *)
+lemma suite_A_1_terme:
+  "terme_A_pos 2 2 1 1 = 2"
+  unfolding terme_A_pos_def by simp
+
+(*  Suite A 2 termes  : [2, 3]                                                *)
+lemma suite_A_2_termes_pos1:
+  "terme_A_pos 2 2 2 1 = 2"
+  unfolding terme_A_pos_def by simp
+
+lemma suite_A_2_termes_pos2:
+  "terme_A_pos 2 2 2 2 = 3"
+  unfolding terme_A_pos_def by simp
+
+(*  Suite A 3 termes  : [2, 3, 6]                                             *)
+lemma suite_A_3_termes_pos3:
+  "terme_A_pos 2 2 3 3 = 6"
+  unfolding terme_A_pos_def by simp
+
+(*  Suite A 4 termes  : [2, 4, 6, 12] - position 3 = 6 (penultieme)           *)
+lemma suite_A_4_termes_pos3:
+  "terme_A_pos 2 2 4 3 = 6"
+  unfolding terme_A_pos_def by simp
+
+lemma suite_A_4_termes_pos4:
+  "terme_A_pos 2 2 4 4 = 12"
+  unfolding terme_A_pos_def by simp
+
+(*  Suite A 5 termes  : [2, 4, 8, 12, 24]                                     *)
+lemma suite_A_5_termes_pos4:
+  "terme_A_pos 2 2 5 4 = 12"
+  unfolding terme_A_pos_def by simp
+
+lemma suite_A_5_termes_pos5:
+  "terme_A_pos 2 2 5 5 = 24"
+  unfolding terme_A_pos_def by simp
+
+(*  Suite A 7 termes  : [2, 4, 8, 16, 32, 48, 96]                             *)
+lemma suite_A_7_termes_pos6:
+  "terme_A_pos 2 2 7 6 = 48"
+  unfolding terme_A_pos_def by simp
+
+lemma suite_A_7_termes_pos7:
+  "terme_A_pos 2 2 7 7 = 96"
+  unfolding terme_A_pos_def by simp
+
+(*  Suite A 8 termes  : [2, 4, 8, 16, 32, 64, 96, 192]                        *)
+lemma suite_A_8_termes_pos6:
+  "terme_A_pos 2 2 8 6 = 64"
+  unfolding terme_A_pos_def by simp
+
+lemma suite_A_8_termes_pos7:
+  "terme_A_pos 2 2 8 7 = 96"
+  unfolding terme_A_pos_def by simp
+
+lemma suite_A_8_termes_pos8:
+  "terme_A_pos 2 2 8 8 = 192"
+  unfolding terme_A_pos_def by simp
+
+(*  Suite B 8 termes  : [2, 4, 8, 16, 32, 128, 192, 384]                      *)
+(*  Substitution position 6 : 128 = 2 * 64 = position 7 de la suite A         *)
+(*  Positions 7 et 8 suivent la regle penultieme / dernier avec base decalee  *)
+lemma suite_B_8_termes_pos6:
+  "terme_B_pos 2 2 8 6 = 128"
+  unfolding terme_B_pos_def by simp
+
+lemma suite_B_8_termes_pos7:
+  "terme_B_pos 2 2 8 7 = 192"
+  unfolding terme_B_pos_def by simp
+
+lemma suite_B_8_termes_pos8:
+  "terme_B_pos 2 2 8 8 = 384"
   unfolding terme_B_pos_def by simp
 
 (*  Suite B 9 termes  : [2, 4, 8, 16, 32, 128, 256, 384, 768]                 *)

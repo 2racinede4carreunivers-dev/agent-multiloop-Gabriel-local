@@ -267,7 +267,7 @@ https://github.com/2racinede4carreunivers-dev/Ia_geo_spec_prem_app_deplo.git \\
 
 \begin{longtable}{|p{0.940\textwidth}|}
 \hline
-Note liminaire \\ Ce document contient des formules, des preuves formelles validées par Isabelle/HOL, et la voix de l'auteur, qui cherche à faire toucher au lecteur ce que la géométrie des nombres premiers lui a fait ressentir. Cette géométrie est la chair qui le touche et qu'il touche en retour. Toute est tiré des documents sources et du fichier methode spectrale. Vous êtes invités a consulter les fichiers Readme des dépôts publics mise en place et à la dispositon des contributeur via PR, de partager, consulter, cloner, selon les permissions de la LICENSE Apach 2.0 Bienvenu a tous.\_spectral.thy validé par l'assistant de preuve. Méthode Spectrale de Philippe Thomas Savard. \\
+Note liminaire \\ .L’ensemble des informations mathématiques est tiré des documents sources et du fichier methode_spectrale.thy. Vous êtes chaleureusement invités à consulter les README des dépôts publics, à contribuer via PR, à partager ou cloner les projets conformément aux permissions de la LICENSE Apache 2.0. Bienvenue dans la communauté. Méthode Spectrale de Philippe Thomas Savard. \\
 \hline
 \end{longtable}
 
@@ -282,7 +282,7 @@ Note méthodologique de correction \\ La correction de ce document a été appli
 \section{Avant-propos — La Chair Première Géométrique}
 Il y a dans les nombres premiers quelque chose qui résiste. Pas seulement à la preuve — à la vision. On les devine là, dissimulés dans le tissu des entiers, mais, dès qu'on croit les tenir, ils glissent. Ce poids freiné par cette glisse éveille la chair géométrique qui touche et que l'on touche en retour dans la géométrie du spectre des nombres premiers. Les méthodes classiques les saisissent par contraste : le crible d'Ératosthène les garde en rejetant ce qui n'est pas eux; la formule explicite de Riemann les retrouve comme des fantômes dans les zéros d'une fonction de variable complexe. Dans les deux cas, on parle autour des premiers. Pas depuis eux.
 
-Ce document part d'une observation naïve — presque enfantine. Que se passe-t-il si l'on construit deux suites de nombres réels dont les valeurs portent directement, terme à terme, l'empreinte des premiers réels (2, 3, 5, 7, 11, 13, …) ? Que se passe-t-il si ces deux suites, en apparence distinctes, entretiennent un rapport constant, inaltérable, quelle que soit la paire de termes que l'on considère ? Ce rapport — je l'appelle le rapport spectral, noté RsP — vaut exactement 1/2 pour le régime central. Et ce 1/2 n'est pas un artefact algébrique. Il émerge de la réalité numérique des sommes construites à partir des premiers eux-mêmes. La géométrie du spectre des nombres premiers permet de mettre au jour, contre l'habitude, qu'entre deux nombres entiers il ne peut y avoir moins que 1; cette géométrie dévoile le spectre de la possibilité d'un code entre les premiers, code qui peut se lire entre chacun d'eux, ou entre des groupes d'entre eux, sous le rapport 1/2.
+Ce document part d'une observation naïve. Que se passe-t-il si l'on construit deux suites de nombres réels dont les valeurs portent directement, terme à terme, l'empreinte des premiers réels (2, 3, 5, 7, 11, 13, …) ? Que se passe-t-il si ces deux suites, en apparence distinctes, entretiennent un rapport constant, inaltérable, quelle que soit la paire de termes que l'on considère ? Ce rapport — je l'appelle le rapport spectral, noté RsP — vaut exactement 1/2 pour le régime central. Et ce 1/2 n'est pas un artefact algébrique. Il émerge de la réalité numérique des sommes construites à partir des premiers eux-mêmes. La géométrie du spectre des nombres premiers permet de mettre au jour, contre l'habitude, qu'entre deux nombres entiers il ne peut y avoir moins que 1; cette géométrie dévoile le spectre de la possibilité d'un code entre les premiers, code qui peut se lire entre chacun d'eux, ou entre des groupes d'entre eux, sous le rapport 1/2.
 
 C'est cette observation qui a ouvert la fissure. Pas une fissure dans un raisonnement — une fissure dans le mur de l'évidence, dans cette certitude tacite que les premiers sont fondamentalement désordonnés et chaotiques. La Méthode Spectrale de Philippe Thomas Savard est un formalisme arithmétique original qui reconstruit les nombres premiers à partir de suites à rapport spectral constant. Ce n'est pas une méthode de crible, ni une conjecture probabiliste : c'est une géométrie — une structure interne, invariante, qui porte en elle la trace de chaque nombre premier, et de lui seul.
 
@@ -1078,60 +1078,7 @@ Pour construire une suite spectrale de longueur n ≥ 8, le manuscrit de Philipp
 \item Position n (dernier) : avant-dernier terme multiplié par r, soit la continuation géométrique du terme terminal.
 \item Position 6 de la suite B — saut structurel « x7 (Zêta) » : la suite B insère à la position 6 la valeur a1 × r6, décalant tous les termes suivants d'un rang. Ce saut structurel est la marque de fabrique de la suite B et l'origine de l'asymétrie ordonnée |B| = |A| + 1.
 \end{enumerate}
-\subsection{Les constantes spectrales 3,25 et 6,5 — extraction par différence fine}
 
-La découverte originale de Philippe Savard est que les constantes spectrales 3,25 et 6,5 s'extraient par différence fine entre deux suites consécutives :
-
-(SA(10) − SA(9)) / 28 = (1 662 − 830) / 256 = 832 / 256 = 3,25 ✓
-
-(SB(10) − SB(9)) / 28 = (3 262 − 1 598) / 256 = 1 664 / 256 = 6,5 ✓
-
-Ces valeurs sont universelles : elles se retrouvent pour toute suite de longueur n ≥ 8, quelle que soit la paire de rangs consécutifs considérée. Le théorème HOL le garantit :
-
-\begin{holcode}[title={Code HOL — Constante spectrale 3,25 par différence fine}]
-theorem ecart_minimal_universel_A:
- assumes "n >= 8"
- shows "(SA (n + 1) - SA n) / (2 \textasciicircum{} (n - 1)) = 3.25"
-\end{holcode}
-
-Ce résultat transforme une observation numérique (faite sur n = 10) en un théorème universel. C'est l'un des exemples les plus élégants de la façon dont la validation formelle élève une intuition empirique au rang de vérité mathématique.
-
-∴
-
-\section{Section X — Locale spectral\_family : la factorisation générique}
-\subsection{Une seule structure formelle pour tous les régimes}
-
-L'une des avancées les plus importantes de la formalisation HOL est la définition du locale spectral\_family. Un locale en Isabelle est une structure algébrique paramétrée : on y prouve des propriétés générales une seule fois, et les modèles concrets en sont des interprétations (instanciations des paramètres).
-
-Le locale spectral\_family capture les invariants algébriques communs aux trois modèles spectraux (1/2, 1/3, 1/4). Plutôt que de prouver l'invariance du rapport spectral trois fois — une fois pour chaque régime — on la prouve une seule fois dans le locale, et les trois régimes en héritent automatiquement.
-
-Les trois interprétations concrètes sont :
-
-
-\begin{longtable}{|p{0.188\textwidth}|p{0.188\textwidth}|p{0.188\textwidth}|p{0.188\textwidth}|p{0.188\textwidth}|}
-\hline
-Régime & Base k & coef\_A & coef\_B & Ratio \\
-\hline
-regime\_1\_2 & 2 & 3,25/2 & 6,5/2 & 1/2 \\
-\hline
-regime\_1\_3 & 3 & 73/108 & 219/108 & 1/3 \\
-\hline
-regime\_1\_4 & 4 & 241/192 & 964/192 & 1/4 \\
-\hline
-\end{longtable}
-
-
-
-\begin{longtable}{|p{0.940\textwidth}|}
-\hline
-Avertissement philosophique fondamental \\ Les vérifications algébriques (3,25/6,5 = 1/2, 73/219 = 1/3, 241/964 = 1/4) sont trompeuses si on les prend pour de simples identités algébriques choisies ad hoc. Ces coefficients émergent des sommes réelles des suites construites par Philippe Savard, qui portent les valeurs des nombres premiers réels. Leur ratio rationnel simple est une propriété qui se découvre, non qui se choisit. \\
-\hline
-\end{longtable}
-
-
-L'extensibilité de cette architecture est remarquable : pour définir un nouveau modèle 1/5, 1/6, ou 1/k quelconque, une seule ligne d'interprétation suffit — le locale spectral\_family fournit automatiquement toutes les propriétés prouvées.
-
-∴
 
 \section{Section XI — Le Pont Logique Savard : Tchebychev ↔ Spectral ↔ RH}
 Cette section est le couronnement de l'œuvre. Je cherche ici à montrer que la Méthode Spectrale n'est pas un formalisme isolé, mais qu'elle s'insère précisément dans le tissu de la théorie analytique des nombres, au niveau exact où la conjecture de Riemann fait son nœud.
@@ -1148,9 +1095,11 @@ où ρ parcourt les zéros non triviaux de ζ(s). Cette identité est fondamenta
 
 La grande originalité du Pont Savard est la suivante : la somme infinie et analytiquement complexe sur les zéros de zêta est substituée par un ratio géométrique fini construit directement sur SB(n) :
 
-psi\_savard(x, n) = x − 2n/SB(n) − log10(2π) − (1/2) × log10(1 − x−2)
+\[
+\psi_{\mathrm{Savard}}(x,n)=x-\frac{2^{n}}{SB(n)}-\log(2\pi)-\frac{1}{2}\log(1-x^{-2})
+\]
 
-La substitution ∑ρ(xρ/ρ) → 2n/SB(n) est la clé du pont. Elle transforme une somme sur des zéros complexes non triviaux en un ratio entre une puissance géométrique et la somme partielle SB, deux objets entièrement arithmétiques, construits à partir des premiers réels. Cette substitution est justifiée numériquement par les validations ci-dessous.
+La substitution $\sum_{\rho}(x^{\rho}/\rho) \to 2^{n}/SB(n)$ est la clé du pont. Elle transforme une somme sur des zéros complexes non triviaux en un ratio entre une puissance géométrique et la somme partielle SB, deux objets entièrement arithmétiques, construits à partir des premiers réels. Cette substitution est justifiée numériquement par les validations ci-dessous.
 
 \subsection{Validations numériques — le pont en chiffres}
 

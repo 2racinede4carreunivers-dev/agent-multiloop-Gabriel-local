@@ -59,6 +59,7 @@ theories/tex/*.aux
 theories/tex/*.out
 theories/tex/*.toc
 theories/tex/*.listing
+theories/tex/*.litening
 theories/tex/*.log
 theories/tex/*.fls
 theories/tex/*.fdb_latexmk

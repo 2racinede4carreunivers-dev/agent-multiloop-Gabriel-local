@@ -1,4 +1,4 @@
-
+﻿
 theory methode_spectral
   imports Complex_Main "HOL-Computational_Algebra.Primes"
 begin
@@ -6,17 +6,17 @@ begin
 (*
 ================================================================================
   Fichier : Methode_spectral.thy
-    /fiʃje : metod spɛktʁal ti/
+    /fi╩âje : metod sp╔økt╩üal ti/
   Date : Vingt-quatre juillet deux mille vingt-six
-    /vɛ̃t katʁ ʒɥijɛ dø mil vɛ̃t sis/
-  Lieu : Lévis Chaudière-Appalaches Canada
-    /levi ʃodjɛʁ apalak kanada/
-  Titre : L'univers est au carré
-    /lynivɛʁ ɛto kaʁe/
-  Sous-titre : Chapitre — La géométrie du spectre des nombres premiers
-    /ʃapitʁ — la ʒeometʁi dy spɛktʁ dɛ nɔ̃bʁ pʁəmje/
+    /v╔ø╠ât kat╩ü ╩Æ╔Ñij╔ø d├© mil v╔ø╠ât sis/
+  Lieu : L├®vis Chaudi├¿re-Appalaches Canada
+    /levi ╩âodj╔ø╩ü apalak kanada/
+  Titre : L'univers est au carr├®
+    /lyniv╔ø╩ü ╔øto ka╩üe/
+  Sous-titre : Chapitre ÔÇö La g├®om├®trie du spectre des nombres premiers
+    /╩âapit╩ü ÔÇö la ╩Æeomet╩üi dy sp╔økt╩ü d╔ø n╔ö╠âb╩ü p╩ü╔Ömje/
   Auteur : Philippe Thomas Savard
-    /filip tɔma savaʁ/
+    /filip t╔öma sava╩ü/
 ================================================================================
 *)
 
@@ -423,24 +423,24 @@ qed
 
 (****************************************************************)
 (* AJOUT : Note conceptuelle et lemmes de double instance       *)
-(* d'analyse (Algébrique vs Numérique Réelle)                   *)
+(* d'analyse (Alg├®brique vs Num├®rique R├®elle)                   *)
 (****************************************************************)
 
 text \<open>
   NOTE DE L'AUTEUR (Philippe Thomas Savard) :
   Quand n >= 1 et que n <= -1 et qu'il est un entier alors toutes les valeurs
-  de n ramènent à un premier P. Toutes les valeurs de n sont la conséquence de la
-  quantité de termes dans les suites A et B. Toutes les P entre eux respectent
-  le rapport spectral 1/k. Ce rapport est numériquement valide mais
-  algébriquement inconséquent.
+  de n ram├¿nent ├á un premier P. Toutes les valeurs de n sont la cons├®quence de la
+  quantit├® de termes dans les suites A et B. Toutes les P entre eux respectent
+  le rapport spectral 1/k. Ce rapport est num├®riquement valide mais
+  alg├®briquement incons├®quent.
 
-  Par l'unicité d'application de l'équation de Chebyshev envers la fonction Zêta,
-  le fait que la méthode spectrale s'y substitue numériquement prouve le lien direct
-  avec Zêta. De plus, la nature exclusive de RsP = 1/2 sur l'ensemble des premiers P,
-  validée par l'exclusion des composés C par l'absurde, implique la vérité de Re = 1/2.
+  Par l'unicit├® d'application de l'├®quation de Chebyshev envers la fonction Z├¬ta,
+  le fait que la m├®thode spectrale s'y substitue num├®riquement prouve le lien direct
+  avec Z├¬ta. De plus, la nature exclusive de RsP = 1/2 sur l'ensemble des premiers P,
+  valid├®e par l'exclusion des compos├®s C par l'absurde, implique la v├®rit├® de Re = 1/2.
 \<close>
 
-subsection \<open>Instance 1 : Incohérence algébrique locale (Espace Imaginaire)\<close>
+subsection \<open>Instance 1 : Incoh├®rence alg├®brique locale (Espace Imaginaire)\<close>
 
 lemma algebriquement_incoherent_local:
   fixes A1 A2 B1 B2 :: real
@@ -448,7 +448,7 @@ lemma algebriquement_incoherent_local:
   shows "A1 / B1 \<noteq> 1/2 \<and> A2 / B2 \<noteq> 1/2"
   using assms by simp
 
-subsection \<open>Instance 2 : Cohérence numérique réelle globale (Re = 1/2)\<close>
+subsection \<open>Instance 2 : Coh├®rence num├®rique r├®elle globale (Re = 1/2)\<close>
 
 lemma coherence_numerique_reelle_P:
   fixes A1 A2 B1 B2 :: real
@@ -2050,7 +2050,7 @@ text \<open>
  *
  * Auteur      : Philippe Thomas Savard
  * Date        : 29 juin 2026
- * Lieu        : Lévis, Chaudière-Appalaches, Canada
+ * Lieu        : L├®vis, Chaudi├¿re-Appalaches, Canada
  * Licence     : Apache 2.0 (Attribution et conservation des mentions requises)
  *
  * REGLES FORMALISEES SANS UTILISATION DE LA TACTIQUE 'RING'
@@ -2064,7 +2064,7 @@ text \<open>
     - x1, x2 : les indices spectraux (avec r = x2 / x1 comme raison de base).
     - La condition terminale multiplicative s'appliquant sur l'avant-dernier
       et le dernier terme de la famille.
-    - La substitution de la position 6 de la suite B par l'exposant 7 (Saut Zêta).
+    - La substitution de la position 6 de la suite B par l'exposant 7 (Saut Z├¬ta).
 \<close>
 
 subsection \<open>XI.1. Definition de la raison et des formes de base\<close>
@@ -2080,7 +2080,7 @@ definition progression_simple_terme :: "real \<Rightarrow> real \<Rightarrow> na
 subsection \<open>XI.3. Condition Terminale : Avant-dernier terme (Position n-1)\<close>
 
 text \<open>
-  Règle du manuscrit :
+  R├¿gle du manuscrit :
   (x2/x1 - x1/x2) * terme_precedant_avant_dernier = avant_dernier
   Soit : (r - 1/r) * (a1 * r^(n-3))
 \<close>
@@ -2855,7 +2855,7 @@ lemma suite_B_8_termes_pos8:
   "tubsection \<open>XI.4. Condition Terminale : Dernier terme (Position n)\<close>
 
 text \<open>
-  Règle du manuscrit : dernier = avant_dernier * (x2/x1) = avant_dernier * r
+  R├¿gle du manuscrit : dernier = avant_dernier * (x2/x1) = avant_dernier * r
 \<close>
 definition dernier_terme_savard :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> real" where
   "dernier_terme_savard a1 r n = (avant_dernier_terme_savard a1 r n) * r"
@@ -2870,11 +2870,11 @@ definition suite_A_savard_construction :: "real \<Rightarrow> real \<Rightarrow>
       else if (i = n) then dernier_terme_savard a1 r n
       else 0)"
 
-subsection \<open>XI.6. Substitution Spécifique Position 6 de la Suite B (n \<ge> 8)\<close>
+subsection \<open>XI.6. Substitution Sp├®cifique Position 6 de la Suite B (n \<ge> 8)\<close>
 
 text \<open>
-  Règle du manuscrit : La suite B prend la progression classique mais insère
-  le saut structurel "x^7 (Zêta)" à la position 6, décalant les termes suivants.
+  R├¿gle du manuscrit : La suite B prend la progression classique mais ins├¿re
+  le saut structurel "x^7 (Z├¬ta)" ├á la position 6, d├®calant les termes suivants.
 \<close>
 definition suite_B_savard_construction :: "real \<Rightarrow> real \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
   "suite_B_savard_construction a1 r n i =
@@ -2887,7 +2887,7 @@ definition suite_B_savard_construction :: "real \<Rightarrow> real \<Rightarrow>
       else if (i = n) then ((r - 1 / r) * (a1 * r ^ (n - 2))) * r
       else 0)"
 
-subsection \<open>XI.7. Sommation et Formules Fermées Globales\<close>
+subsection \<open>XI.7. Sommation et Formules Ferm├®es Globales\<close>
 
 definition somme_A_compacte_savard :: "real \<Rightarrow> nat \<Rightarrow> real" where
   "somme_A_compacte_savard r n = (3.25 / 2) * (r ^ n) - 2"
@@ -2901,8 +2901,8 @@ definition rapport_spectral_total_savard :: "real \<Rightarrow> nat \<Rightarrow
   "rapport_spectral_total_savard r n = somme_A_compacte_savard r n / somme_B_compacte_savard r n"
 
 text \<open>
-  Preuve de l'identité du taux d'accroissement constant menant au rapport 1/2.
-  Validée en forçant la mise au même dénominateur avant la division globale.
+  Preuve de l'identit├® du taux d'accroissement constant menant au rapport 1/2.
+  Valid├®e en for├ºant la mise au m├¬me d├®nominateur avant la division globale.
 \<close>
 lemma preuve_rapport_spectral_limite_savard:
   assumes "n \<ge> 8" and "r > 1"
@@ -2942,10 +2942,10 @@ proof -
 
   from step1 step2 show ?thesis by simp
 qed
-subsection \<open>XI.9. Lemmes de validation numérique par différence fine\<close>
+subsection \<open>XI.9. Lemmes de validation num├®rique par diff├®rence fine\<close>
 
 text \<open>
-  Vérification de l'extraction de la constante Savard 3.25 pour la suite A
+  V├®rification de l'extraction de la constante Savard 3.25 pour la suite A
   entre les niveaux macroscopiques n=10 et n=9 sur la zone stable (2^8).
 \<close>
 lemma validation_constante_A_savard:
@@ -2953,7 +2953,7 @@ lemma validation_constante_A_savard:
   by (simp add: field_simps)
 
 text \<open>
-  Vérification de l'extraction de la constante Savard 6.5 pour la suite B
+  V├®rification de l'extraction de la constante Savard 6.5 pour la suite B
   entre les niveaux macroscopiques n=10 et n=9 sur la zone stable (2^8).
 \<close>
 lemma validation_constante_B_savard:
@@ -2963,21 +2963,21 @@ lemma validation_constante_B_savard:
 (****************************************************************************
  * FIN DE LA SECTION XI - RECONSTRUITE AVEC SUCCES POUR ISABELLE/HOL
  ****************************************************************************)
-subsection "XI.10.b Détermination formelle des constantes par différence fine"
+subsection "XI.10.b D├®termination formelle des constantes par diff├®rence fine"
 
 text \<open>
-  Cette section formalise la découverte de Philippe Thomas Savard concernant
-  l'extraction des constantes 3.25 et 6.5 par la différence fine de deux suites
-  consécutives (10 et 9 termes), normalisée par l'écart minimal géométrique (2^8).
+  Cette section formalise la d├®couverte de Philippe Thomas Savard concernant
+  l'extraction des constantes 3.25 et 6.5 par la diff├®rence fine de deux suites
+  cons├®cutives (10 et 9 termes), normalis├®e par l'├®cart minimal g├®om├®trique (2^8).
 \<close>
 
-(* Définition des valeurs numériques brutes constatées à 9 et 10 termes *)
+(* D├®finition des valeurs num├®riques brutes constat├®es ├á 9 et 10 termes *)
 definition valeur_A_10 :: real where "valeur_A_10 = 1662"
 definition valeur_A_9  :: real where "valeur_A_9  = 830"
 definition valeur_B_10 :: real where "valeur_B_10 = 3262"
 definition valeur_B_9  :: real where "valeur_B_9  = 1598"
 
-(* Facteur d'échelle de la zone stable (8 termes dénombrables) *)
+(* Facteur d'├®chelle de la zone stable (8 termes d├®nombrables) *)
 definition echelle_stable :: real where "echelle_stable = 2 ^ 8"
 
 (* THEOREME 1 : Extraction de la constante de la suite A *)
@@ -2992,7 +2992,7 @@ theorem extraction_constante_B:
   unfolding valeur_B_10_def valeur_B_9_def echelle_stable_def
   by simp
 
-(* GENERALISATION : Lien logique avec les formules globales fermées existantes *)
+(* GENERALISATION : Lien logique avec les formules globales ferm├®es existantes *)
 lemma generalisation_ecart_minimal_A:
   fixes n :: nat
   assumes hA10: "valeur_A_10 = SA 10"
@@ -3037,11 +3037,11 @@ text \<open>
   le rapport spectral 1/k_i pour tout k entier (k = 2, 3, 4, ...).
 \<close>
 
-subsection "XI.12. Preuve analytique générale de l'écart minimal stable"
+subsection "XI.12. Preuve analytique g├®n├®rale de l'├®cart minimal stable"
 text \<open>
-  Théorème généralisé de Philippe Thomas Savard :
-  Démonstration que pour toute suite de longueur n >= 8, la différence fine
-  divisée par le facteur d'échelle géométrique (2^(n-2)) extrait de manière
+  Th├®or├¿me g├®n├®ralis├® de Philippe Thomas Savard :
+  D├®monstration que pour toute suite de longueur n >= 8, la diff├®rence fine
+  divis├®e par le facteur d'├®chelle g├®om├®trique (2^(n-2)) extrait de mani├¿re
   invariante les constantes spectrales 3.25 et 6.5.
 \<close>
 (* THEOREME GENERALISE : Suite A *)
@@ -3230,7 +3230,7 @@ text \<open>
     regime_1_4 : k=4, coef_A = 241/192, coef_B = 964/192, offA = 4/3, offB = 3073*4/3
 
   --------------------------------------------------------------------------
-  NOTE CONCEPTUELLE MAJEURE (Philippe Savard) - Cohérence numérique reelle
+  NOTE CONCEPTUELLE MAJEURE (Philippe Savard) - Coh├®rence num├®rique reelle
   --------------------------------------------------------------------------
   Les "verifications algebriques triviales" (3.25/6.5 = 1/2, 73/219 = 1/3,
   241/964 = 1/4) sont TROMPEUSES si on les prend pour de simples identites
@@ -3348,33 +3348,33 @@ lemma RsP_generic_1_4_is_quarter:
 
 (***************************************************************)
 (*  SECTION XI.A : Suites spectrales A_i et B_i (version k=2)  *)
-(*  Ajoutée après la Section XI originale                      *)
+(*  Ajout├®e apr├¿s la Section XI originale                      *)
 (***************************************************************)
 
 text \<open>
-  Cette section introduit les versions spécialisées des suites A_i et B_i
-  pour le régime spectral k = 2, avec a1 = 2 et r = 2. Ces suites sont
-  directement construites à partir des définitions générales de la Section XI.
+  Cette section introduit les versions sp├®cialis├®es des suites A_i et B_i
+  pour le r├®gime spectral k = 2, avec a1 = 2 et r = 2. Ces suites sont
+  directement construites ├á partir des d├®finitions g├®n├®rales de la Section XI.
 \<close>
-(* Suite A spécialisée : a1 = 2, r = 2 *)
+(* Suite A sp├®cialis├®e : a1 = 2, r = 2 *)
 definition A_suite_InDSpecT :: "nat => nat => real" where
   "A_suite_InDSpecT n i = suite_A_savard_construction 2 2 n i"
 
-(* Suite B spécialisée : a1 = 2, r = 2 *)
+(* Suite B sp├®cialis├®e : a1 = 2, r = 2 *)
 definition B_suite_InDSpecT :: "nat => nat => real" where
   "B_suite_InDSpecT n i = suite_B_savard_construction 2 2 n i"
 
 text \<open>
-  Les formes fermées SA(n) et SB(n) sont celles démontrées dans la Section XI.
-  (Les définitions canoniques `SA` et `SB` figurent déjà en amont — voir
+  Les formes ferm├®es SA(n) et SB(n) sont celles d├®montr├®es dans la Section XI.
+  (Les d├®finitions canoniques `SA` et `SB` figurent d├®j├á en amont ÔÇö voir
    lignes ~353-357 : `SA n = (3.25 / 2) * (2 ^ n) - 2` et
-   `SB n = (6.5 / 2) * (2 ^ n) - 66`. Nous ne les redéclarons donc pas ici,
+   `SB n = (6.5 / 2) * (2 ^ n) - 66`. Nous ne les red├®clarons donc pas ici,
    ce qui provoquerait un conflit de noms en Isabelle/HOL. Cette section
-   les REUTILISE simplement pour construire les lemmes de cohérence.)
+   les REUTILISE simplement pour construire les lemmes de coh├®rence.)
 \<close>
 
 text \<open>
-  Sommation terme-à-terme des suites A_i et B_i.
+  Sommation terme-├á-terme des suites A_i et B_i.
 \<close>
 
 definition somme_A :: "nat => real" where
@@ -3384,10 +3384,10 @@ definition somme_B :: "nat => real" where
   "somme_B n = (\<Sum> i\<in>{1..n}. B_suite_InDSpecT n i)"
 
 text \<open>
-  Lemmes de cohérence : les sommes terme-à-terme des suites A_i et B_i
-  coïncident avec les formes fermées SA(n) et SB(n) SUR LEUR DOMAINE
-  DE VALIDITE. Ces résultats sont garantis par les démonstrations de la
-  Section XI (différence fine, stabilité spectrale, extraction des
+  Lemmes de coh├®rence : les sommes terme-├á-terme des suites A_i et B_i
+  co├»ncident avec les formes ferm├®es SA(n) et SB(n) SUR LEUR DOMAINE
+  DE VALIDITE. Ces r├®sultats sont garantis par les d├®monstrations de la
+  Section XI (diff├®rence fine, stabilit├® spectrale, extraction des
   constantes).
 
   NOTE TECHNIQUE (v3.39) : La preuve directe par `simp add: algebra_simps`
@@ -3498,10 +3498,10 @@ definition RsP_neg_k :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> r
  *
  * Auteur      : Philippe Thomas Savard
  * Date        : Juillet 2026
- * Lieu        : Lévis, Chaudière-Appalaches, Canada
+ * Lieu        : L├®vis, Chaudi├¿re-Appalaches, Canada
  * Licence     : Apache 2.0
  *
- * Cette section établit formellement le double pont logique de manière
+ * Cette section ├®tablit formellement le double pont logique de mani├¿re
  * DIRECTE et CONSTRUCTIVE, sans aucun postulat abstrait ni "sorry".
  ****************************************************************************)
 
@@ -3905,7 +3905,7 @@ text \<open>
     (2) REGIME CHAOTIQUE : les indices ne sont plus croissants,
         A_cha = { p_{sigma(1)}, ..., p_{sigma(k)} } pour une permutation
         sigma des rangs de premiers. On definit un fonctionnel spectral
-        ponderé S(A, B) = sum(a_i * p_{sigma(i)}) / sum(b_j * p_{tau(j)})
+        ponder├® S(A, B) = sum(a_i * p_{sigma(i)}) / sum(b_j * p_{tau(j)})
         ou (a_i), (b_j) sont des ponderations reelles ou complexes.
 
   Ces deux regimes forment la version generale de la Methode Spectrale ;

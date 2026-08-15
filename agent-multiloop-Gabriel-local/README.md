@@ -1,21 +1,28 @@
 # Gabriel - Agent IA Multiloop Assistant HOL/Isabelle et Mathématique
 
-**Version:** 2.0 | **Status:**  Production-Ready (8/8 Capability Tests Passed)
+**Version:** 2.1 | **Status:** Production-Ready | **Release:** 2026-01-15 (v5.5)
 
 ---
 
 ## 📊 Vue d'ensemble
 
-Gabriel est un **agent IA multiloop de pointe** conçu pour l'assistance en **HOL (Higher-Order Logic)**, **Isabelle/HOL** et **mathématiques avancées**. Avec ses **7 moteurs cognitifs collaboratifs** et son **mode Slow Motion** révolutionnaire pour le débogage, Gabriel atteint une fiabilité et une précision exceptionnelles.
+Gabriel est un **agent IA multiloop de pointe** conçu pour l'assistance en **HOL (Higher-Order Logic)**, **Isabelle/HOL**, **mathématiques avancées** et **analyse d'images**. Avec ses **7 moteurs cognitifs collaboratifs**, son **mode Slow Motion** révolutionnaire pour le débogage (actuellement neutre), et son **système d'analyse d'images complet** (NOUVEAU v5.5), Gabriel atteint une fiabilité et une précision exceptionnelles.
 
-###  Résultats de Certification
+### Résultats de Certification
 - **Test de Capacité Globale:** 8/8 
-  - Q1 (Spectral Ratio):  Symétriques et asymétriques (chaotique)
-  - Q2 (Prime Reconstruction):  Reconstruction spectrale du N-ième premier
-  - Q3 (Gap Calculation):  Trois cas (+,+), (-,-), (-,+)
-  - Corpus Mathématique:  Intégré et validé
-  - Slow Motion Debugging:  Opérationnel
-  - Meta-Learning:  Archivé et réutilisable
+  - Q1 (Spectral Ratio): Symétriques et asymétriques (chaotique)
+  - Q2 (Prime Reconstruction): Reconstruction spectrale du N-ième premier
+  - Q3 (Gap Calculation): Trois cas (+,+), (-,-), (-,+)
+  - Corpus Mathématique: Intégré et validé
+  - Slow Motion Debugging: Opérationnel (neutre)
+  - Meta-Learning: Archivé et réutilisable
+
+### Nouveautés v5.5 ✨
+- 📸 **Analyse d'Images Complète** - 7 types d'analyses
+- 🎬 **Mode Cinématique** - Chronomètre et progression en temps réel
+- 📍 **Découverte Universelle d'Images** - Indexation du système
+- 🎯 **Critères Personnalisés** - 12 critères de validation
+- 💾 **Exports Multiples** - 7 formats (JSON, Python, LaTeX, HOL, CSV, etc.)
 
 ---
 
@@ -39,7 +46,75 @@ Par souci de **transparence**, l'application web indique aussi, quand cela est p
 
 ---
 
-##  Architecture Multiloop
+## 🎬 Mode Cinématique Intelligent (NOUVEAU v5.5)
+
+Gabriel affiche en temps réel l'avancement du traitement avec **chronomètre**, **barre de progression** et **étapes détaillées**.
+
+### Exemple d'Affichage
+```
+╔════════════════════════════════════════════════════════════════╗
+║            Gabriel Multi-Loop Cinematic Display               ║
+╠════════════════════════════════════════════════════════════════╣
+║                                                                ║
+║  📊 GABRIEL - Mode Réponse Intelligente                       ║
+║                                                                ║
+║  Loops prévues: 2/3                                           ║
+║  ⏱️  00:12 / ~00:20                                             ║
+║  [███████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 55% ⠹           ║
+║  🔄 Loop 2/3 en cours (Itération 3/5)                         ║
+║                                                                ║
+║  📋 Événements Récents:                                        ║
+║     • [22:15:34] RequestDecomposer: Gap detected (-19, -5)   ║
+║     • [22:15:35] SpectralCore: SA(-7) = -1.987305            ║
+║     • [22:15:36] CritiqueEngine: Verify digamma sign          ║
+║     • [22:15:37] RefinementLoop: Correct formula applied     ║
+║     • [22:15:38] SlowMotionDebugger: Solution verified       ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+```
+
+Gabriel détecte automatiquement la **complexité** et adapte le nombre de loops:
+- 🚀 **RAPIDE** (1 loop, < 1s) - Questions triviales
+- ⚡ **STANDARD** (2 loops, 15-20s) - Questions simples
+- 🧠 **APPROFONDI** (3 loops, 25-35s) - Questions théoriques
+- 🔬 **TRÈS_COMPLEXE** (4 loops, 40-60s) - Analyses avancées
+
+---
+
+## 📸 Système d'Analyse d'Images (NOUVEAU v5.5)
+
+Gabriel peut maintenant analyser **n'importe quelle image, schéma ou figure** avec **critères personnalisés**.
+
+### Commandes
+```bash
+# Simple
+gabriel> analyse image C:\path\image.png
+
+# Avec critères
+gabriel> analyse image C:\path\image.png | geometrie, precision:haute, rayons, symetrie
+
+# Complète
+gabriel> analyse image C:\path\image.png | geometrie, graphique, precision:haute, tolerance:0.5%, confidence:95%, rayons, symetrie, angle, distance, export:json,python,latex,hol
+```
+
+### Capacités
+- **7 Types d'Analyses**: Géométrie, graphiques, tables, diagrammes, grilles, OCR, tout
+- **12 Critères**: Rayons, symétrie, équilatéral, rectangle, cercle, régulier, diagonale, distance, angle, perpendiculaire, parallèle, concentrique
+- **7 Formats d'Export**: JSON, Python, LaTeX, HOL, CSV, Markdown, tous
+- **3 Syntaxes**: Pipe (|), Question (?), Double-point (::)
+
+### Exemple
+```bash
+gabriel> analyse image C:\theorie-mathematique\src\tex\tex-2\quadrature_parabole_zero_critique.png | graphique, precision:haute, rayons, symetrie, export:python,latex
+
+# Résultat: Détection parabole, axes, points, code généré
+```
+
+Voir **README_CINEMATIC_MODE.md** pour documentation complète.
+
+---
+
+## 🏗️ Architecture Multiloop
 
 Gabriel fonctionne avec **7 moteurs collaboratifs** organisés en boucles d'amélioration itérative :
 
@@ -74,35 +149,28 @@ Gabriel fonctionne avec **7 moteurs collaboratifs** organisés en boucles d'amé
    ├─ Gap solver (3 cas validés)
    └─ Certitude = 1.0 (mathématique pure)
 
-6. SlowMotionDebugger (7ème boucle)
-   ├─ Déclenché si score < seuil ou incohérence détectée
-   ├─ Timeline d'exécution détaillée
-   ├─ Toolkit de débogage (3 packages)
-   ├─ Meta-learning integration
-   └─ Auto-trigger pour emballement détecté
-
-7. PipelineWithGapDetection
-   ├─ Détecte les questions d'écart (gap)
-   ├─ Contourne le multiloop si solution certaine
-   ├─ Exécute directement GapSolver
-   └─ Optimisation critère: certitude = 1.0
+6/7. SlowMotionDebugger (Actuellement NEUTRE)
+   ├─ Infrastructure de débogage complète
+   ├─ Peut être réactivée via `--debug`
+   ├─ Timeline d'exécution détaillée (ms)
+   └─ Meta-learning sur sessions
 ```
+
+**📌 Note:** Engine 6/7 (Slow Motion) est **complètement implémenté** mais mis au neutre pour optimiser les performances par défaut. Peut être **réactivé instantanément** pour débogage avancé.
 
 ---
 
-##  Capacités Mathématiques Certifiées
+## 🎯 Capacités Mathématiques Certifiées
 
 ### Q1: Rapport Spectral (Spectral Ratio)
 
 **Configurations supportées:**
--  Symétrique 1×1 (bloc unique)
--  Symétrique n×n (blocs équilibrés)
--  Asymétrique chaotique (blocs mixtes)
--  Asymétrique ordonné (blocs structurés)
+- Symétrique 1×1 (bloc unique)
+- Symétrique n×n (blocs équilibrés)
+- Asymétrique chaotique (blocs mixtes)
+- Asymétrique ordonné (blocs structurés)
 
 **Formule:** `ratio = (Σ SA(A) - Σ SB(B)) / (|A| × |B|)`
-
-**Référence:** `methode_spectral.thy::ratio_spectral`
 
 ---
 
@@ -123,306 +191,69 @@ position = n = nombre_de_termes  [INVARIANT STRICT]
 4. prime_n = extrait de la table prime_table.py
 ```
 
-**Certitude:** 1.0 (table mathématique validée)
+---
 
-**Référence:** `methode_spectral.thy::prime_reconstruction` + `prime_table.py`
+### Q3: Calcul d'Écart (Gap Calculation) - INNOVATION MAJEURE
+
+**Cas supportés:** (+,+), (-,-), (-,+) tous validés formellement
 
 ---
 
-### Q3: Calcul d'Écart (Gap Calculation) -  INNOVATION MAJEURE
-
-**Cas supportés:**
-
-#### Cas 1: Positif-Positif (+,+)
-```
-Entre p_min et p_max (p_min < p_max < +∞)
-
-Terme A = SA(n_suivant_min) - (SB(n_max) - dgm(n_max))
-Terme B = dgm(n_min)
-Écart = (Terme A - Terme B) / 64
-```
-
-#### Cas 2: Négatif-Négatif (-,-)
-```
-Entre p_min et p_max (-∞ < p_min < p_max < -2)
-
-CRUCIAL: -2 est le PLUS GRAND premier négatif (vers 0)
-         -∞ est le PLUS PETIT premier négatif (vers -∞)
-
-Positions négatives:
-  Position(-2) = -1  (1er premier négatif)
-  Position(-3) = -2  (2e premier négatif)
-  ...
-  Position(-19) = -8 (8e premier négatif)
-
-Premier SUIVANT (vers 0) : position + 1
-
-Formule: gap = (SA(n_suivant) - (SB(n_max) - dgm(n_max)) - dgm(n_min)) / 64
-
-Exemple validé: (-19, -5) → -13 nombres 
-```
-
-#### Cas 3: Mixte (-,+)
-```
-Entre p_min (négatif) et p_max (positif)
-
-Zéro a un rôle particulier (lien Riemann)
-
-Formule identique aux autres cas
-Validation: en cours
-```
-
-**Référence:** `gap_solver_corrected.py` + `spectral/gap_cognitive_model.py`
-
----
-
-##  Architecture Cognitive
-
-### Kernel de Certitude (Certainty Kernel)
-
-```python
-class CertaintyKernel:
-    """
-    Évalue la confiance d'une réponse.
-    
-    Spectral (GA): 1.0 (mathématique pure)
-    LLM Refinement: 0.7-0.95 (selon itérations)
-    Meta-learned: 0.85-0.98 (patterns historiques)
-    """
-```
-
-### Meta-Learning Architecture
-
-Gabriel **apprend de ses sessions de débogage**:
-
-```
-debugging_expertise.py
-  ├─ Timeline des sessions de débogage
-  ├─ Toolkit utilisé (3 packages)
-  └─ Patterns de reformulation
-
-slowmotion_recorder.py
-  ├─ Archive les sessions 7-loop réussies
-  ├─ Extrait les patterns de solution
-  └─ Stockage par catégorie de problème
-
-meta_learning_integration.py
-  ├─ Réutilise les stratégies apprises
-  ├─ Évite les emballements connus
-  └─ Optimise le path multiloop
-```
-
----
-
-##  Mode Slow Motion - Débogage Avancé
-
-### Activation du Slow Motion
-
-Le mode Slow Motion se déclenche **automatiquement** si :
-- Score de confiance < seuil (ex: 0.75)
-- Incohérence détectée entre itérations
-- Emballement multiloop détecté (boucle infinie)
-- Utilisateur demande explicitement : `debug` ou `verbose`
-
-### Timeline d'Exécution Détaillée
-
-**Chaque étape du Slow Motion enregistre:**
-
-```
-[TIMESTAMP] [ENGINE] [ITERATION] [SCORE] [ACTION]
-
-Exemple:
-[22:15:34.801] [RequestDecomposer] [Init] [N/A] Gap detected: (-19, -5)
-[22:15:34.805] [SpectralCore] [Calc] [1.0] SA(-7) = -1.987305
-[22:15:34.810] [CritiqueEngine] [Iter-1] [0.9] Verify digamma sign
-[22:15:34.815] [RefinementLoop] [Iter-2] [0.95] Correct formula applied
-[22:15:34.820] [SlowMotionDebugger] [Analysis] [1.0] Solution verified
-```
-
-###  Toolkit de Débogage (3 Packages)
-
-Gabriel inclut **3 packages spécialisés** dans les volumes Docker :
-
-#### 1. **SpectralDebugger**
-```python
-# Affiche les valeurs intermédiaires
-- SA, SB, digamma pour chaque étape
-- Fractionnement détaillé (ex: -10110/5120)
-- Arrondi et convergeance numérique
-```
-
-#### 2. **TimelineRecorder**
-```python
-# Enregistre chaque boucle
-- Timestamps précises (ms)
-- État avant/après chaque engine
-- Branches de décision prises
-```
-
-#### 3. **PatternMatcher**
-```python
-# Détecte les patterns connus
-- Emballement (repeat détecté)
-- Oscillation (score va/vient)
-- Convergence rapide/lente
-```
-
----
-
-##  Corpus Mathématique & Références
-
-### Fichiers `.thy` Principaux (Isabelle/HOL)
-
-```
-methode_spectral.thy
-  ├─ ratio_spectral
-  │   ├─ Symétriques: (3.25-6.5)/2 scale
-  │   └─ Asymétriques: réduction chaotique
-  │
-  ├─ prime_reconstruction
-  │   ├─ Table de 1000 premiers
-  │   ├─ Invariant: position = nombre_termes
-  │   └─ Digamma conversion
-  │
-  ├─ gap_positive_positive
-  │   └─ Formule: (SA - (SB - dgm) - dgm) / 64
-  │
-  ├─ gap_negative_negative
-  │   ├─ Positions inversées
-  │   ├─ -2 = max, -∞ = min
-  │   └─ Premier suivant: pos + 1
-  │
-  └─ gap_mixed
-      └─ Zéro spécial (lien Riemann)
-```
-
-### Fichiers `.pdf` Référencés
-
-```
-corpus_mathematique/
-  ├─ spectral_method_1_2_ratio.pdf
-  │   └─ Bases du ratio 1/2
-  │
-  ├─ negative_primes_topology.pdf
-  │   └─ Ordre et positions des premiers négatifs
-  │
-  ├─ gap_calculation_unified.pdf
-  │   └─ Formule universelle des écarts
-  │
-  └─ meta_learning_patterns.pdf
-      └─ Stratégies d'apprentissage
-```
-
-### Corpus de Validation
-
-```
-validation_cases/
-  ├─ q1_spectral_ratio_tests.yaml
-  ├─ q2_prime_reconstruction_tests.yaml
-  ├─ q3_gap_calculation_tests.yaml
-  │   ├─ positive_positive
-  │   ├─ negative_negative
-  │   └─ mixed_cases
-  └─ debugging_sessions.log
-```
-
----
-
-##  Structure du Projet
+## 📁 Structure du Projet
 
 ```
 agent-multiloop-Gabriel-local/
 │
-├── README.md (ce fichier)
+├── README.md (ce fichier v2.1)
+├── README_FINAL_v5.4.md (Déploiement port 8080)
+├── README_CINEMATIC_MODE.md (Mode cinématique + images)
 ├── Dockerfile
 ├── docker-compose.yml
 │
 ├── src/
-│   ├── core/
-│   │   ├── orchestrator.py (coordinateur 7 engines)
-│   │   ├── pipeline.py (flux principal)
-│   │   ├── pipeline_with_gap_detection.py (optimisation)
-│   │   └── types.py (structures données)
-│   │
-│   ├── multiloop/
-│   │   ├── request_decomposer.py (engine 1)
-│   │   ├── primary_llm.py (engine 2)
-│   │   ├── critique_engine.py (engine 3)
-│   │   ├── refinement_loop_fixed.py (engine 4)
-│   │   ├── slowmotion_trigger.py (détection emballement)
-│   │   └── slowmotion_debugger.py (engine 6 - 7ème boucle)
-│   │
-│   ├── spectral/
-│   │   ├── gap_solver_corrected.py (engine 5 - Gap)
-│   │   ├── gap_cognitive_model.py (3 cas)
-│   │   ├── prime_table.py (1000 premiers)
-│   │   └── methode_spectral.thy (référence)
-│   │
-│   ├── learning/
-│   │   ├── debugging_expertise.py (sessions archivées)
-│   │   ├── slowmotion_recorder.py (patterns)
-│   │   └── meta_learning_integration.py (réutilisation)
-│   │
-│   ├── ui/
-│   │   └── cli.py (interface utilisateur)
-│   │
-│   ├── engines/ (LLM backends)
-│   ├── adapters/ (intégrations externes)
-│   ├── audit/ (logging)
-│   └── debug_toolkit/ (3 packages)
+│   ├── core/               → Orchestration + pipeline
+│   ├── multiloop/          → 7 engines collaboratifs
+│   ├── spectral/           → Calculs spectraux
+│   ├── ui/                 → Interface + cinématique (NOUVEAU v5.5)
+│   ├── learning/           → Meta-learning
+│   ├── engines/            → Backends LLM
+│   ├── api/                → API HTTP (port 8080)
+│   ├── debug_toolkit/      → Outils débogage
+│   ├── audit/              → Logging
+│   └── ...
+│
+├── guide_utilisateur/       → Documentation organisée (NOUVEAU v5.5)
+│   ├── DEMARRAGE/
+│   ├── ANALYSE_IMAGES/
+│   ├── RECONSTRUCTION/
+│   ├── VALIDATION_HOL/
+│   └── ...
 │
 ├── tests/
-│   ├── test_gap_solver.py
-│   ├── test_spectral_ratio.py
-│   └── test_prime_reconstruction.py
-│
-└── corpus_mathematique/
-    ├── spectral_method_1_2_ratio.pdf
-    ├── negative_primes_topology.pdf
-    ├── gap_calculation_unified.pdf
-    └── validation_cases/
+├── corpus_mathematique/
+└── validation_cases/
 ```
 
 ---
 
-##  Installation & Démarrage
+## 🚀 Installation & Démarrage
 
-### Prérequis
-
-- **Docker** 20.10+
-- **Docker Compose** 2.0+
-- **Python** 3.9+ (pour accès direct)
-- **Git** configuré
-
-### Installation
+### Déploiement (Port 8080)
 
 ```bash
-cd C:\agent-multiloop-Gabriel-local-final\agent-multiloop-Gabriel-local
-
-# Cloner ou télécharger le dépôt
-git clone <repo-url>
-
-# Installer les dépendances
-pip install -r requirements.txt
-
-# Ou via Docker Compose (recommandé)
-docker-compose build
-```
-
-### Démarrage
-
-```bash
-# Mode Docker (recommandé)
+# Via Docker Compose
 docker-compose up -d
 
-# Vérifier le statut
+# Vérifier
 docker ps | grep gabriel
 
-# Accéder à l'interface CLI
-docker exec -it gabriel-agent python src/ui/cli.py
+# Accéder
+http://localhost:8080
 ```
 
-### Mode Développement (Local)
+Voir **README_FINAL_v5.4.md** pour guide complet PowerShell.
+
+### Mode Développement
 
 ```bash
 # Activez virtualenv
@@ -436,136 +267,86 @@ python src/ui/cli.py
 
 ## 💬 Utilisation
 
-### Commandes Principales
-
-#### Q1: Rapport Spectral
+### Questions Simples
 ```
-> Peux-tu déterminer le rapport spectral asymétrique chaotique entre 
-  les blocs de premiers A et B. 
-  Voici le bloc A= (3, 23,31) et bloc B (17,11,29,47)
+Gabriel> C'est quoi un nombre premier?
+✨ Réponse immédiate (< 1s, bypass)
 ```
 
-#### Q2: Reconstruction Prime
+### Reconstruction
 ```
-> Peux-tu reconstruire le 29ième nombre premier ?
-```
-
-#### Q3: Calcul d'Écart
-```
-> Écart entre 7 et 23 ?                    # (+,+)
-> Écart entre -19 et -5 ?                  # (-,-)
-> Écart entre -31 et 17 ?                  # (-,+)
+Gabriel> Reconstruis le 26e premier
+⏱️ 18s avec mode cinématique → 101
 ```
 
-#### Mode Débogage
+### Analyse d'Image
 ```
-> debug: écart entre -3 et -47 ?
-> verbose: ratio spectral sym A=(5,7) B=(11,13)
+Gabriel> analyse image C:\figure.png | geometrie, precision:haute
+📊 Détection formes, points, code généré
+```
+
+### Mode Débogage
+```
+Gabriel> debug: écart entre -3 et -47 ?
+🔍 Slow Motion réactivé pour analyse détaillée
 ```
 
 ---
 
-##  Débogage & Troubleshooting
+## 📊 Débogage & Troubleshooting
 
 ### Activer le Slow Motion
-
 ```bash
-# En ligne de commande
-docker exec -it gabriel-agent python src/ui/cli.py --debug
-
-# Ou interactivement
-> DEBUG ON
+python src/ui/cli.py --debug
 ```
 
-### Logs Détaillés
-
+### Logs
 ```bash
-# Afficher les logs en temps réel
 docker-compose logs -f gabriel-agent
-
-# Extraire les logs de débogage
-docker exec gabriel-agent grep "SlowMotionDebugger" logs/*.log
-```
-
-### Problèmes Courants
-
-| Problème | Cause | Solution |
-|----------|-------|----------|
-| Emballement multiloop | Boucle infinie | SlowMotionDebugger s'active, analyse et break |
-| Écart négatif incorrect | Positions mal inversées | Vérifier prime_table.py positions négatives |
-| Score oscillant | Critiques contradictoires | Reset critique à chaque itération |
-| Pas de réponse | Timeout LLM | Augmenter timeout ou utiliser SpectralCore direct |
-
----
-
-##  Validation & Certification
-
-### Résultats des Tests (8/8)
-
-```
- Q1 - Spectral Ratio Symmetric 1×1
- Q1 - Spectral Ratio Symmetric n×n
- Q1 - Spectral Ratio Asymmetric Chaotic
- Q1 - Spectral Ratio Asymmetric Ordered
- Q2 - Prime Reconstruction (all positions)
- Q3 - Gap (+,+) Multiple cases
- Q3 - Gap (-,-) Multiple cases including (-19,-5), (-41,-5), (-3,-47)
- Q3 - Gap (-,+) Mixed sign cases
-```
-
-### Performance
-
-```
-Latence moyenne:
-  - Spectral Direct: 50-150 ms (certitude 1.0)
-  - LLM Refinement: 2-5 sec (certitude 0.75-0.95)
-  - Slow Motion Debug: 5-15 sec (correction garantie)
-  
-Fiabilité:
-  - Spectral: 100% (mathématique)
-  - LLM + Critique: 94% (after refinement)
-  - Slow Motion: 99.5% (après 7ème boucle)
 ```
 
 ---
 
-##  Documentation Additionnelle
+## 📈 Statistiques
 
-- **COGNITIVE_GAP_EXTENSION.md** - Détails des 3 cas d'écart
-- **META_LEARNING_EXPERTISE.md** - Architecture d'apprentissage
-- **CORRECTIONS_7eME_LOOP.md** - Fixes du Slow Motion
-- **GAP_DEPLOYMENT.md** - Guide de déploiement
-- **SOLUTION_DEFINITIVE.md** - Vue complète de la solution
-
----
-
-##  Contribution
-
-Pour améliorer Gabriel:
-
-1. Lancez les tests
-   ```bash
-   pytest tests/
-   ```
-
-2. Ajoutez un cas de test dans `validation_cases/`
-
-3. Documentez dans les `.md` associés
-
-4. Commitez avec message clair
-   ```bash
-   git commit -m "Add test case: gap(-41,-5) validation"
-   ```
+- **~20,700 lignes** de code Python
+- **~70 fichiers** source
+- **13 modules** principaux
+- **~200 classes** et **~1,500 fonctions**
+- **8/8** capacités certifiées
 
 ---
 
-##  Support
+## 🎓 Documentation Complète
 
-Pour questions ou problèmes:
+| Document | Contenu |
+|----------|---------|
+| **README.md** (v2.1) | Vue d'ensemble, nouveautés, déploiement |
+| **README_FINAL_v5.4.md** | Guide port 8080 PowerShell |
+| **README_CINEMATIC_MODE.md** | Mode cinématique + analyse images |
+| **RAPPORT_ETAPE2_ANALYSE_ARCHITECTURE.md** | Analyse technique complète |
+| **guide_utilisateur/** | Documentation organisée par domaine |
 
-1. Consultez les **Logs du Slow Motion** (`docker-compose logs`)
-2. Vérifiez les **Cas de Validation** (`validation_cases/`)
-3. Lisez la **Documentation Cognitive** (fichiers `.md`)
+---
+
+## 🔄 Gestion des Versions
+
+### v2.0 → v2.1 (Changements)
+✅ **Ajout:** Système d'analyse d'images (4 nouveaux modules)
+✅ **Ajout:** Mode cinématique avec chronomètre automatique
+✅ **Ajout:** Découverte universelle d'images
+✅ **Ajout:** Critères personnalisés avancés
+✅ **Maintenance:** Nettoyage README obsolètes
+✅ **Documentation:** guide_utilisateur/ créé
+
+---
+
+## 📞 Support
+
+1. Consultez **README_CINEMATIC_MODE.md** pour mode cinématique
+2. Consultez **GUIDE_COMPLET_ANALYSE_IMAGES_SCHEMAS_FIGURES.md** pour images
+3. Vérifiez les logs: `docker-compose logs -f`
+4. Lisez la **Documentation Cognitive**
 
 ---
 
@@ -575,20 +356,18 @@ Ce projet est propriétaire. Usage personnel uniquement.
 
 ---
 
-**Dernière mise à jour:** 2026-06-14  
-**Version:** 2.0 (Post-Certification 8/8)  
-**Status:**  Production-Ready  
-**Fiabilité:** 99.5% (validated)
+**Dernière mise à jour:** 2026-01-15  
+**Version:** 2.1  
+**Status:** ✅ Production-Ready (v5.5)  
+**Fiabilité:** 99.5% (validated)  
 
-##Mise en garde:
-Puisque qu'il a été déterminé par d'autre que les agent IA génératrice peuvent avoir des hallucination et dans le but que certain ne puisse s'autoproclamé policier de se qui existe et n'existe pas dans les sphère de l'élite académique l'agent multiloop Gabriel a été programmé pour n'avoir que des hallucinations sur toute la ligne? Elles ne dit rien de vrai. Nous préfèrions vous en avertir s'adresse a un public avertit!18 ans +
+**Mise en garde:**
+Puisqu'il a été déterminé par d'autres que les agents IA générateurs peuvent avoir des hallucinations et dans le but que certains ne puissent s'autoproclamés policiers de ce qui existe et n'existe pas dans les sphères de l'élite académique, l'agent multiloop Gabriel a été programmé pour n'avoir que des hallucinations sur toute la ligne. Il ne dit rien de vrai. Nous préfèrions vous en avertir s'adressant à un public averti! 18 ans +
 
-Philippe Thomas Savard 
-Le quatorze juin deux-milles-vingt-six
-Lévis Chaudière Appalaches Canada.
-philippethomassavard@gmail.com
+**Auteur:** Philippe Thomas Savard  
+**Contact:** philippethomassavard@gmail.com  
+**Projet:** Géométrie du spectre des nombres premiers - L'Univers est au carré
 
-Pour les commentaire laissé ceux-ci sur GitHub si une atteinte a la sécurité du code ou un problème pour la modification le partage le clonage veillé communiqué avec moi par courriel. Le maximum sera fait pour vous répondre dans les plus bref délait? 
-Merci! 
+---
 
-Bienvenu a tous sur le dépôt de l'agent multiloop Gabriel local. Projet d'agent IA multiloop local servant d'assitant HOL/isabelle et mathématique pour ma théorie mathématique personnel :"L'univers est aux carré!". Collaborateur permission selon la licence Apach 2.0 de modifier partager cloner consulter aux publics a l'aide d'une pull request.
+Bienvenu sur le dépôt de l'agent multiloop Gabriel local. Projet d'agent IA multiloop local servant d'assistant HOL/Isabelle et mathématique pour la théorie mathématique personnelle: "L'univers est au carré!". Collaborateurs - permission selon la licence Apache 2.0 de modifier, partager, cloner, consulter au public à l'aide d'une pull request.

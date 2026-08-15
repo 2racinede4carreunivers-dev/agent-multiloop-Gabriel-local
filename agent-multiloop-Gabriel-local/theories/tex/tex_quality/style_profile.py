@@ -14,7 +14,11 @@ from collections import Counter
 from pathlib import Path
 from statistics import mean
 
-WORD_RE = re.compile(r"[A-Za-zA-za-z0-9'\-]+")
+# SÉCURITÉ: Regex corrigée - éviter les portées de caractères ambiguës
+# Ancienne regex problématique: r"[A-Za-zA-za-z0-9'\-]+"
+# Problème: A-za-z inclut les caractères [\]^_` (ASCII 91-96)
+# Nouveau: ordre correct A-Z puis a-z, tiret échappé
+WORD_RE = re.compile(r"[A-Za-z0-9'\-]+")
 SENTENCE_RE = re.compile(r"[^.!?]+[.!?]")
 
 

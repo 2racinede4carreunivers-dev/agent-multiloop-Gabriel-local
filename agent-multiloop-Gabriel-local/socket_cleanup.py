@@ -4,6 +4,9 @@ SOCKET CLEANUP UTILITY - Ferme complètement les sockets sans fermer Docker Desk
 
 Cette librairie gère la fermeture des sockets au niveau du système d'exploitation
 pour garantir que le port se libère quand Gabriel s'arrête.
+
+SÉCURITÉ: Par défaut, les sockets sont bindées sur 127.0.0.1 (localhost) pour éviter
+l'exposition sur toutes les interfaces réseau. Voir CWE-200.
 """
 
 import os
@@ -17,12 +20,23 @@ from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
+# SÉCURITÉ: Configuration par défaut bindée sur localhost
+DEFAULT_BIND_ADDRESS = '127.0.0.1'  # Au lieu de '0.0.0.0'
+
 
 class SocketCleanup:
     """Gère la fermeture complète des sockets au niveau système."""
     
-    def __init__(self, port: int):
+    def __init__(self, port: int, bind_address: str = DEFAULT_BIND_ADDRESS):
+        """
+        Args:
+            port: Numéro de port à nettoyer
+            bind_address: Adresse IP pour binder (défaut: 127.0.0.1 pour sécurité)
+                          SÉCURITÉ: Éviter '0.0.0.0' car elle expose sur tous les interfaces
+                          Voir CWE-200: Exposure of Sensitive Information to an Unauthorized Actor
+        """
         self.port = port
+        self.bind_address = bind_address
         self.listener_socket: Optional[socket.socket] = None
         self.original_sigint = None
         
@@ -129,14 +143,22 @@ class SocketCleanup:
         self._close_port_linux()
     
     def reset_port(self):
-        """Remet le port en état utilisable."""
+        """Remet le port en état utilisable.
+        
+        SÉCURITÉ: Utilise bind_address (localhost par défaut) au lieu de '0.0.0.0'
+        pour éviter l'exposition sur toutes les interfaces réseau.
+        Ref: CWE-200 Exposure of Sensitive Information to an Unauthorized Actor
+        """
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, b'\x01\x00\x00\x00\x00\x00\x00\x00')
-            sock.bind(('0.0.0.0', self.port))
+            
+            # SÉCURITÉ: Binder sur l'adresse configurée (défaut: 127.0.0.1 localhost)
+            # Au lieu de '0.0.0.0' qui accepte toutes les connexions
+            sock.bind((self.bind_address, self.port))
             sock.close()
-            logger.info(f"Port {self.port} réinitialisé (SO_REUSEADDR)")
+            logger.info(f"Port {self.port} réinitialisé (SO_REUSEADDR, bind={self.bind_address})")
             return True
         except OSError as e:
             logger.warning(f"Port {self.port} pas complètement libéré: {e}")
@@ -144,7 +166,7 @@ class SocketCleanup:
     
     def cleanup(self):
         """Nettoyage complet."""
-        logger.info(f"=== SOCKET CLEANUP: Port {self.port} ===")
+        logger.info(f"=== SOCKET CLEANUP: Port {self.port} (bind={self.bind_address}) ===")
         
         # Étape 1: Fermer la socket Python
         self.close_socket()
@@ -160,29 +182,47 @@ class SocketCleanup:
 
 
 @contextmanager
-def socket_context(port: int):
-    """Context manager pour socket cleanup automatique."""
-    cleanup = SocketCleanup(port)
+def socket_context(port: int, bind_address: str = DEFAULT_BIND_ADDRESS):
+    """Context manager pour socket cleanup automatique.
+    
+    Args:
+        port: Numéro de port
+        bind_address: Adresse IP pour binder (défaut: 127.0.0.1 pour sécurité)
+    """
+    cleanup = SocketCleanup(port, bind_address)
     try:
         yield cleanup
     finally:
         cleanup.cleanup()
 
 
-def force_port_cleanup(port: int, force_kill_listener: bool = True):
-    """Force le cleanup du port (fonction standalone)."""
-    cleanup = SocketCleanup(port)
+def force_port_cleanup(port: int, bind_address: str = DEFAULT_BIND_ADDRESS, force_kill_listener: bool = True):
+    """Force le cleanup du port (fonction standalone).
+    
+    Args:
+        port: Numéro de port
+        bind_address: Adresse IP pour binder (défaut: 127.0.0.1 pour sécurité)
+        force_kill_listener: Forcer la fermeture des listeners existants
+        
+    SÉCURITÉ: Par défaut utilise 127.0.0.1 (localhost) pour éviter l'exposition
+    sur toutes les interfaces réseau.
+    """
+    cleanup = SocketCleanup(port, bind_address)
     if force_kill_listener:
         cleanup.force_close_port_listeners()
     time.sleep(1)
     cleanup.reset_port()
-    logger.info(f"Port {port} forcément nettoyé")
+    logger.info(f"Port {port} forcément nettoyé (bind={bind_address})")
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
-    print(f"Nettoyage port {port}...")
-    force_port_cleanup(port)
+    # SÉCURITÉ: Accepter optionnellement une adresse de binding en ligne de commande
+    # Défaut: 127.0.0.1 (localhost) pour sécurité
+    bind_address = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_BIND_ADDRESS
+    
+    print(f"Nettoyage port {port} (bind={bind_address})...")
+    force_port_cleanup(port, bind_address)
     print(f"Port {port} nettoyé!")

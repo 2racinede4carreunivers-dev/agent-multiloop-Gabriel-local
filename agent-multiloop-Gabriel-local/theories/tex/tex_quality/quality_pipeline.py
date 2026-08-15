@@ -27,7 +27,11 @@ from typing import Iterable
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TEX_OUTPUT_DIR = Path(__file__).resolve().parents[1]
 
-WORD_RE = re.compile(r"[A-Za-zA-za-z0-9'\-]+")
+# SÉCURITÉ: Regex corrigée - éviter les portées de caractères ambiguës
+# Ancienne regex problématique: r"[A-Za-zA-za-z0-9'\-]+"
+# Problème: A-za-z inclut les caractères [\]^_` (ASCII 91-96)
+# Nouveau: ordre correct A-Z puis a-z, tiret échappé
+WORD_RE = re.compile(r"[A-Za-z0-9'\-]+")
 NUMBER_RE = re.compile(r"\d+(?:[\.,]\d+)?")
 NEGATION_RE = re.compile(r"\b(ne|n'|pas|jamais|aucun|sans|ni|non)\b", re.IGNORECASE)
 TRAILING_LINEBREAK_RE = re.compile(r"^(.*?)(\s*\\\\\s*)$")

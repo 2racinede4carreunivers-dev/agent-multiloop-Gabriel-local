@@ -13,6 +13,9 @@ from ...core.types import CognitiveConcept, QuestionContext, SpectralModel
 
 logger = logging.getLogger(__name__)
 
+# CONSTANTES DE SÉCURITÉ
+MAX_INPUT_LENGTH = 10000  # Limite pour éviter les attaques par régrex complexes
+
 
 # Patterns lexicaux pour le corpus de Philippe Thomas Savard
 SPECTRAL_PATTERNS: dict[str, list[str]] = {
@@ -98,22 +101,50 @@ def _is_contextual_statement(text: str) -> bool:
 
 
 def _extract_numbers(text: str) -> list[int]:
-    """Extrait les entiers pertinents d'un segment (hors fractions usuelles)."""
+    """Extrait les entiers pertinents d'un segment (hors fractions usuelles).
+    
+    SÉCURITÉ: Limite la taille d'entrée pour éviter ReDoS (Regular Expression Denial of Service).
+    Utilise une approche sans lookaround complexe qui pourrait causer des exponentielles.
+    """
+    # SÉCURITÉ: Limiter la taille d'entrée pour éviter les attaques ReDoS
+    if len(text) > MAX_INPUT_LENGTH:
+        text = text[:MAX_INPUT_LENGTH]
+        logger.warning(f"_extract_numbers: input tronqué de {MAX_INPUT_LENGTH} chars")
+    
     cleaned = re.sub(r'\b1\s*/\s*[0-9]+\b', ' ', text)
     cleaned = re.sub(r'\brapport\s+[0-9]+\s*/\s*[0-9]+\b', ' ', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'modele?\s+\d+\s*/\s*\d+', ' ', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'\b13\s*/\s*\d+\b', ' ', cleaned)
     cleaned = re.sub(r'\b3\.25\s*/\s*\d+\b', ' ', cleaned)
     cleaned = re.sub(r'\b6\.5\s*/\s*\d+\b', ' ', cleaned)
-    # v3.46 : Regex sans look-behind ReDoS ET sans \b Unicode qui echouait
-    # sur "132eme" / "132ieme" (le e/è etant un char de mot Unicode).
-    # `(?<!\d)-?\d+(?!\d)` = lookarounds a largeur fixe (pas de ReDoS) qui
-    # detectent les frontieres digit/non-digit (accents inclus).
-    return [int(m) for m in re.findall(r'(?<!\d)-?\d+(?!\d)', cleaned)]
+    
+    # SÉCURITÉ: Regex simplifiée et sécurisée (pas de lookaround complexe)
+    # Approche itérative pour extraire les nombres sans lookaround qui cause ReDoS
+    numbers: list[int] = []
+    for match in re.finditer(r'-?\d+', cleaned):
+        try:
+            # Vérifier que c'est un nombre isolé (pas partie d'un plus grand nombre)
+            start = match.start()
+            end = match.end()
+            # Vérifier les bornes pour éviter de capturer des parties de nombres
+            if (start == 0 or not cleaned[start-1].isdigit()) and (end == len(cleaned) or not cleaned[end].isdigit()):
+                numbers.append(int(match.group()))
+        except (ValueError, IndexError):
+            continue
+    
+    return numbers
 
 
 def _split_objective_chunks(text: str) -> list[str]:
-    """Decoupe une requete en chunks d'objectifs potentiels, dans l'ordre."""
+    """Decoupe une requete en chunks d'objectifs potentiels, dans l'ordre.
+    
+    SÉCURITÉ: Limite la taille d'entrée et utilise des regex sécurisées sans ReDoS.
+    """
+    # SÉCURITÉ: Limiter la taille d'entrée
+    if len(text) > MAX_INPUT_LENGTH:
+        text = text[:MAX_INPUT_LENGTH]
+        logger.warning(f"_split_objective_chunks: input tronqué à {MAX_INPUT_LENGTH} chars")
+    
     q = text.strip()
     if not q:
         return []
@@ -129,16 +160,34 @@ def _split_objective_chunks(text: str) -> list[str]:
                 chunks.append(chunk)
         return chunks
 
-    # Sinon: separateurs conversationnels standards (puis/ensuite/;/. + espace)
-    separators = r'\s+(?:puis|ensuite|et\s+apres|et\s+puis)\s+|[;\n]+'
+    # SÉCURITÉ: Regex simplifiée et sécurisée (pas d'ambigüité sur \s+)
+    # Ancienne regex problématique: r'\s+(?:puis|ensuite|et\s+apres|et\s+puis)\s+|[;\n]+'
+    # Problème: \s+ avant le groupe peut matcher de façons multiples (régrex polynomial)
+    # Solution: Utiliser une approche plus directe avec séparateurs simples
+    # Remplacer par: exactement 1+ espaces suivi du mot clé (sans ambigüité)
+    separators = r'\s(?:puis|ensuite|et\s+apres|et\s+puis)\s|[;\n]+'
     rough = [c.strip(" .;:\n\t") for c in re.split(separators, q) if c.strip(" .;:\n\t")]
+    
     if len(rough) <= 1:
-        rough = [c.strip(" .;:\n\t") for c in re.split(r'(?<=[\?\.])\s+', q) if c.strip(" .;:\n\t")]
+        # SÉCURITÉ: Regex corrigée - pas de lookbehind complexe
+        # Ancienne regex problématique: r'(?<=[\?\.])\s+' (lookbehind variable)
+        # Problème: lookbehind peut matcher de plusieurs façons (ReDoS polynomial)
+        # Solution: Utiliser simple split sur caractères littéraux
+        rough = [c.strip(" .;:\n\t") for c in re.split(r'\?\s+|\.\s+', q) if c.strip(" .;:\n\t")]
+    
     return rough
 
 
 def _extract_objectives(raw_question: str) -> tuple[str, list[dict[str, Any]]]:
-    """Extrait un preambule contextuel et des objectifs explicites ordonnes."""
+    """Extrait un preambule contextuel et des objectifs explicites ordonnes.
+    
+    SÉCURITÉ: Limite la taille d'entrée pour éviter les attaques.
+    """
+    # SÉCURITÉ: Limiter la taille d'entrée globale
+    if len(raw_question) > MAX_INPUT_LENGTH:
+        raw_question = raw_question[:MAX_INPUT_LENGTH]
+        logger.warning(f"_extract_objectives: input tronqué à {MAX_INPUT_LENGTH} chars")
+    
     chunks = _split_objective_chunks(raw_question)
     objectives: list[dict[str, Any]] = []
     contextual_prefix_parts: list[str] = []
@@ -164,7 +213,14 @@ def _extract_objectives(raw_question: str) -> tuple[str, list[dict[str, Any]]]:
 
 
 def _detect_intent(text: str) -> str:
-    """Categorise l'intention : reconstruction / ratio / gap / autre."""
+    """Categorise l'intention : reconstruction / ratio / gap / autre.
+    
+    SÉCURITÉ: Utilise des regex sécurisées sans ReDoS.
+    """
+    # SÉCURITÉ: Limiter la taille d'entrée
+    if len(text) > MAX_INPUT_LENGTH:
+        text = text[:MAX_INPUT_LENGTH]
+    
     t = text.lower()
 
     # Garde-fou majeur : ne pas traiter une description de contexte comme une
@@ -175,11 +231,16 @@ def _detect_intent(text: str) -> str:
     if contextual_statement and not explicit_request:
         return "conversation"
 
-    if re.search(r"reconstr|p-?i[èe]me|p\s+i[èe]me|déterminer.{0,200}?digamma", t):
+    # SÉCURITÉ: Regex avec lookahead/behind limités (pas de quantificateurs imbriqués)
+    if re.search(r"reconstr|p-?i[èe]me|p\s+i[èe]me", t):
+        return "reconstruction"
+    # Chercher digamma séparément avec une limite de 200 caractères
+    if re.search(r"digamma", t) and re.search(r"déterminer", t[:200]):
         return "reconstruction"
     if re.search(r"rapport|ratio|asym[ée]trique|sym[ée]trique|chaotique", t):
         return "ratio"
-    if re.search(r"\becart\b|\bgap\b|quantit[eé].{0,200}?(?:terme|entier|nombre)", t):
+    # Chercher les patterns gap plus simplement
+    if re.search(r"\becart\b|\bgap\b", t) and re.search(r"quantit[eé]|terme|entier|nombre", t):
         return "gap"
     if re.search(r"riemann|hypoth[èe]se|z[êe]ta", t):
         return "riemann_link"

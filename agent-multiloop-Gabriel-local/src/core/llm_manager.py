@@ -65,11 +65,14 @@ class ClaudeClient:
         if self.api_key:
             placeholders = ("COLLEZ", "VOTRE", "PLACEHOLDER", "sk-ant-[")
             if any(self.api_key.upper().startswith(p.upper()) for p in placeholders):
-                import hashlib
-
-                masked = hashlib.sha256(self.api_key.encode()).hexdigest()[:8]
+                # SÉCURITÉ: Utiliser secrets pour un masquage sécurisé (non-réversible)
+                # au lieu de SHA256 qui est faible pour les données sensibles (API keys)
+                # Refs: OWASP CWE-327, CWE-328, CWE-916
+                import secrets
+                # Générer un token aléatoire pour masquer la clé (pas une hash)
+                masked = secrets.token_hex(4)  # 8 caractères hexadécimaux aléatoires
                 logger.warning(
-                    "CLAUDE_API_KEY semble invalide (hash=%s). Claude désactivé jusqu'à saisie d'une clé réelle.",
+                    "CLAUDE_API_KEY semble invalide (token=%s). Claude désactivé jusqu'à saisie d'une clé réelle.",
                     masked,
                 )
                 self.api_key = None

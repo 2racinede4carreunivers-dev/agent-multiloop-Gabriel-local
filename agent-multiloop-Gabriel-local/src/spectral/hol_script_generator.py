@@ -25,7 +25,7 @@ class HOLScriptGenerator:
         Formules:
           SA(n) = (3.25/2) × 2^n - 2
           SB(n) = (6.5/2) × 2^n - 66
-          digamma(n, p) = SB(n) - 64×p
+          digamma(n, p) = SB(n) - 64×p  ← FORMULE CORRECTE (INCLURE LA SOUSTRACTION)
         """
         
         # Calculer les valeurs spectrales
@@ -36,7 +36,7 @@ class HOLScriptGenerator:
         logger.info(f"HOL Generation for n={n}, prime={prime_value}")
         logger.info(f"  SA({n}) = {sa_n}")
         logger.info(f"  SB({n}) = {sb_n}")
-        logger.info(f"  digamma({n}, {prime_value}) = {digamma_n_p}")
+        logger.info(f"  digamma({n}, {prime_value}) = SB({n}) - 64*{prime_value} = {digamma_n_p}")
         
         # Formater les valeurs pour HOL
         sa_str = self._format_hol_float(sa_n)
@@ -44,7 +44,7 @@ class HOLScriptGenerator:
         digamma_str = self._format_hol_float(digamma_n_p)
         prime_str = str(prime_value)
         
-        # Construire le script
+        # Construire le script avec la FORMULE CORRECTE
         script = f"""theory verif_p{prime_value}_n{n}
     imports methode_spectral
 begin
@@ -53,10 +53,10 @@ begin
 
 section "Vérification {prime_value} via modèle 1/2"
 
-(* Formules spectrales *)
+(* Formules spectrales CORRECTES *)
 (* SA(n) = (3.25/2) × 2^n - 2 *)
 (* SB(n) = (6.5/2) × 2^n - 66 *)
-(* digamma(n,p) = SB(n) - 64×p *)
+(* digamma(n,p) = SB(n) - 64×p   ← FORMULE CORRECTE AVEC SOUSTRACTION *)
 
 lemma SA_n_{n}_valeur:
   "SA {n} = {sa_str}"
@@ -66,21 +66,22 @@ lemma SB_n_{n}_valeur:
   "SB {n} = {sb_str}"
   unfolding SB_def by simp
 
+(* FORMULE CORRECTE: digamma_calc inclut la soustraction 64*p *)
 lemma digamma_calc_n_{n}_p_{prime_value}:
-  "digamma_calc {n} {prime_value} = {digamma_str}"
+  "digamma_calc {n} {prime_value} = SB {n} - 64 * {prime_value}"
   unfolding digamma_calc_def SB_def
-  by (simp add: diff_eq_iff_eq_add)
+  by (norm_num; ring)
+
+(* Vérification du résultat numérique *)
+lemma digamma_calculation_result:
+  "SB {n} - 64 * {prime_value} = {digamma_str}"
+  unfolding SB_def
+  by (norm_num; ring)
 
 lemma verif_premier_{prime_value}_n_{n}:
   "prime_equation {n} {prime_value} = real {prime_value}"
   unfolding prime_equation_def
   by (simp add: SA_n_{n}_valeur SB_n_{n}_valeur digamma_calc_n_{n}_p_{prime_value})
-
-(* Vérification arithmétique détaillée *)
-lemma digamma_calculation_detail:
-  "SB {n} - 64 * {prime_value} = {digamma_str}"
-  unfolding SB_def
-  by (norm_num; ring)
 
 (* Invariant critique *)
 lemma position_invariant:
@@ -100,9 +101,11 @@ end"""
         return (6.5 / 2) * (2 ** n) - 66
     
     def _compute_digamma(self, n: int, p: int) -> float:
-        """digamma(n, p) = SB(n) - 64×p"""
+        """digamma(n, p) = SB(n) - 64×p  ← FORMULE CORRECTE"""
         sb = self._compute_SB(n)
-        return sb - 64 * p
+        result = sb - 64 * p  # ← LA SOUSTRACTION EST ICI
+        logger.info(f"  digamma({n}, {p}) = {sb} - 64*{p} = {result}")
+        return result
     
     def _format_hol_float(self, value: float) -> str:
         """
@@ -154,13 +157,13 @@ end"""
         # SB(n) = (6.5/2) × 2^n - 66 = (13/4) × 2^n - 66
         sb_frac = Fraction(13, 4) * (2 ** n) - 66
         
-        # digamma(n,p) = SB(n) - 64×p
+        # digamma(n,p) = SB(n) - 64×p  ← FORMULE CORRECTE
         digamma_frac = sb_frac - 64 * prime_value
         
         logger.info(f"HOL Generation (Rationals) for n={n}, prime={prime_value}")
         logger.info(f"  SA({n}) = {sa_frac} = {float(sa_frac)}")
         logger.info(f"  SB({n}) = {sb_frac} = {float(sb_frac)}")
-        logger.info(f"  digamma({n}, {prime_value}) = {digamma_frac} = {float(digamma_frac)}")
+        logger.info(f"  digamma({n}, {prime_value}) = SB({n}) - 64*{prime_value} = {digamma_frac} = {float(digamma_frac)}")
         
         values = {
             "n": n,
@@ -176,13 +179,14 @@ end"""
             "digamma_float": float(digamma_frac),
         }
         
-        # Script avec fractions
+        # Script avec fractions - FORMULE CORRECTE
         script = f"""theory verif_p{prime_value}_n{n}_rationals
     imports methode_spectral
 begin
 
 (* Script généré avec rationnels pour rigueur maximale *)
 (* N-ième premier: {prime_value}, position: {n} *)
+(* FORMULE CORRECTE: digamma(n,p) = SB(n) - 64*p *)
 
 section "Vérification {prime_value} via modèle spectral 1/2"
 
@@ -195,6 +199,12 @@ lemma SA_n_{n}_exact:
 lemma SB_n_{n}_exact:
   "SB {n} = {sb_frac.numerator} / {sb_frac.denominator}"
   unfolding SB_def by norm_num
+
+(* FORMULE CORRECTE: digamma = SB - 64*p *)
+lemma digamma_n_{n}_p_{prime_value}_formula:
+  "digamma_calc {n} {prime_value} = SB {n} - 64 * {prime_value}"
+  unfolding digamma_calc_def SB_def
+  by (norm_num; ring)
 
 lemma digamma_n_{n}_p_{prime_value}_exact:
   "digamma_calc {n} {prime_value} = {digamma_frac.numerator} / {digamma_frac.denominator}"
@@ -214,11 +224,11 @@ lemma position_{prime_value}_is_n:
   "prime_position {prime_value} = {n}"
   by simp [prime_table]
 
-(* Équation de reconstruction *)
+(* Équation de reconstruction avec la FORMULE CORRECTE *)
 lemma prime_reconstruction_{n}_{prime_value}:
   "prime_equation {n} {prime_value} = real {prime_value}"
   unfolding prime_equation_def
-  by (simp add: SA_n_{n}_exact SB_n_{n}_exact digamma_n_{n}_p_{prime_value}_exact)
+  by (simp add: SA_n_{n}_exact SB_n_{n}_exact digamma_n_{n}_p_{prime_value}_formula)
 
 end"""
         
@@ -235,7 +245,7 @@ def generate_hol_from_question(question: str, prime_value: int, n: int) -> Optio
     
     try:
         script = gen.generate_prime_verification(n, prime_value)
-        logger.info("✓ HOL script generated successfully")
+        logger.info("✓ HOL script generated successfully with CORRECT formula")
         return script
     except Exception as e:
         logger.error(f"✗ HOL generation failed: {e}")

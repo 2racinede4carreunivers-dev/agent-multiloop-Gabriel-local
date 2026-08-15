@@ -854,9 +854,9 @@ Notons que le diviseur est ici 4 096 = 46, contre 64 = 26 pour le régime 1/2. L
 
 Le régime 1/3 est construit sur la base géométrique 3n :
 
-A1/3(n) = ((73/9)/12) × 3n − 1,5
+A1/3(n) = ((73/9)/6) × 3n − 1,5
 
-B1/3(n) = ((219/9)/12) × 3n − (487 × 1,5)
+B1/3(n) = ((219/9)/6) × 3n − (487 × 1,5)
 
 \subsection{III.2 Le rapport spectral constant 1/3}
 
@@ -932,6 +932,71 @@ SBmix(n) = −28 + 13 / 2n+1
 
 Ces suites mixtes introduisent une structure plus riche, où les termes oscillent autour de valeurs limites (respectivement 48 et −28 à l'infini). La propriété d'invariance du rapport spectral est préservée. Rappel important : les constantes 48 et −28, ainsi que les formes fermées An = 48 + 13/2(n+2) et Bn = −28 + 13/2(n+1), sont propres à ce modèle précis (n termes négatifs variables + 5 termes positifs fixes). Un modèle mixte différent produira des constantes limites et des formes fermées différentes.
 
+\textbf{Convention de lecture des blocs}\\
+Bloc A négatif\\
+Bloc B positif
+
+\bigskip
+
+\textbf{Ex. 1.} 1 terme négatif, 5 termes positifs :
+\begin{align*}
+&\left(\frac{13}{4} - \frac{13}{8} - 2\right) + \left(2 + 4 + 8 + 12 + 24\right) = 49{,}625 \quad \text{Somme suite A} \\
+&\left(\frac{13}{2} - \frac{13}{4} - 66\right) + \left(-59{,}5 + 6{,}5 + 13 + 26 + 52\right) = -24{,}75 \quad \text{Somme suite B} \\
+&\text{Digamma}: 49{,}625 + \frac{2651}{64} = 91{,}046875 \\
+&\frac{-24{,}75 - 91{,}046875}{\dfrac{1}{64}} = 4243 \quad \text{Nombre premier}
+\end{align*}
+
+\bigskip
+
+\textbf{Ex. 2.} 2 termes négatifs, 5 termes positifs :
+\begin{align*}
+&\left(\frac{13}{4} - \left(\frac{13}{8} + \frac{13}{16}\right) - 2\right) + \left(2 + 4 + 8 + 12 + 24\right) = 48{,}8125 \quad \text{Somme suite A} \\
+&\left(\frac{13}{2} + \left(\frac{13}{4} + \frac{13}{8}\right) - 66\right) + \left(-59{,}5 + 6{,}5 + 13 + 26 + 52\right) = -26{,}375 \quad \text{Somme suite B} \\
+&\text{Digamma}: 48{,}8125 - \frac{8727}{64} = -94{,}546875 \\
+&\frac{-26{,}375 - (-94{,}546875)}{\dfrac{1}{64}} = 4363 \quad \text{Nombre premier}
+\end{align*}
+
+\bigskip
+
+\textbf{Ex. 3.} 3 termes négatifs, 5 termes positifs :
+\begin{align*}
+&\left(\frac{13}{4} - \left(\frac{13}{8} + \frac{13}{16} + \frac{13}{32}\right) - 2\right) + \left(2 + 4 + 8 + 12 + 24\right) = 48{,}40625 \quad \text{Somme suite A} \\
+&\left(\frac{13}{2} - \left(\frac{13}{4} + \frac{13}{8} + \frac{13}{16}\right) - 66\right) + \left(-59{,}5 + 6{,}5 + 13 + 26 + 52\right) = -26{,}375 \quad \text{Somme suite B} \\
+&\text{Digamma}: 48{,}40625 - \frac{9059}{64} = -93{,}140625 \\
+&\frac{-26{,}375 - (-93{,}140625)}{\dfrac{1}{64}} = 4273
+\end{align*}
+
+\bigskip
+
+\textbf{Ex. 4.} 4 termes négatifs, 5 termes positifs :
+\begin{align*}
+&\left(\frac{13}{4} - \left(\frac{13}{8} + \frac{13}{16} + \frac{13}{32} + \frac{13}{64}\right) - 2\right) + \left(2 + 4 + 8 + 12 + 24\right) = 48{,}203125 \quad \text{Somme suite A} \\
+&\left(\frac{13}{2} - \left(\frac{13}{4} + \frac{13}{8} + \frac{13}{16} + \frac{13}{32}\right) - 66\right) + \left(-59{,}5 + 6{,}5 + 13 + 26 + 52\right) = -27{,}59375 \quad \text{Somme suite B} \\
+&\text{Digamma}: 48{,}203125 - \frac{9248}{64} \ (4397) \\
+&\frac{-27{,}59375 - (-96{,}296875) \ (4397)}{\dfrac{1}{64}} = 4397
+\end{align*}
+
+\bigskip
+
+\textbf{Ex. 5.} 5 termes négatifs, 5 termes positifs :
+\begin{align*}
+&\left(\frac{13}{4} - \left(\frac{13}{8} + \frac{13}{16} + \frac{13}{32} + \frac{13}{64} + \frac{13}{128}\right) - 2\right) + \left(2 + 4 + 8 + 12 + 24\right) = 48{,}1015625 \quad \text{Somme suite A} \\
+&\left(\frac{13}{2} - \left(\frac{13}{4} + \frac{13}{8} + \frac{13}{16} + \frac{13}{32} + \frac{13}{64}\right) - 66\right) + \left(-59{,}5 + 6{,}5 + 13 + 26 + 52\right) = -27{,}796875 \quad \text{Somme suite B} \\
+&\text{Digamma}: 48{,}1015625 - 144{,}7890625 = -96{,}6875 \\
+&\frac{-27{,}796875 - (-96{,}6875)}{\dfrac{1}{64}} = 4409
+\end{align*}
+
+\bigskip
+
+\textbf{Ex. 6.} 6 termes négatifs, 5 termes positifs :
+\begin{align*}
+&\left(\frac{13}{4} - \left(\frac{13}{8} + \frac{13}{16} + \frac{13}{32} + \frac{13}{64} + \frac{13}{128} + \frac{13}{256}\right) - 2\right) + \left(2 + 4 + 8 + 12 + 24\right) = 48{,}05078125 \quad \text{Somme suite A} \\
+&\left(\frac{13}{2} - \left(\frac{13}{4} + \frac{13}{8} + \frac{13}{16} + \frac{13}{32} + \frac{13}{64} + \frac{13}{128}\right) - 66\right) + \left(-59{,}5 + 6{,}5 + 13 + 26 + 52\right) = -27{,}8984375 \quad \text{Somme suite B} \\
+&\text{Digamma}: 48{,}05078125 - \frac{37127}{256} = -96{,}9765625 \\
+&\frac{-27{,}8984375 - (-96{,}9765625)}{\dfrac{1}{64}} = 4421
+\end{align*}
+
+
 \subsection{Régime négatif — une découverte originale}
 
 L'une des extensions les plus surprenantes de la Méthode Spectrale est la découverte que les nombres premiers négatifs (−2, −3, −5, −7, …) sont en bijection canonique avec les premiers positifs. Cette bijection n'est pas une convention artificielle : sur le plan complexe de la fonction zêta, elle se traduit par la symétrie fonctionnelle bien connue :
@@ -960,7 +1025,7 @@ La Méthode Spectrale distingue deux types d'asymétries dans les suites, selon 
 
 L'asymétrie ordonnée est la configuration normale et structurée. Les indices sont strictement croissants, et la suite B contient exactement un terme de plus que la suite A : |B| = |A| + 1. C'est la configuration « propre » de la méthode, celle qui correspond aux constructions canoniques décrites dans les sections précédentes.
 
-L'asymétrie chaotique est une configuration dégradée où les indices ne suivent pas l'ordre naturel, où |A| ≠ |B|, et où la configuration ordonnée n'est pas satisfaite. Cette situation peut survenir dans des constructions non canoniques ou lors de tests de robustesse de la méthode.
+L'asymétrie chaotique est une configuration dégradée où les indices ne suivent pas l'ordre naturel, où |A| ≠ |B|, et où la configuration ordonnée n'est pas satisfaite. Cette situation peut survenir dans des constructions non canoniques.
 
 Dans les deux cas, une contrainte commune s'applique : tous les indices doivent être valides, c'est-à-dire appartenir au domaine de définition des suites (n ≥ 1 ou n ≤ −1 selon le régime). Le lemme HOL garantit cette propriété :
 
@@ -1070,7 +1135,7 @@ Le log de l'agent Gabriel « Cannot find positions for C » lorsque C est compos
 \section{Section IX — Construction géométrique des suites}
 \subsection{Les règles de construction pour les suites à 8 termes ou plus}
 
-Pour construire une suite spectrale de longueur n ≥ 8, le manuscrit de Philippe Savard établit quatre règles précises :
+Pour construire une suite spectrale de longueur n ≥ 8, le manuscrit de Philippe Thomas Savard établit quatre règles précises :
 
 \begin{enumerate}[leftmargin=*]
 \item Positions 1 à n−2 : progression géométrique simple, de terme général a1 × ri−1.
@@ -1079,6 +1144,13 @@ Pour construire une suite spectrale de longueur n ≥ 8, le manuscrit de Philipp
 \item Position 6 de la suite B — saut structurel « x7 (Zêta) » : la suite B insère à la position 6 la valeur a1 × r6, décalant tous les termes suivants d'un rang. Ce saut structurel est la marque de fabrique de la suite B et l'origine de l'asymétrie ordonnée |B| = |A| + 1.
 \end{enumerate}
 
+\begin{description}
+  \item[\textbf{Zêta ($\zeta$)}] Dans le système de numération grecque,
+  le Zêta vaut~7 bien qu'il occupe la 6\ieme{} position. Cela est dû à
+  l'ancienne existence du Digamma, situé entre l'Epsilon et le Zêta.%
+  \footnote{Wikipédia, l'encyclopédie libre. \textit{Zêta}.
+  Disponible en ligne : \url{https://fr.wikipedia.org/wiki/Zêta}}
+\end{description}
 
 \section{Section XI — Le Pont Logique Savard : Tchebychev ↔ Spectral ↔ RH}
 Cette section est le couronnement de l'œuvre. Je cherche ici à montrer que la Méthode Spectrale n'est pas un formalisme isolé, mais qu'elle s'insère précisément dans le tissu de la théorie analytique des nombres, au niveau exact où la conjecture de Riemann fait son nœud.
@@ -1286,7 +1358,7 @@ Ce que je prétends, c'est ceci. L'ensemble composé de :
 \item les trois concordances C1, C2, C3 se verrouillant mutuellement,
 \item la primauté du numérique réel sur l'algébrique formel —
 \end{enumerate}
-— constitue, pour moi, une réponse suffisante à l'énigme de l'Hypothèse de Riemann. Une réponse local qui n'a de possibilité qu'a l'aide de la méthode spectrale et la géométrie du spectre des nombres premiers mais une démonstration formelle et validé par l'assistant de preuve isabelle démontrant puisque la méthode ne s'applique qu'aux nombre premiers l'équation psi(Savard) vs Tchebychev où cette dernière n'a d'utilité que pour la fonction Zêta de Riemann liant la méthode spectrale et la fonction Zêta de Riemann directement il est question du même sujet. Que la fonction zêta de Riemann ou les zéros non triviaux déterminent la position de l'ensemble des nombres premiers le RsP rapport spectral est pour l'ensemble des P entre chacun et groupe de premier est validé ce faisant isabelle valide RsP=Re=1/2 Vrai
+— constitue, pour moi, une réponse suffisante local à l'énigme de l'Hypothèse de Riemann. Une réponse local qui n'a de possibilité qu'a l'aide de la méthode spectrale et la géométrie du spectre des nombres premiers mais une démonstration formelle et validé par l'assistant de preuve isabelle démontrant puisque la méthode ne s'applique qu'aux nombre premiers l'équation psi(Savard) vs Tchebychev où cette dernière n'a d'utilité que pour la fonction Zêta de Riemann liant la méthode spectrale et la fonction Zêta de Riemann directement il est question du même sujet. Que la fonction zêta de Riemann ou les zéros non triviaux déterminent la position de l'ensemble des nombres premiers le RsP rapport spectral est pour l'ensemble des P entre chacun et groupe de premier est validé ce faisant isabelle valide RsP=Re=1/2 Vrai
 
 Le rapport 1/2 n'est pas un artefact algébrique élégant. Il émerge de la structure numérique réelle des sommes de nombres premiers. Son alignement avec Re(ρ) = 1/2 est vérifié à la fois numériquement (huit cas dans le tableau psi\_savard) et structurellement (via les trois concordances et le locale). Le Pont Savard formalise cette réalité déjà constatée. Il est une reconnaissance, non une conjecture. En plus de la preuve par l'absurde qui démontre que la méthode exclut catégoriquement les C composé donc ne s'applique qu'aux P premiers.
 

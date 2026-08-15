@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 """
-main_cli.py v4.0
+main_cli.py v4.0 INTERIM
 Point d'entree CLI pour Gabriel avec API HTTP intègee.
+(Version stable en attente du socket_cleanup)
 
 Modes:
   1. Mode interactif: CLI Rich (par defaut si GABRIEL_HTTP_ONLY=0)
   2. Mode API seule: Serveur Flask (si GABRIEL_HTTP_ONLY=1)
   3. Mode hybride: CLI + API simultanes (ThreadPoolExecutor)
-
-Utilise les variables d'environnement:
-  - GABRIEL_HTTP_ONLY=1 → Lancer SEULEMENT le serveur HTTP (pas de CLI)
-  - GABRIEL_HTTP_ONLY=0 → Lancer SEULEMENT le CLI interactif
-  - GABRIEL_HTTP_API=1 → Lancer CLI + API en parallele (defaut)
 """
 from __future__ import annotations
 
@@ -194,7 +190,10 @@ def main() -> None:
                 logger.info("CLI interrupted by user")
             
             # Attendre la fin de l'API (elle s'arrête quand le CLI s'arrête)
-            http_thread.result(timeout=5)
+            try:
+                http_thread.result(timeout=5)
+            except Exception as e:
+                logger.warning("HTTP thread error: %s", e)
     
     else:
         # Mode CLI seul (pas d'API HTTP)

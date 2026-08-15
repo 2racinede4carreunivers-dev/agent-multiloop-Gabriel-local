@@ -4,3 +4,4 @@ session Methode_Spectral = HOL +
     "HOL-Computational_Algebra"
   theories
     methode_spectral
+    validation_hol_unifiee

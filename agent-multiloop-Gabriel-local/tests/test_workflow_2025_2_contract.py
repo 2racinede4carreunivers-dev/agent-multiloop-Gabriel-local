@@ -3,7 +3,7 @@ from pathlib import Path
 import re
 
 
-BUILD = Path("/app/.github/workflows/build.yml")
+BUILD = Path("/home/agent/app/.github/workflows/build.yml")
 CONTENT = BUILD.read_text(encoding="utf-8")
 
 

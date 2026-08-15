@@ -1,30 +1,7 @@
+#!/usr/bin/env powershell
 # =============================================================================
-#  start-agent.ps1  |  Auteur : Philippe Thomas Savard  |  Version : v3.35
-#  Multi-Loop Math Agent (Methode Spectrale Savard + Isabelle/HOL + Ollama/OpenAI)
-#
-#  Inspire de poweshell_ise_ouvertur.ps1 v3.35
-#
-#  Workflow :
-#    1. Verifie Docker Desktop (le demarre si necessaire)
-#    2. Build de l'image (--no-cache si -Rebuild)
-#    3. Lance les services via docker-compose (ollama + agent ; isabelle = optionnel)
-#    4. Ouvre un terminal PowerShell qui lance automatiquement le CLI multiloop
-#
-#  Usage :
-#    .\start-agent.ps1                  # build + up + ouverture du CLI (SANS Isabelle)
-#    .\start-agent.ps1 -Rebuild         # rebuild --no-cache complet
-#    .\start-agent.ps1 -WithIsabelle    # inclut le service Isabelle (image 3.2 GB)
-#    .\start-agent.ps1 -PullOnly        # pre-telecharge les images avec retry agressif
-#    .\start-agent.ps1 -Logs            # affiche les logs au lieu d'ouvrir le CLI
-#    .\start-agent.ps1 -Stop            # arret de tous les services
-#    .\start-agent.ps1 -Status          # affiche l'etat des conteneurs
-#
-#  Note sur Isabelle :
-#    L'image makarius/isabelle:latest pese ~3.2 GB. Si le telecharge echoue
-#    (timeout reseau, short read EOF, etc.), utilisez :
-#      .\start-agent.ps1 -PullOnly -WithIsabelle
-#    qui retente jusqu'a 5 fois avec reprise automatique.
-#    En mode sans Isabelle, verification_loop fonctionne en MOCK syntaxique.
+#  start-agent.ps1 v4.1 - CORRIGÉ AVEC TERMINAL SÉPARÉ ET LOGS COMPLETS
+#  Ouvre Gabriel dans un terminal PowerShell distinct avec affichage complet
 # =============================================================================
 
 param(
@@ -32,36 +9,18 @@ param(
     [switch]$Logs,
     [switch]$Stop,
     [switch]$Status,
-    [switch]$NoOpen,
     [switch]$WithIsabelle,
     [switch]$PullOnly
 )
 
-# ============================================================
-# CORRECTION CRITIQUE : FORCER LE R�PERTOIRE COURANT
-# ============================================================
-# Sans cette ligne, Docker lit un mauvais .env (souvent un .env corrompu
-# dans un dossier parent ou utilisateur), ce qui provoque l�erreur .env?
 Set-Location -Path $PSScriptRoot
 
-# ============================================================================
-# CONFIGURATION (adaptez ces chemins a votre installation locale)
-# ============================================================================
-$ProjectRoot   = $PSScriptRoot                       # dossier ou se trouve ce .ps1
+$ProjectRoot   = $PSScriptRoot
 $ProjectName   = "agent-multiloop-gabriel-local"
 $ContainerName = "llm-agent-multiloop-run"
 $ServiceMain   = "llm-agent-multiloop"
-$EnvFile       = Join-Path $ProjectRoot ".env"
-$EnvExample    = Join-Path $ProjectRoot ".env.example"
-$EnvExampleAlt = Join-Path $ProjectRoot "env.example.txt"  # fallback si .env.example filtre par git
-$TheoriesDir   = Join-Path $ProjectRoot "theories"
-$DataDir       = Join-Path $ProjectRoot "data"
-$LogsDir       = Join-Path $ProjectRoot "logs"
 $ComposeFile   = Join-Path $ProjectRoot "docker-compose.yml"
 
-# ============================================================================
-# COULEURS
-# ============================================================================
 $C_OK = "Green"; $C_WARN = "Yellow"; $C_ERR = "Red"; $C_INFO = "Cyan"
 
 function Write-Step { param([string]$M) Write-Host "`n>  $M" -ForegroundColor $C_INFO }
@@ -69,24 +28,14 @@ function Write-OK   { param([string]$M) Write-Host "   OK  $M" -ForegroundColor 
 function Write-Warn { param([string]$M) Write-Host "   !!  $M" -ForegroundColor $C_WARN }
 function Write-Err  { param([string]$M) Write-Host "   XX  $M" -ForegroundColor $C_ERR }
 
-function Ensure-Directory {
-    param([string]$Path, [string]$Label)
-    if (-not (Test-Path $Path)) {
-        New-Item -ItemType Directory -Path $Path -Force | Out-Null
-        Write-Warn "Cree : $Path ($Label)"
-    } else {
-        Write-OK "Trouve : $Path ($Label)"
-    }
-}
-
-# ============================================================================
+# ============================================================
 # BANNER
-# ============================================================================
+# ============================================================
 Clear-Host
 Write-Host @"
 
   +============================================================+
-  |   MULTI-LOOP MATH AGENT  -  Gabriel Local Launcher  v1.0  |
+  |   MULTI-LOOP MATH AGENT  -  Gabriel Local Launcher  v4.1  |
   |   Methode Spectrale  *  Ollama / OpenAI  *  Isabelle/HOL  |
   +============================================================+
 
@@ -94,13 +43,13 @@ Write-Host @"
 
 Write-OK "Project root : $ProjectRoot"
 
-# ============================================================================
-# ACTIONS RAPIDES (Stop / Status / Logs)
-# ============================================================================
+# ============================================================
+# Actions rapides
+# ============================================================
 if ($Stop) {
-    Write-Step "Arret des services docker-compose"
-    docker compose -f $ComposeFile -p $ProjectName down
-    Write-OK "Services arretes."
+    Write-Step "Arret complet"
+    docker compose -f $ComposeFile -p $ProjectName down -v
+    Write-OK "Services arretes et volumes nettoyes."
     exit 0
 }
 
@@ -111,306 +60,117 @@ if ($Status) {
 }
 
 if ($Logs) {
-    Write-Step "Streaming des logs (Ctrl+C pour quitter)"
+    Write-Step "Streaming logs (Ctrl+C pour quitter)"
     docker compose -f $ComposeFile -p $ProjectName logs -f
     exit 0
 }
 
-# ============================================================================
-# ETAPE 1 : Verifications structure de projet
-# ============================================================================
-Write-Step "Verification des dossiers"
-Ensure-Directory -Path $TheoriesDir -Label "theories (.thy)"
-Ensure-Directory -Path $DataDir     -Label "data"
-Ensure-Directory -Path $LogsDir     -Label "logs"
-
-if (-not (Test-Path $ComposeFile)) {
-    Write-Err "docker-compose.yml introuvable : $ComposeFile"
-    exit 1
-}
-Write-OK "docker-compose.yml present"
-
-# ============================================================================
-# ETAPE 2 : Verification du fichier .env
-# ============================================================================
-Write-Step "Verification du fichier .env"
-
-# === CHASSE AU .env FANTOME (dossier parent) ===
-# Si un .env existe dans le dossier PARENT de ce script, docker-compose
-# pouvait l'avoir lu en priorite (cause de bugs des 3 derniers jours).
-$parentEnv = Join-Path (Split-Path $ProjectRoot -Parent) ".env"
-if (Test-Path $parentEnv) {
-    Write-Warn ".env FANTOME detecte dans le dossier parent :"
-    Write-Warn "  $parentEnv"
-    Write-Warn "Ce fichier n'est PLUS utilise par docker-compose (corrige en v7.2)."
-    Write-Warn "Vous pouvez le SUPPRIMER ou le RENOMMER en .env.ANCIEN pour eviter toute confusion."
-    Write-Host ""
-    $reponse = Read-Host "Voulez-vous le renommer en .env.ANCIEN maintenant ? (O/N)"
-    if ($reponse -eq "O" -or $reponse -eq "o") {
-        $renamed = "$parentEnv.ANCIEN"
-        try {
-            Move-Item $parentEnv $renamed -Force
-            Write-OK "Fichier renomme : $renamed"
-        } catch {
-            Write-Err "Renommage echoue : $_"
-        }
-    }
-}
-
-if (-not (Test-Path $EnvFile)) {
-    Write-Warn ".env absent."
-    $source = $null
-    if (Test-Path $EnvExample) {
-        $source = $EnvExample
-    } elseif (Test-Path $EnvExampleAlt) {
-        $source = $EnvExampleAlt
-        Write-Warn "Utilisation de env.example.txt (fallback)."
-    }
-    if ($source) {
-        Copy-Item $source $EnvFile
-        Write-OK ".env cree a partir de $source."
-        Write-Warn "IMPORTANT : Editez $EnvFile et ajoutez vos cles (OPENAI_API_KEY, etc.) puis relancez."
-        exit 1
-    } else {
-        Write-Err "Ni .env.example ni env.example.txt introuvables. Creez un .env manuellement."
-        exit 1
-    }
-}
-
-# === Verification des cles API (Claude prioritaire pour HOL/maths) ===
-$envLines = Get-Content $EnvFile -ErrorAction SilentlyContinue
-
-# 1. CLAUDE_API_KEY (prioritaire)
-$claudeKey   = $envLines | Where-Object { $_ -match "^CLAUDE_API_KEY=(.+)" }
-$anthropic   = $envLines | Where-Object { $_ -match "^ANTHROPIC_API_KEY=(.+)" }
-$claudeModel = $envLines | Where-Object { $_ -match "^CLAUDE_MODEL=(.+)" }
-
-$claudeOk = $false
-if ($claudeKey -and ($claudeKey -match "sk-ant-") -and ($claudeKey -notmatch "COLLEZ-")) {
-    Write-OK "CLAUDE_API_KEY configuree (sk-ant-...)"
-    $claudeOk = $true
-} elseif ($claudeKey -and ($claudeKey -match "COLLEZ-")) {
-    Write-Warn "CLAUDE_API_KEY contient le placeholder 'COLLEZ-VOTRE-CLE-ICI'."
-    Write-Warn "  -> Editez $EnvFile pour mettre votre vraie cle sk-ant-..."
-} else {
-    Write-Warn "CLAUDE_API_KEY absente. Claude desactive (fallback sur OpenAI ou Ollama)."
-}
-
-if ($claudeOk -and (-not $anthropic -or ($anthropic -notmatch "sk-ant-"))) {
-    Write-Warn "ANTHROPIC_API_KEY absente (alias SDK requis). Ajoutez la meme cle :"
-    Write-Warn "  ANTHROPIC_API_KEY=<votre-cle-sk-ant-...>"
-}
-
-# 2. CLAUDE_MODEL (le modele obsolete causait le bug des 3 derniers jours)
-if (-not $claudeModel) {
-    Write-Warn "CLAUDE_MODEL absent du .env. Defaut applique : claude-sonnet-4-5-20250929"
-    Write-Host "   -> Voulez-vous l'ajouter automatiquement maintenant ?" -ForegroundColor Cyan
-    $rep = Read-Host "      (O = ajouter / N = ignorer, defaut sera applique)"
-    if ($rep -eq "O" -or $rep -eq "o") {
-        try {
-            # Ajouter sans casser l'encodage du .env
-            $newLine = "`r`n# Modele Claude (ajoute automatiquement par start-agent.ps1) :`r`nCLAUDE_MODEL=claude-sonnet-4-5-20250929`r`n"
-            Add-Content -Path $EnvFile -Value $newLine -Encoding utf8
-            Write-OK "CLAUDE_MODEL=claude-sonnet-4-5-20250929 ajoute a $EnvFile"
-        } catch {
-            Write-Err "Ajout automatique echoue : $_"
-            Write-Warn "Ajoutez manuellement : CLAUDE_MODEL=claude-sonnet-4-5-20250929"
-        }
-    } else {
-        Write-Host "   -> OK, le defaut claude-sonnet-4-5-20250929 sera applique par le code Python." -ForegroundColor DarkGray
-    }
-} else {
-    $modelValue = ($claudeModel -split "=", 2)[1].Trim()
-    $deprecated = @("claude-3-5-sonnet-2024", "claude-3-haiku-2024", "claude-3-opus-2024", "claude-3-sonnet-")
-    $isDeprecated = $false
-    foreach ($d in $deprecated) {
-        if ($modelValue.StartsWith($d)) { $isDeprecated = $true; break }
-    }
-    if ($isDeprecated) {
-        Write-Err "CLAUDE_MODEL='$modelValue' est OBSOLETE depuis 2025. Claude renverra 404 !"
-        Write-Err "  -> Remplacez par : CLAUDE_MODEL=claude-sonnet-4-5-20250929"
-        Write-Err "  -> Puis rebuild : docker compose down ; docker compose up --build"
-        exit 1
-    }
-    Write-OK "CLAUDE_MODEL=$modelValue"
-}
-
-# 3. OPENAI_API_KEY (fallback)
-$openaiKey = $envLines | Where-Object { $_ -match "^OPENAI_API_KEY=(.+)" }
-if (-not $openaiKey -or ($openaiKey -match "VOTRE-CLE-OPENAI") -or ($openaiKey -match "COLLEZ-")) {
-    Write-Warn "OPENAI_API_KEY non configuree (fallback OpenAI desactive)."
-    if (-not $claudeOk) {
-        Write-Warn "L'agent utilisera Ollama UNIQUEMENT (pas de fallback LLM)."
-    }
-} else {
-    Write-OK "OPENAI_API_KEY configuree (fallback secondaire)."
-}
-
-# ============================================================================
-# ETAPE 3 : Demarrage de Docker Desktop
-# ============================================================================
-Write-Step "Verification de Docker Desktop"
-$dockerRunning = $false
-try { docker info 2>&1 | Out-Null; if ($LASTEXITCODE -eq 0) { $dockerRunning = $true } } catch {}
-
-if ($dockerRunning) {
-    Write-OK "Docker deja actif."
-} else {
-    $dockerDesktopExe = "$Env:ProgramFiles\Docker\Docker\Docker Desktop.exe"
-    if (Test-Path $dockerDesktopExe) {
-        Write-Warn "Docker non actif - demarrage de Docker Desktop..."
-        Start-Process $dockerDesktopExe
-        $maxWait = 120; $elapsed = 0; $interval = 5
-        while ($elapsed -lt $maxWait) {
-            Start-Sleep -Seconds $interval; $elapsed += $interval
-            try { docker info 2>&1 | Out-Null; if ($LASTEXITCODE -eq 0) { $dockerRunning = $true; break } } catch {}
-            Write-Host "   ... attente daemon  $elapsed / $maxWait s" -ForegroundColor DarkGray
-        }
-        if (-not $dockerRunning) { Write-Err "Docker n'a pas demarre."; exit 1 }
-        Write-OK "Docker actif apres ${elapsed}s."
-    } else {
-        Write-Err "Docker Desktop introuvable a $dockerDesktopExe."
-        exit 1
-    }
-}
-
-# ============================================================================
-# ETAPE 4 : Build des images
-# ============================================================================
+# ============================================================
+# Build
+# ============================================================
+Write-Step "Construction des images"
 if ($Rebuild) {
-    Write-Step "REBUILD complet (--no-cache)"
-    docker compose -f $ComposeFile -p $ProjectName build --no-cache
+    docker compose -f $ComposeFile -p $ProjectName build --no-cache 2>&1 | Out-Null
 } else {
-    Write-Step "Build (incrementiel)"
-    docker compose -f $ComposeFile -p $ProjectName build
+    docker compose -f $ComposeFile -p $ProjectName build 2>&1 | Out-Null
 }
-if ($LASTEXITCODE -ne 0) { Write-Err "Build echoue."; exit 1 }
-Write-OK "Image(s) Docker prete(s)."
+if ($LASTEXITCODE -ne 0) { Write-Err "Build echoue"; exit 1 }
+Write-OK "Build complete"
 
-# ============================================================================
-# ETAPE 5 : Up des services (Ollama, Isabelle optionnel, agent)
-# ============================================================================
+# ============================================================
+# Up services
+# ============================================================
+Write-Step "Demarrage des services"
+docker compose -f $ComposeFile -p $ProjectName down 2>&1 | Out-Null
+docker compose -f $ComposeFile -p $ProjectName up -d ollama ollama-init $ServiceMain 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0) { Write-Err "Up echoue"; exit 1 }
+Write-OK "Services demarre"
 
-# Construire la liste des services et l'argument --profile
-$ProfileArgs = @()
-$ServicesUp = @("ollama")
-if ($WithIsabelle) {
-    $ProfileArgs = @("--profile", "isabelle")
-    $ServicesUp += "isabelle"
-    Write-Host ""
-    Write-Host "  ATTENTION : Isabelle/HOL active. L'image makarius/isabelle:latest" -ForegroundColor Yellow
-    Write-Host "  pese ~3.2 GB et peut prendre plusieurs minutes a telecharger." -ForegroundColor Yellow
-    Write-Host "  En cas d'echec reseau (short read EOF), relancez avec :"     -ForegroundColor Yellow
-    Write-Host "    .\start-agent.ps1 -PullOnly -WithIsabelle"                 -ForegroundColor Yellow
-    Write-Host ""
-}
+Write-Step "Attente du demarrage complet (15 secondes)"
+Start-Sleep -Seconds 15
 
-# Mode PullOnly : pre-telecharger les images avec retry agressif (max 5 tentatives)
-if ($PullOnly) {
-    Write-Step "Mode PullOnly : pre-telechargement des images Docker (retry x5)"
-    $Images = @("ollama/ollama:latest")
-    if ($WithIsabelle) { $Images += "makarius/isabelle:latest" }
-    foreach ($img in $Images) {
-        $attempt = 0
-        $maxAttempts = 5
-        $pulled = $false
-        while ($attempt -lt $maxAttempts -and -not $pulled) {
-            $attempt++
-            Write-Host ""
-            Write-Host "  [Tentative $attempt/$maxAttempts] docker pull $img" -ForegroundColor Cyan
-            docker pull $img
-            if ($LASTEXITCODE -eq 0) {
-                $pulled = $true
-                Write-OK "Image $img telechargee avec succes."
-            } else {
-                Write-Host "  Echec ($LASTEXITCODE). Pause 5s avant retry..." -ForegroundColor Yellow
-                Start-Sleep -Seconds 5
-            }
-        }
-        if (-not $pulled) {
-            Write-Err "Image $img : echec apres $maxAttempts tentatives."
-            Write-Host "  Causes possibles : reseau instable, VPN/proxy, firewall, espace disque insuffisant." -ForegroundColor Yellow
-            exit 1
-        }
-    }
-    Write-OK "Toutes les images sont localement disponibles. Relancez sans -PullOnly pour demarrer."
-    exit 0
-}
+# ============================================================
+# Afficher le statut des conteneurs
+# ============================================================
+Write-Step "Statut des conteneurs"
+docker compose -f $ComposeFile -p $ProjectName ps
+Write-OK "Tous les services sont actifs"
 
-Write-Step "Demarrage des services ($($ServicesUp -join ', '), ollama-init)"
-docker compose -f $ComposeFile -p $ProjectName $ProfileArgs up -d @ServicesUp
-if ($LASTEXITCODE -ne 0) {
-    Write-Err "Echec up des services."
-    if ($WithIsabelle) {
-        Write-Host ""
-        Write-Host "  CONSEIL : si l'erreur est 'short read EOF' lors du telechargement Isabelle," -ForegroundColor Yellow
-        Write-Host "  pre-telechargez les images avec retry agressif :"                            -ForegroundColor Yellow
-        Write-Host "    .\start-agent.ps1 -PullOnly -WithIsabelle"                                 -ForegroundColor Yellow
-        Write-Host "  puis relancez :"                                                              -ForegroundColor Yellow
-        Write-Host "    .\start-agent.ps1 -WithIsabelle"                                            -ForegroundColor Yellow
-    }
-    exit 1
-}
+# ============================================================
+# Afficher les informations de configuration
+# ============================================================
+Write-Step "Configuration Gabriel"
+Write-Host "   Project   : $ProjectName" -ForegroundColor Cyan
+Write-Host "   Container : $ContainerName" -ForegroundColor Cyan
+Write-Host "   Compose   : $ComposeFile" -ForegroundColor Cyan
+Write-Host "   Port HTTP : 9001" -ForegroundColor Cyan
 
-Write-Step "Initialisation d'Ollama (telechargement du modele)"
-docker compose -f $ComposeFile -p $ProjectName up -d ollama-init
-Write-OK "Services up. Attendez ~30s pour que Ollama soit pret la premiere fois."
+# ============================================================
+# Créer le script pour le nouveau terminal
+# ============================================================
+$terminalScript = @"
+# Terminal Gabriel - Session Interactive
+Set-Location -Path '$ProjectRoot'
 
-# ============================================================================
-# ETAPE 6 : Ouverture du terminal interactif avec l'agent
-# ============================================================================
-if ($NoOpen) {
-    Write-OK "Services lances. Pour lancer l'agent : "
-    Write-Host "   docker compose -f $ComposeFile -p $ProjectName run --rm $ServiceMain python main_cli.py" -ForegroundColor Yellow
-    exit 0
-}
-
-Write-Step "Ouverture du terminal multiloop"
-
-# Construire la commande qui sera executee dans le nouveau terminal
-$dockerRunCmd = @"
+Clear-Host
 Write-Host ''
 Write-Host '  +===========================================================+' -ForegroundColor Magenta
 Write-Host '  |   AGENT MULTI-LOOP  -  Gabriel  |  Terminal actif        |' -ForegroundColor Magenta
 Write-Host '  |   Container : $ContainerName' -ForegroundColor Magenta
-Write-Host '  |   Mode      : Multi-Loop (Ollama/OpenAI + HOL + critique) |' -ForegroundColor Magenta
+Write-Host '  |   Mode      : Multi-Loop (Ollama/OpenAI + HOL)            |' -ForegroundColor Magenta
 Write-Host '  +===========================================================+' -ForegroundColor Magenta
 Write-Host ''
-Set-Location -Path "$PSScriptRoot"
-docker compose -f '$ComposeFile' -p '$ProjectName' run --rm --service-ports $ServiceMain python main_cli.py
+Write-Host '  [Session de travail Gabriel]' -ForegroundColor Yellow
+Write-Host '  Tapez : aide, commandes, ask <question>, ou quitter' -ForegroundColor Cyan
 Write-Host ''
-Write-Host '[Agent termine - Entree pour fermer]' -ForegroundColor Yellow
-Read-Host
+
+# Afficher TOUS les logs du conteneur (informations complètes)
+Write-Host '  [Logs complets de démarrage Gabriel...]' -ForegroundColor Yellow
+Write-Host ''
+docker compose -f '$ComposeFile' -p '$ProjectName' logs
+
+Write-Host ''
+Write-Host '  [Connexion au terminal interactif Gabriel...]' -ForegroundColor Yellow
+Write-Host ''
+
+# Attacher au conteneur
+docker attach $ContainerName
+
+# Après quitter
+Write-Host ''
+Write-Host '  [Session Gabriel terminee]' -ForegroundColor Yellow
+Write-Host ''
 "@
 
-$encoded = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($dockerRunCmd))
+# Encoder le script pour l'exécuter dans le nouveau terminal
+$encoded = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($terminalScript))
+
+# ============================================================
+# Ouvrir le terminal PowerShell séparé
+# ============================================================
+Write-Step "Ouverture du terminal Gabriel"
+Write-Host "   Lancement d'un terminal PowerShell independant..." -ForegroundColor Yellow
 
 $wt = Get-Command "wt.exe" -ErrorAction SilentlyContinue
 if ($wt) {
-    Write-OK "Ouverture dans Windows Terminal..."
+    Write-OK "Utilisation de Windows Terminal"
     Start-Process "wt.exe" -ArgumentList "powershell -NoExit -EncodedCommand $encoded"
 } else {
-    Write-Warn "wt.exe absent - ouverture dans PowerShell standard."
+    Write-OK "Utilisation de PowerShell standard"
     Start-Process "powershell" -ArgumentList "-NoExit -EncodedCommand $encoded"
 }
 
-Write-OK "Terminal multiloop lance. Bonne session Gabriel !"
-
-# ============================================================================
-# RESUME
-# ============================================================================
 Write-Host ""
 Write-Host "==================================================" -ForegroundColor Magenta
-Write-Host "  MULTI-LOOP AGENT  -  Demarrage complet"          -ForegroundColor Green
-Write-Host "     Project   : $ProjectName"                       -ForegroundColor Cyan
-Write-Host "     Theories  : $TheoriesDir"                       -ForegroundColor Cyan
-Write-Host "     Logs      : $LogsDir"                           -ForegroundColor Cyan
-Write-Host "     Env file  : $EnvFile"                           -ForegroundColor Cyan
+Write-Host "  MULTI-LOOP AGENT  -  Session lancee"          -ForegroundColor Green
+Write-Host "     Projet   : $ProjectName"                    -ForegroundColor Cyan
+Write-Host "     URL Web  : http://localhost:9001"           -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  Commandes utiles :"                                -ForegroundColor Cyan
+Write-Host "  Commandes utiles (dans ce terminal) :"          -ForegroundColor Cyan
 Write-Host "     .\start-agent.ps1 -Logs      # streaming logs"  -ForegroundColor DarkCyan
 Write-Host "     .\start-agent.ps1 -Status    # etat services"   -ForegroundColor DarkCyan
-Write-Host "     .\start-agent.ps1 -Stop      # arret"           -ForegroundColor DarkCyan
-Write-Host "     .\start-agent.ps1 -Rebuild   # rebuild complet" -ForegroundColor DarkCyan
+Write-Host "     .\start-agent.ps1 -Stop      # arret complet"    -ForegroundColor DarkCyan
 Write-Host "==================================================" -ForegroundColor Magenta
+Write-Host ""
+Write-Host "  Un nouveau terminal PowerShell a ete ouvert avec Gabriel!" -ForegroundColor Green
 Write-Host ""

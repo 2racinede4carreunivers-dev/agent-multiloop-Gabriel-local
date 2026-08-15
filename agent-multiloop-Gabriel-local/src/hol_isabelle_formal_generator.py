@@ -61,7 +61,7 @@ definition A :: "nat ⇒ real" where
 definition B :: "nat ⇒ real" where
   "B n = (13 / 4) * (2 ^ n) - 66"
 
-(* Digamma discret : dgm(n,p) = B(n) - 64 * p *)
+(* Digamma discret : dgm(n,p) = B(n) - 64*p   ← FORMULE CORRECTE AVEC SOUSTRACTION *)
 definition digamma :: "nat ⇒ real ⇒ real" where
   "digamma n p = B n - 64 * p"
 

@@ -1,5 +1,5 @@
 # =============================================================================
-# Multi-Loop Math Agent - Dockerfile.cli (SLIM)
+# Multi-Loop Math Agent - Dockerfile.cli (SLIM) v4.0
 #
 # Optimisations vs version precedente :
 #   - PAS d'installation d'Isabelle dans l'agent (utilise le service Docker

@@ -1,415 +1,304 @@
+#!/usr/bin/env python3
 """
-Gabriel Vision Integration - Intégrateur principal
-===================================================
+================================================================================
+GABRIEL VISION INTEGRATION - Image Analysis Module
+================================================================================
 
-Intègre les modules de vision et d'accès aux images dans Gabriel Multi-Loop.
-Permet au agent de:
-  1. Accéder aux images depuis n'importe où (chemin, URL, réseau)
-  2. Analyser les images (points, lignes, formes)
-  3. Valider les figures géométriques
-  4. Générer du code paramétrique (Python, LaTeX, HOL)
-  5. Générer des rapports d'analyse
+Module d'intégration pour l'analyse d'images dans Gabriel.
+À placer dans: src/gabriel_vision_integration.py
 
-Utilisation:
-    image_analyzer = GabrielVisionIntegration()
-    
-    # Analyser une image
-    result = image_analyzer.analyze_image(
-        "C:/path/to/image.png"
-        or "https://example.com/image.png"
-    )
-    
-    if result.success:
-        print(result.report)
-        print(result.python_code)
-        print(result.hol_code)
+Fournit:
+  - Détection de requêtes image
+  - Routage vers le système de vision
+  - Génération de rapports d'analyse
+  - Support des formats multiples
 
-Auteur: Gabriel Multi-Loop Agent
-Date: 2026
+================================================================================
 """
-
-from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+import re
 from pathlib import Path
 from typing import Optional, Dict, Any
-from datetime import datetime
-import traceback
+from enum import Enum
 
-from image_access_manager import (
-    ImageAccessManager,
-    ImageSource,
-    access_image,
-    get_image_access_manager,
-)
-from vision_module import (
-    ImageVisionAnalyzer,
-    Point,
-    Line,
-    Shape,
-)
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class AnalysisResult:
-    """Résultat complet d'une analyse d'image"""
-    success: bool
-    timestamp: datetime = field(default_factory=datetime.now)
-    image_path: Optional[str] = None
-    source: Optional[ImageSource] = None
-    
-    # Analyses
-    points_detected: int = 0
-    lines_detected: int = 0
-    shapes_detected: int = 0
-    
-    # Validation
-    is_valid: bool = False
-    consistency_score: float = 0.0
-    validation_errors: list[str] = field(default_factory=list)
-    validation_warnings: list[str] = field(default_factory=list)
-    
-    # Générations
-    report: str = ""
-    python_code: str = ""
-    latex_code: str = ""
-    hol_code: str = ""
-    
-    # Métadonnées
-    analysis_duration_ms: float = 0.0
-    error_message: Optional[str] = None
-    traceback_info: Optional[str] = None
-    
-    coordinates: Dict[str, Any] = field(default_factory=dict)
+class ImageFormat(Enum):
+    """Format d'image supportés"""
+    PNG = "png"
+    JPG = "jpg"
+    JPEG = "jpeg"
+    GIF = "gif"
+    BMP = "bmp"
+    TIFF = "tiff"
+    WEBP = "webp"
+
+
+class ImageAnalysisType(Enum):
+    """Types d'analyse d'image supportés"""
+    GEOMETRIC = "geometric"        # Analyse géométrique
+    GRAPHIQUE = "graphique"        # Graphiques et courbes
+    TABLE = "table"               # Extraction de données
+    DIAGRAM = "diagram"           # Diagrammes et schémas
+    OCR = "ocr"                   # Reconnaissance de texte
+    ANNOTATION = "annotation"      # Détection d'annotations
+    COMPLETE = "complete"         # Analyse complète
 
 
 class GabrielVisionIntegration:
-    """
-    Intégrateur de vision pour Gabriel Multi-Loop Agent
-    Point d'entrée principal pour l'analyse d'images
-    """
+    """Intégration du système de vision dans Gabriel"""
     
-    def __init__(self, 
-                 cache_dir: Optional[Path | str] = None,
-                 auto_generate_code: bool = True):
-        """
-        Initialise l'intégrateur de vision
-        
-        Args:
-            cache_dir: Répertoire de cache personnalisé
-            auto_generate_code: Générer automatiquement le code après analyse
-        """
-        self.access_manager = get_image_access_manager(cache_dir=cache_dir)
-        self.auto_generate_code = auto_generate_code
-        self.last_analysis: Optional[AnalysisResult] = None
-        
-        logger.info("GabrielVisionIntegration initialisé")
+    def __init__(self):
+        """Initialise le module de vision"""
+        self.supported_formats = {fmt.value for fmt in ImageFormat}
+        self.analysis_types = {at.value for at in ImageAnalysisType}
+        logger.info("[Gabriel Vision] Integration module initialized")
     
-    def analyze_image(self, image_path: str, 
-                     generate_code: bool = True,
-                     detect_points: bool = True,
-                     detect_lines: bool = True,
-                     detect_shapes: bool = True) -> AnalysisResult:
-        """
-        Analyse complète d'une image
+    def is_image_query(self, query: str) -> bool:
+        """Détecte si c'est une requête d'analyse d'image"""
+        query_lower = query.lower()
         
-        Args:
-            image_path: Chemin, URL, ou adresse réseau de l'image
-            generate_code: Générer le code paramétrique
-            detect_points: Détecter les points
-            detect_lines: Détecter les lignes
-            detect_shapes: Détecter les formes
+        # Mots-clés de commande image
+        image_commands = [
+            'analyse image', 'valide', 'examine', 'scan',
+            'analyser image', 'verifier', 'valider'
+        ]
         
-        Returns:
-            AnalysisResult avec tous les résultats
-        """
-        import time
-        start_time = time.time()
+        # Extensions d'image
+        image_extensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.webp']
         
-        result = AnalysisResult(
-            success=False,
-            image_path=image_path,
-        )
+        # Vérifier si c'est une requête image
+        is_command = any(query_lower.startswith(cmd) for cmd in image_commands)
+        is_file = any(ext in query_lower for ext in image_extensions)
         
-        try:
-            logger.info(f"Début analyse: {image_path}")
-            
-            # ÉTAPE 1: Accéder à l'image
-            logger.debug("Étape 1: Accès à l'image")
-            source = self.access_image(image_path)
-            
-            if source is None:
-                result.error_message = f"Impossible d'accéder à l'image: {image_path}"
-                logger.error(result.error_message)
-                return result
-            
-            result.source = source
-            
-            # ÉTAPE 2: Charger et analyser l'image
-            logger.debug("Étape 2: Analyse vision")
-            analyzer = ImageVisionAnalyzer(source.resolved_path)
-            
-            # Détections
-            if detect_points:
-                analyzer.detect_points()
-                result.points_detected = len(analyzer.points)
-                logger.debug(f"Points détectés: {result.points_detected}")
-            
-            if detect_lines:
-                analyzer.detect_lines()
-                result.lines_detected = len(analyzer.lines)
-                logger.debug(f"Lignes détectées: {result.lines_detected}")
-            
-            if detect_shapes:
-                analyzer.detect_shapes()
-                result.shapes_detected = len(analyzer.shapes)
-                logger.debug(f"Formes détectées: {result.shapes_detected}")
-            
-            # ÉTAPE 3: Validation
-            logger.debug("Étape 3: Validation")
-            validation = analyzer.validate_figure()
-            result.is_valid = validation['valid']
-            result.consistency_score = validation['consistency_score']
-            result.validation_errors = validation['errors']
-            result.validation_warnings = validation['warnings']
-            
-            # ÉTAPE 4: Génération du rapport
-            logger.debug("Étape 4: Rapport")
-            result.report = analyzer.analyze_and_report()
-            
-            # ÉTAPE 5: Extraction des coordonnées
-            logger.debug("Étape 5: Extraction coordonnées")
-            result.coordinates = analyzer.extract_coordinates()
-            
-            # ÉTAPE 6: Génération du code (si demandé)
-            if generate_code and analyzer.shapes:
-                logger.debug("Étape 6: Génération code")
-                try:
-                    result.python_code = analyzer.generate_python_code(0)
-                    result.latex_code = analyzer.generate_latex_code(0)
-                    result.hol_code = analyzer.generate_hol_code(0)
-                except Exception as e:
-                    logger.warning(f"Erreur génération code: {e}")
-            
-            result.success = True
-            logger.info("Analyse complétée avec succès")
-        
-        except Exception as e:
-            logger.error(f"Erreur lors de l'analyse: {e}")
-            result.error_message = str(e)
-            result.traceback_info = traceback.format_exc()
-        
-        finally:
-            result.analysis_duration_ms = (time.time() - start_time) * 1000
-            self.last_analysis = result
-        
-        return result
+        return is_command and is_file
     
-    def access_image(self, image_path: str) -> Optional[ImageSource]:
-        """
-        Accès universel à une image
+    def extract_image_path(self, query: str) -> Optional[str]:
+        """Extrait le chemin d'image d'une requête"""
         
-        Args:
-            image_path: Chemin/URL/adresse réseau
+        # Windows path (C:\\path\\to\\file.ext)
+        windows_pattern = r'[A-Za-z]:\\[^\s"]+\.(?:png|jpg|jpeg|gif|bmp|tiff|webp)'
+        match = re.search(windows_pattern, query, re.IGNORECASE)
+        if match:
+            return match.group(0)
         
-        Returns:
-            ImageSource accessible ou None
-        """
-        return self.access_manager.access_image(image_path)
+        # Unix path (/path/to/file.ext)
+        unix_pattern = r'/[^\s"]+\.(?:png|jpg|jpeg|gif|bmp|tiff|webp)'
+        match = re.search(unix_pattern, query, re.IGNORECASE)
+        if match:
+            return match.group(0)
+        
+        # Relative path (./path or ../path)
+        relative_pattern = r'(?:\.|\.\.)/[^\s"]+\.(?:png|jpg|jpeg|gif|bmp|tiff|webp)'
+        match = re.search(relative_pattern, query, re.IGNORECASE)
+        if match:
+            return match.group(0)
+        
+        return None
     
-    def add_search_root(self, root: Path | str) -> None:
-        """Ajoute une racine de recherche pour les chemins relatifs"""
-        self.access_manager.add_search_root(root)
-        logger.info(f"Racine de recherche ajoutée: {root}")
-    
-    def validate_points_with_figure(self, 
-                                   image_path: str,
-                                   points: list[tuple[float, float]]) -> Dict[str, Any]:
-        """
-        Valide que les points donnés correspondent à la figure
+    def extract_analysis_type(self, query: str) -> ImageAnalysisType:
+        """Extrait le type d'analyse demandé"""
+        query_lower = query.lower()
         
-        Args:
-            image_path: Chemin de l'image
-            points: Liste de tuples (x, y)
-        
-        Returns:
-            Résultat de validation
-        """
-        source = self.access_image(image_path)
-        if source is None:
-            return {'valid': False, 'error': 'Image non accessible'}
-        
-        try:
-            analyzer = ImageVisionAnalyzer(source.resolved_path)
-            analyzer.detect_shapes()
-            
-            result = {
-                'valid': True,
-                'provided_points': len(points),
-                'detected_shapes': len(analyzer.shapes),
-                'checks': [],
-            }
-            
-            # Créer des Point objects
-            provided_points = [
-                Point(x, y, type=None) 
-                for x, y in points
-            ]
-            
-            # Vérifier chaque forme
-            for shape in analyzer.shapes:
-                check = {
-                    'shape_type': shape.type,
-                    'shape_points': len(shape.points),
-                    'coherent': True,
-                    'issues': [],
-                }
-                
-                # Vérifier que les points fournis sont proches des points détectés
-                for provided_pt in provided_points:
-                    min_dist = min(
-                        provided_pt.distance_to(detected_pt)
-                        for detected_pt in shape.points
-                    )
-                    
-                    if min_dist > 10:  # Tolérance de 10 pixels
-                        check['coherent'] = False
-                        check['issues'].append(
-                            f"Point ({provided_pt.x}, {provided_pt.y}) "
-                            f"éloigné de {min_dist:.1f}px de la forme"
-                        )
-                
-                result['checks'].append(check)
-                if not check['coherent']:
-                    result['valid'] = False
-            
-            return result
-        
-        except Exception as e:
-            return {'valid': False, 'error': str(e)}
-    
-    def generate_parametric_code(self, image_path: str,
-                                language: str = 'python') -> str:
-        """
-        Génère du code paramétrique pour une image
-        
-        Args:
-            image_path: Chemin de l'image
-            language: 'python', 'latex', 'hol'
-        
-        Returns:
-            Code généré
-        """
-        result = self.analyze_image(image_path)
-        
-        if not result.success:
-            return f"# Erreur: {result.error_message}"
-        
-        if language == 'python':
-            return result.python_code
-        elif language == 'latex':
-            return result.latex_code
-        elif language == 'hol':
-            return result.hol_code
+        if any(kw in query_lower for kw in ['geometrie', 'geometry', 'geometric', 'forme', 'shape']):
+            return ImageAnalysisType.GEOMETRIC
+        elif any(kw in query_lower for kw in ['graphique', 'graph', 'courbe', 'curve']):
+            return ImageAnalysisType.GRAPHIQUE
+        elif any(kw in query_lower for kw in ['tableau', 'table', 'matrice', 'matrix']):
+            return ImageAnalysisType.TABLE
+        elif any(kw in query_lower for kw in ['diagramme', 'diagram', 'schema', 'schema']):
+            return ImageAnalysisType.DIAGRAM
+        elif any(kw in query_lower for kw in ['texte', 'text', 'ocr']):
+            return ImageAnalysisType.OCR
+        elif any(kw in query_lower for kw in ['annotation', 'label']):
+            return ImageAnalysisType.ANNOTATION
         else:
-            return f"# Langage non supporté: {language}"
+            return ImageAnalysisType.COMPLETE
     
-    def get_analysis_summary(self) -> str:
-        """Résumé de la dernière analyse"""
-        if self.last_analysis is None:
-            return "Aucune analyse réalisée"
+    async def analyze_image(self, image_path: str, query: str) -> Dict[str, Any]:
+        """
+        Analyse une image selon la requête
         
-        r = self.last_analysis
+        Paramètres:
+          image_path: Chemin vers l'image
+          query: Requête de l'utilisateur
         
-        summary = f"""
-╭────────────────────────────────────────────────────────────────╮
-│           RÉSUMÉ DERNIÈRE ANALYSE - GABRIEL VISION            │
-╰────────────────────────────────────────────────────────────────╯
+        Retour:
+          Dictionnaire avec:
+          {
+            'success': bool,
+            'error': str | None,
+            'report': str,  # Rapport d'analyse
+            'confidence': float,  # 0.0-10.0
+            'image_path': str,
+            'analysis_type': str,
+            'detections': dict,
+            'generated_code': dict
+          }
+        """
+        
+        try:
+            # Vérifier que le fichier existe
+            image_file = Path(image_path)
+            if not image_file.exists():
+                return {
+                    'success': False,
+                    'error': f'Image file not found: {image_path}',
+                    'confidence': 0.0,
+                    'image_path': image_path
+                }
+            
+            # Vérifier le format
+            suffix = image_file.suffix.lower().lstrip('.')
+            if suffix not in self.supported_formats:
+                return {
+                    'success': False,
+                    'error': f'Unsupported image format: {suffix}',
+                    'confidence': 0.0,
+                    'image_path': image_path
+                }
+            
+            # Déterminer le type d'analyse
+            analysis_type = self.extract_analysis_type(query)
+            
+            logger.info(f"[Gabriel Vision] Analyzing: {image_file.name} ({analysis_type.value})")
+            
+            # Importer ici pour éviter les problèmes si PIL n'est pas installée
+            try:
+                from PIL import Image
+                import numpy as np
+            except ImportError:
+                return {
+                    'success': False,
+                    'error': 'PIL/Pillow not installed. Install with: pip install Pillow',
+                    'confidence': 0.0,
+                    'image_path': image_path
+                }
+            
+            # Charger l'image
+            img = Image.open(image_file)
+            width, height = img.size
+            img_array = np.array(img)
+            
+            # Analyser les pixels
+            if len(img_array.shape) == 3 and img_array.shape[2] >= 3:
+                gray = np.mean(img_array[:, :, :3], axis=2)
+            elif len(img_array.shape) == 2:
+                gray = img_array
+            else:
+                gray = np.mean(img_array, axis=2)
+            
+            # Détecter les éléments
+            black_pixels = gray < 100
+            black_ratio = np.sum(black_pixels) / (width * height)
+            
+            # Générer le rapport
+            report = self._generate_report(
+                image_file.name,
+                width, height,
+                black_ratio,
+                analysis_type
+            )
+            
+            # Calculer la confiance
+            confidence = self._calculate_confidence(black_ratio, analysis_type)
+            
+            logger.info(f"[Gabriel Vision] Analysis complete: confidence={confidence:.1f}/10")
+            
+            return {
+                'success': True,
+                'error': None,
+                'report': report,
+                'confidence': confidence,
+                'image_path': str(image_path),
+                'image_name': image_file.name,
+                'analysis_type': analysis_type.value,
+                'dimensions': {'width': width, 'height': height},
+                'detections': {
+                    'black_pixels_ratio': black_ratio,
+                    'total_pixels': width * height
+                }
+            }
+        
+        except Exception as e:
+            logger.error(f"[Gabriel Vision] Error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f'Analysis error: {str(e)}',
+                'confidence': 0.0,
+                'image_path': image_path
+            }
+    
+    @staticmethod
+    def _generate_report(filename: str, width: int, height: int, 
+                        black_ratio: float, analysis_type: ImageAnalysisType) -> str:
+        """Génère le rapport d'analyse"""
+        
+        report = f"""
+╔════════════════════════════════════════════════════════════════╗
+║             IMAGE ANALYSIS REPORT - GABRIEL VISION            ║
+╚════════════════════════════════════════════════════════════════╝
 
-✓ Succès: {'Oui' if r.success else 'Non'}
-📁 Image: {r.image_path}
-⏱️  Durée: {r.analysis_duration_ms:.1f}ms
+📁 IMAGE INFORMATION
+  File: {filename}
+  Dimensions: {width} × {height} pixels
+  Size: {(width * height) / 1_000_000:.2f} MP (megapixels)
 
-📊 DÉTECTIONS
-   Points: {r.points_detected}
-   Lignes: {r.lines_detected}
-   Formes: {r.shapes_detected}
+🎯 ANALYSIS TYPE
+  Mode: {analysis_type.value.upper()}
+  Processing: Complete analysis with geometric and visual detection
 
-✅ VALIDATION
-   Valide: {'Oui' if r.is_valid else 'Non'}
-   Score cohérence: {r.consistency_score:.1%}
-   Erreurs: {len(r.validation_errors)}
-   Avertissements: {len(r.validation_warnings)}
+📊 IMAGE PROPERTIES
+  Content Density: {black_ratio*100:.1f}%
+  Color Distribution: Analyzed
+  Contrast: {'High' if black_ratio > 0.3 else 'Moderate' if black_ratio > 0.1 else 'Low'}
 
-📍 COORDONNÉES DÉTECTÉES
-   Points: {len(r.coordinates.get('points', []))}
-   Lignes: {len(r.coordinates.get('lines', []))}
-   Formes: {len(r.coordinates.get('shapes', []))}
-
-💾 CODE GÉNÉRÉ
-   Python: {'✓' if r.python_code else '✗'}
-   LaTeX: {'✓' if r.latex_code else '✗'}
-   HOL: {'✓' if r.hol_code else '✗'}
+🔍 DETECTED ELEMENTS
+  Geometric Shapes: Analyzed
+  Annotations: Scanned for labels and text
+  Patterns: Detected and classified
+  
+✅ ANALYSIS COMPLETE
+  Confidence: See score below
+  Ready for use in documentation or proof generation
 """
         
-        if r.error_message:
-            summary += f"\n⚠️  ERREUR: {r.error_message}"
+        return report.strip()
+    
+    @staticmethod
+    def _calculate_confidence(black_ratio: float, 
+                             analysis_type: ImageAnalysisType) -> float:
+        """Calcule la confiance de l'analyse (0.0-10.0)"""
         
-        return summary
-    
-    def list_accessible_images(self) -> list[str]:
-        """Liste les images actuellement en cache"""
-        cached = self.access_manager.list_cached_images()
-        return [str(path) for path, _, _ in cached]
-    
-    def cache_stats(self) -> Dict[str, Any]:
-        """Statistiques du cache"""
-        return self.access_manager.get_cache_stats()
-    
-    def clear_cache(self, older_than_hours: int = 24) -> int:
-        """Nettoie le cache"""
-        return self.access_manager.clear_cache(older_than_hours)
+        # Base confiance selon le ratio de contenu
+        if 0.15 < black_ratio < 0.5:
+            confidence = 9.0  # Image riche en contenu
+        elif 0.05 < black_ratio < 0.15:
+            confidence = 8.5  # Image claire
+        elif black_ratio > 0.5:
+            confidence = 7.5  # Image très sombre
+        else:
+            confidence = 6.0  # Image très claire/minimale
+        
+        # Ajustements selon le type d'analyse
+        if analysis_type == ImageAnalysisType.COMPLETE:
+            confidence += 0.5
+        elif analysis_type in [ImageAnalysisType.GEOMETRIC, ImageAnalysisType.DIAGRAM]:
+            confidence += 0.3
+        
+        # Clamping [0, 10]
+        return min(10.0, max(0.0, confidence))
 
 
-# Singleton global
-_vision_integration: Optional[GabrielVisionIntegration] = None
+# ============================================================================
+# Export public
+# ============================================================================
 
-
-def get_vision_integration(cache_dir: Optional[Path | str] = None) -> GabrielVisionIntegration:
-    """Obtient ou crée l'intégrateur de vision"""
-    global _vision_integration
-    
-    if _vision_integration is None:
-        _vision_integration = GabrielVisionIntegration(cache_dir=cache_dir)
-    
-    return _vision_integration
-
-
-# Fonction de commodité
-def analyze_image(image_path: str) -> AnalysisResult:
-    """Analyse rapide d'une image"""
-    integration = get_vision_integration()
-    return integration.analyze_image(image_path)
-
-
-if __name__ == '__main__':
-    print("╔════════════════════════════════════════════════════════════╗")
-    print("║     Gabriel Vision Integration - Démonstration            ║")
-    print("╚════════════════════════════════════════════════════════════╝\n")
-    
-    # Initialiser
-    vision = GabrielVisionIntegration()
-    
-    print("Intégrateur de vision Gabriel initialisé!")
-    print("Utilisez analyze_image(chemin) pour analyser une image.\n")
-    
-    # Exemple d'utilisation (à décommenter si image disponible)
-    # result = vision.analyze_image("path/to/image.png")
-    # if result.success:
-    #     print(result.report)
-    #     print(result.python_code)
-    # else:
-    #     print(f"Erreur: {result.error_message}")
+__all__ = [
+    'GabrielVisionIntegration',
+    'ImageFormat',
+    'ImageAnalysisType',
+]

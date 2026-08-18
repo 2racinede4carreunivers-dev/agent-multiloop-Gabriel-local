@@ -118,6 +118,10 @@ def main() -> None:
     except Exception as exc:
         logger.warning("Badge scientifique non disponible: %s", exc)
 
+    # 4b) Pipeline cognitif HOL — initialisation du corpus spectral Savard
+    from gabriel_p4_bridge import archiviste as hol_archiviste
+    hol_archiviste.initialiser()
+
     # 5) Résumé d'init (avant que run_cli() prenne le contrôle)
     log_path = Path(log_dir).resolve() / "agent_cli.log"
     _rich_init_summary(console, started_at, log_path, verbose)

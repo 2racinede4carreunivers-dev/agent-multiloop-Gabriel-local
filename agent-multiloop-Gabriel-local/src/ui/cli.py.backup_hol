@@ -3488,15 +3488,6 @@ class CLIInterface:
                 cinematic = self._env_enabled("GABRIEL_CINEMATIC", default=True)
                 verbose_trace = self._env_enabled("GABRIEL_TRACE_VERBOSE", default=True)
 
-                # 4c) Pipeline cognitif HOL — enrichissement corpus spectral Savard
-                try:
-                    from gabriel_p4_bridge import enrichir_prompt_hol as _hol
-                    _ctx = await _hol(user_input)
-                    if _ctx:
-                        user_input = _ctx + "\n\n---\nQuestion : " + user_input
-                except Exception:
-                    pass
-
                 if not live_trace:
                     console.print("\n  [dim]Reflexion en cours (multi-loop self-critique)...[/dim]")
                     answer = await self.orchestrator.ask(user_input, force_mode=forced_mode)

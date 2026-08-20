@@ -1,4 +1,4 @@
-"""
+﻿"""
 Pipeline cognitif principal : orchestre les 5 moteurs + multiloop + spectral.
 
 Flow :
@@ -65,7 +65,7 @@ logger = logging.getLogger(__name__)
 
 
 class Pipeline:
-    """Pipeline complet du Multi-Loop Agent avec compréhension spectrale stricte."""
+    """Pipeline complet du Multi-Loop Agent avec comprÃ©hension spectrale stricte."""
 
     def __init__(self, config: dict[str, Any]):
         self.config = config
@@ -84,7 +84,7 @@ class Pipeline:
         self.corpus = TheoryLoader(config.get("data", {}).get("hol_dir", "/theories"))
         self.corpus.load_all()
         
-        # NOUVEAU: Moteur spectral core (compréhension stricte)
+        # NOUVEAU: Moteur spectral core (comprÃ©hension stricte)
         self.spectral_core = SpectralMethodCore()
         self.anti_hallucination = AntiHallucinationValidator()
         # NOUVEAU: Audit silencieux post-pipeline (anti-hallucination actif)
@@ -134,13 +134,13 @@ class Pipeline:
         # la requete (verbal Isabelle / calcul simple / configuration nxn /
         # theorie avancee / message instantane).
         self.pre_reasoner = PreReasoner()
-        logger.info("✓ Pipeline initialized with SpectralMethodCore (INVARIANT: n=position=num_termes)")
-        logger.info("✓ Silent Audit Loop enabled: %s (max_retries=%d)",
+        logger.info("âœ“ Pipeline initialized with SpectralMethodCore (INVARIANT: n=position=num_termes)")
+        logger.info("âœ“ Silent Audit Loop enabled: %s (max_retries=%d)",
                     self.silent_audit.enabled, self.silent_audit.max_retries)
-        logger.info("✓ Slow-Motion Debugger enabled: %s (coherence_threshold=%.2f, %d certitudes)",
+        logger.info("âœ“ Slow-Motion Debugger enabled: %s (coherence_threshold=%.2f, %d certitudes)",
                     self.slowmo_enabled, coherence_threshold,
                     len(self.certainty_kernel.certainties))
-        logger.info("✓ LLM Reformulator enabled: %s",
+        logger.info("âœ“ LLM Reformulator enabled: %s",
                     self.llm_reformulator_enabled)
 
     async def _compute_llm_reformulations(
@@ -678,8 +678,8 @@ class Pipeline:
 
                 # Detection "Neme premier" - le user mentionne une position avec mot-clef
                 position_kw = any(kw in question_low for kw in [
-                    "ieme premier", "ième premier", "eme premier", "ème premier",
-                    "n-ieme", "n-ième", "neme nombre", "n ieme", "n ième",
+                    "ieme premier", "iÃ¨me premier", "eme premier", "Ã¨me premier",
+                    "n-ieme", "n-iÃ¨me", "neme nombre", "n ieme", "n iÃ¨me",
                     "position", "rang",
                 ])
 
@@ -757,7 +757,7 @@ class Pipeline:
                     if data is None:
                         return {"error": f"Cannot reconstruct prime at position {position}"}
                     
-                    # Retourner les données validées
+                    # Retourner les donnÃ©es validÃ©es
                     return {
                         "position": data.position,
                         "n": data.position,  # INVARIANT: n = position
@@ -876,8 +876,9 @@ FORME GENERALE :
 EXTENSIONS POSSIBLES :
   {general.get('extension_hint', 'N/A')}
 
-⚠️ INVARIANT SPECTRAL (RAPPEL MANDATORY):
+âš ï¸ INVARIANT SPECTRAL (RAPPEL MANDATORY):
   Pour TOUTE reconstruction:
     position du nombre premier = n = nombre de termes dans A et B
   PAS D'EXCEPTION. PAS D'ALTERNATIVE.
 """
+

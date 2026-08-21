@@ -543,7 +543,7 @@ class Pipeline:
                 section_lines.append(f"Resultat: echec - {result.get('error')}")
             elif obj_intent == "reconstruction":
                 section_lines.append(
-                    f"Resultat: p={result.get('p')} (position={result.get('position')}, n={result.get('n')}, valide={result.get('equation_holds')})"
+                    f"Resultat (Modele {model}): p={result.get('p')}, SA={result.get('SA')}, SB={result.get('SB')}, digamma={result.get('digamma')}"
                 )
             elif obj_intent == "gap":
                 section_lines.append(
@@ -881,4 +881,5 @@ EXTENSIONS POSSIBLES :
     position du nombre premier = n = nombre de termes dans A et B
   PAS D'EXCEPTION. PAS D'ALTERNATIVE.
 """
+
 

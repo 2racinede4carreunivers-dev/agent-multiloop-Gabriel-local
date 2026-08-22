@@ -119,3 +119,15 @@ def reconstruct_from_blocks(
         "reconstructed_p_float": float(p),
         "is_integer": p == int(p),
     }
+
+
+def reconstruire_non_typique_interface(k: int):
+    from src.spectral.non_typical_ratios import NonTypicalConfig, reconstruire_premier_non_typique
+    cfg = NonTypicalConfig(k=k)
+    return reconstruire_premier_non_typique(cfg)
+
+
+def reconstruire_non_typique_interface(k: int):
+    from src.spectral.non_typical_ratios import NonTypicalConfig, reconstruire_premier_non_typique
+    cfg = NonTypicalConfig(k=k)
+    return reconstruire_premier_non_typique(cfg)

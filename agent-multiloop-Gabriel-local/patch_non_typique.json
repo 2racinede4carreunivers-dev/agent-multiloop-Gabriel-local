@@ -1,0 +1,42 @@
+{
+  "meta": {
+    "nom": "Extension rapports non-typiques 1/k<>1/2",
+    "description": "Ajout du module spectral pour les rapports non-typiques et intégration dans ratios.py et reconstructor.py",
+    "version": "1.0"
+  },
+  "operations": [
+
+    {
+      "op": "creer_fichier",
+      "cible": "src/spectral/non_typical_ratios.py",
+      "role": "spectral",
+      "mots_cles": ["spectral","ratio","non_typique"],
+      "contenu": "from dataclasses import dataclass\n\n@dataclass\nclass NonTypicalConfig:\n    k: int\n    n: int = 10\n    digamma_position: int = 8\n    digamma_mode: str = \"sub\"\n\n\ndef suite_A(k: int, n: int, digamma_pos: int, mode: str):\n    termes = [k**p for p in range(1, n+1)]\n    digamma = k**digamma_pos\n    somme = sum(termes)\n    if mode == \"sub\":\n        digamma_calc = somme - digamma\n    else:\n        digamma_calc = somme + digamma\n    return digamma_calc\n\n\ndef suite_B(k: int, n: int):\n    termes = [k**p for p in range(1, n+2)]\n    return sum(termes)\n\n\ndef reconstruire_premier_non_typique(cfg: NonTypicalConfig):\n    A = suite_A(cfg.k, cfg.n, cfg.digamma_position, cfg.digamma_mode)\n    B = suite_B(cfg.k, cfg.n)\n    return (B - A) // (cfg.k**6)\n\n\ndef premiers_non_typiques(cfg: NonTypicalConfig, direction=\"croissant\", count=10):\n    base = reconstruire_premier_non_typique(cfg)\n    if direction == \"croissant\":\n        return [base + i for i in range(count)]\n    else:\n        return [max(2, base - i) for i in range(count)]\n"
+    },
+
+    {
+      "op": "inserer_lignes",
+      "cible": "src/spectral/ratios.py",
+      "role": "spectral",
+      "mots_cles": ["ratio","spectral"],
+      "ligne_insertion": 1,
+      "contenu": "from src.spectral.non_typical_ratios import NonTypicalConfig, reconstruire_premier_non_typique, premiers_non_typiques\n"
+    },
+
+    {
+      "op": "ajouter_a_la_fin",
+      "cible": "src/spectral/ratios.py",
+      "role": "spectral",
+      "mots_cles": ["ratio","spectral"],
+      "contenu": "\n\ndef repondre_rapport_non_typique(k: int, n: int = 10, direction: str = \"croissant\", count: int = 10):\n    if k == 3:\n        dig_pos, dig_mode = 8, \"sub\"\n    elif k == 5:\n        dig_pos, dig_mode = 7, \"add\"\n    elif k == 6:\n        dig_pos, dig_mode = 7, \"sub\"\n    else:\n        dig_pos, dig_mode = 8, \"sub\"\n\n    cfg = NonTypicalConfig(k=k, n=n, digamma_position=dig_pos, digamma_mode=dig_mode)\n    premier_n10 = reconstruire_premier_non_typique(cfg)\n    liste = premiers_non_typiques(cfg, direction=direction, count=count)\n\n    return {\n        \"rapport\": f\"1/{k}\",\n        \"premier_n10\": premier_n10,\n        \"premiers_generes\": liste,\n        \"digamma_position\": dig_pos,\n        \"digamma_mode\": dig_mode\n    }\n"
+    },
+
+    {
+      "op": "ajouter_a_la_fin",
+      "cible": "src/spectral/reconstructor.py",
+      "role": "spectral",
+      "mots_cles": ["reconstructor","spectral"],
+      "contenu": "\n\ndef reconstruire_non_typique_interface(k: int):\n    from src.spectral.non_typical_ratios import NonTypicalConfig, reconstruire_premier_non_typique\n    cfg = NonTypicalConfig(k=k)\n    return reconstruire_premier_non_typique(cfg)\n"
+    }
+  ]
+}

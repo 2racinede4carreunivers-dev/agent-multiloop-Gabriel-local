@@ -12,6 +12,12 @@ from __future__ import annotations
 
 from fractions import Fraction
 
+from src.spectral.non_typical_ratios import (
+    NonTypicalConfig,
+    reconstruire_premier_non_typique,
+    premiers_non_typiques,
+)
+
 from .suites import get_suite_functions
 from ..core.types import AsymmetryKind
 
@@ -39,6 +45,61 @@ def ratio_nxn(A_indices: list[int], B_indices: list[int], model: str = "1/2") ->
         raise ValueError("Somme des B nulle : division impossible.")
     return sum_a / sum_b
 
+
+# =============================================================
+# 5. Rapport non-typique 1/k <> 1/2
+# =============================================================
+
+def repondre_rapport_non_typique(
+    k: int,
+    n: int = 10,
+    direction: str = "croissant",
+    count: int = 10,
+):
+    """
+    Rapport spectral non-typique 1/k <> 1/2.
+
+    - k : entier > 2 (ex: 3, 4, 5, 6...)
+    - n : nombre de termes (par défaut 10)
+    - direction : 'croissant' ou 'decroissant'
+    - count : nombre de valeurs à générer
+
+    La logique du digamma dépend du rapport :
+      * 1/3  → position 8, soustraction
+      * 1/5  → position 7, addition
+      * 1/6  → position 7, soustraction
+    """
+    if k == 3:
+        dig_pos, dig_mode = 8, "sub"
+    elif k == 5:
+        dig_pos, dig_mode = 7, "add"
+    elif k == 6:
+        dig_pos, dig_mode = 7, "sub"
+    else:
+        dig_pos, dig_mode = 8, "sub"
+
+    cfg = NonTypicalConfig(
+        k=k,
+        n=n,
+        digamma_position=dig_pos,
+        digamma_mode=dig_mode,
+    )
+
+    premier_n10 = reconstruire_premier_non_typique(cfg)
+    liste = premiers_non_typiques(cfg, direction=direction, count=count)
+
+    return {
+        "rapport": f"1/{k}",
+        "premier_n10": premier_n10,
+        "premiers_generes": liste,
+        "digamma_position": dig_pos,
+        "digamma_mode": dig_mode,
+    }
+
+
+# =============================================================
+# Rapport par différences de blocs
+# =============================================================
 
 def ratio_block_difference(A_indices: list[int], B_indices: list[int], model: str = "1/2") -> Fraction:
     """Rapport par differences de blocs.
@@ -117,24 +178,6 @@ def ratio_asymmetric_chaotic(A_indices: list[int], B_indices: list[int], model: 
 # =============================================================
 # 5. Chaos-Savard (convention alternee Philippe Thomas Savard)
 # =============================================================
-#
-# Convention specifique observee par Philippe Thomas Savard pour la
-# convergence de l'asymetrie chaotique vers 1/2 :
-#
-#   alt(X) = X[0] - X[1] - X[2] - ... - X[n]
-#          = X[0] - sum(X[1:])
-#
-#   RsP_chaos_savard(A, B) = (alt_SA(A) - alt_SA(B)) / (alt_SB(A) - alt_SB(B))
-#
-# Construction canonique des blocs A et B pour la courbe k=1..K :
-#   A = [p_{k+1}, p_{k+2}, ..., p_{2k}]                  (k primes intermediaires)
-#   B = [p_{2k+1}, p_1, p_2, ..., p_k]                   (le suivant + k initiaux)
-#   |A| = k, |B| = k+1
-#
-# La courbe montre une divergence (-0.072 a k=1) qui converge tres vite
-# vers 1/2 (0.5015 a k=5, ~1/2 pour k >= 6).
-# =============================================================
-
 
 def _alternating_diff(values: list[Fraction]) -> Fraction:
     """alt([x0, x1, x2, ...]) = x0 - x1 - x2 - ... - xn = x0 - sum(x[1:])."""
@@ -148,14 +191,7 @@ def ratio_chaos_savard(
     B_indices: list[int],
     model: str = "1/2",
 ) -> Fraction:
-    """Rapport spectral selon la convention alternee chaos-Savard.
-
-    RsP = (alt_SA(A) - alt_SA(B)) / (alt_SB(A) - alt_SB(B))
-    avec alt(X) = X[0] - X[1] - ... - X[n].
-
-    Necessite |A| >= 1 et |B| >= 1.
-    Leve ValueError si le denominateur est nul.
-    """
+    """Rapport spectral selon la convention alternee chaos-Savard."""
     if not A_indices or not B_indices:
         raise ValueError("A et B doivent etre non vides.")
     fns = get_suite_functions(model)
@@ -167,8 +203,7 @@ def ratio_chaos_savard(
     den = alt_sb_A - alt_sb_B
     if den == 0:
         raise ValueError(
-            "Denominateur alterne nul (alt_SB(A) - alt_SB(B) = 0) : "
-            "division impossible."
+            "Denominateur alterne nul (alt_SB(A) - alt_SB(B) = 0) : division impossible."
         )
     return num / den
 
@@ -177,25 +212,11 @@ def build_chaos_savard_blocks(
     k: int,
     primes_positions: list[int] | None = None,
 ) -> tuple[list[int], list[int]]:
-    """Construit les blocs A et B canoniques pour la courbe chaos-Savard a l'index k.
-
-    Convention Philippe Thomas Savard :
-      A = [p_{k+1}, ..., p_{2k}]      (positions k+1 .. 2k)
-      B = [p_{2k+1}, p_1, ..., p_k]   (position 2k+1 + positions 1..k)
-
-    Args:
-        k: index de la courbe (k >= 1). Le triplet (|A|, |B|) = (k, k+1).
-        primes_positions: liste optionnelle de positions a utiliser. Si None,
-                          retourne directement les positions [k+1..2k] et
-                          [2k+1, 1, 2, .., k].
-
-    Returns:
-        (A_positions, B_positions) en termes de position 1-indexee.
-    """
+    """Construit les blocs A et B canoniques pour la courbe chaos-Savard a l'index k."""
     if k < 1:
         raise ValueError(f"k doit etre >= 1, recu {k}")
     A = list(range(k + 1, 2 * k + 1))           # positions k+1 .. 2k
-    B = [2 * k + 1] + list(range(1, k + 1))      # position 2k+1 + positions 1..k
+    B = [2 * k + 1] + list(range(1, k + 1))     # position 2k+1 + positions 1..k
     return A, B
 
 
@@ -235,7 +256,6 @@ def compute_spectral_ratio(
     else:
         ratio = ratio_asymmetric_chaotic(A_indices, B_indices, model)
 
-    # Valeur attendue : 1/k (k = denominateur du modele)
     k = int(model.split("/")[1])
     expected = Fraction(1, k)
 

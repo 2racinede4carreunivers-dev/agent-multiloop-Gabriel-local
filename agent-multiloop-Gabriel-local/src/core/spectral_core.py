@@ -24,6 +24,23 @@ except Exception:  # import relatif selon le point d'entree
         suite_A as rnt_suite_A, suite_B as rnt_suite_B,
         verifier_exemples as rnt_verifier_exemples,
     )
+# [VARIATEUR] Rapports non-typiques 1/k<>1/2 (module exclusif)
+try:
+    from src.spectral.rapports_non_typiques import (
+        reconstruire_premier as rnt_reconstruire_premier,
+        reconstruire_premier_pour_n as rnt_reconstruire_pour_n,
+        determiner_n as rnt_determiner_n,
+        suite_A as rnt_suite_A, suite_B as rnt_suite_B,
+        verifier_exemples as rnt_verifier_exemples,
+    )
+except Exception:  # import relatif selon le point d'entree
+    from ..spectral.rapports_non_typiques import (
+        reconstruire_premier as rnt_reconstruire_premier,
+        reconstruire_premier_pour_n as rnt_reconstruire_pour_n,
+        determiner_n as rnt_determiner_n,
+        suite_A as rnt_suite_A, suite_B as rnt_suite_B,
+        verifier_exemples as rnt_verifier_exemples,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +191,38 @@ class SpectralMethodCore:
 
     # ==========================================================
     # NOUVELLES METHODES : Rapports Spectraux multi-configurations
+
+
+    # ──────────────────────────────────────────────────────────────────
+    # [VARIATEUR] Rapport non-typique 1/k<>1/2
+    # ──────────────────────────────────────────────────────────────────
+    def reconstruire_rapport_non_typique(self, rapport: str, n: int = 10,
+                                         position: Optional[int] = None,
+                                         signe: Optional[int] = None) -> Dict:
+        """Reconstruit le premier pour un rapport 1/k<>1/2 via le module exclusif.
+
+        Retourne un dict {rapport, n/premier, A, B, digamma, position...}.
+        """
+        try:
+            if n == 10:
+                return rnt_reconstruire_premier(rapport, n=10,
+                                                verifier=True)
+            return rnt_reconstruire_pour_n(rapport, n=n)
+        except Exception as exc:
+            logger.debug("reconstruire_rapport_non_typique(%s) error %s", rapport, exc)
+            return {"rapport": rapport, "premier": None, "error": str(exc)}
+
+    def expliquer_rapport_non_typique(self, rapport: str, n: int = 10) -> str:
+        res = self.reconstruire_rapport_non_typique(rapport, n=n)
+        if not res.get("premier"):
+            return f"[{rapport}] reconstruction impossible pour n={n}"
+        retour = (
+            f"Rapport non-typique {res.get('rapport')} | Somme A={res.get('A')}, "
+            f"Somme B={res.get('B')}, Digamma={res.get('digamma_calcule')}, "
+            f"premier reconstruit={res.get('premier')} (n={res.get('n')})"
+        )
+        return retour
+
 
 
     # ──────────────────────────────────────────────────────────────────

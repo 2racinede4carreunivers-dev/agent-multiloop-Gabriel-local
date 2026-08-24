@@ -821,8 +821,13 @@ class VariateurMecanique:
     def _editer_fichier(self, op: dict, cible: Path) -> None:
         """Applique une opération d'édition texte à UN fichier (avec copie
         de sauvegarde avant modification + vérification de syntaxe)."""
-        contenu, crlf = _lire_patch_texte(cible)
-        op_type = op["op"]
+        if op.get("op") == "creer_fichier":
+            contenu = op.get("contenu", "")
+            crlf = False
+            op_type = "creer_fichier"
+        else:
+            contenu, crlf = _lire_patch_texte(cible)
+            op_type = op["op"]
         if op_type == "remplacer_texte":
             ancien = op.get("ancien_texte", "")
             nouveau = op.get("nouveau_texte", "")
@@ -980,44 +985,45 @@ class VariateurMecanique:
                 cible.write_bytes(contenu)
             return rep
 
-        contenu, crlf = _lire_patch_texte(cible)
-        if op_type == "remplacer_texte":
-            ancien = op.get("ancien_texte", "")
-            nouveau = op.get("nouveau_texte", "")
-            if not ancien:
-                raise VariateurError("remplacer_texte : 'ancien_texte' requis.")
-            n = contenu.count(ancien)
-            if n == 0:
-                raise VariateurError(f"remplacer_texte : ancien texte introuvable (cible {cible})")
-            if n > 1 and not op.get("toutes"):
-                if self._strict:
-                    raise VariateurError(f"remplacer_texte : texte present {n} fois, ajouter 'toutes': true")
-                contenu = contenu.replace(ancien, nouveau, 1)
-            else:
-                contenu = contenu.replace(ancien, nouveau)
-        elif op_type == "inserer_lignes":
-            ligne = int(op.get("ligne_insertion", 1))
-            lignes = contenu.split("\n")
-            bloc = op.get("contenu", "").split("\n")
-            pos = max(0, min(ligne - 1, len(lignes)))
-            lignes = lignes[:pos] + bloc + lignes[pos:]
-            contenu = "\n".join(lignes)
-        elif op_type == "supprimer_lignes":
-            debut = int(op.get("ligne_debut", 1))
-            fin = int(op.get("ligne_fin", debut))
-            lignes = contenu.split("\n")
-            if debut < 1 or fin > len(lignes):
-                raise VariateurError(
-                    f"supprimer_lignes : bornes {debut}..{fin} hors fichier ({len(lignes)} lignes)"
-                )
-            lignes = lignes[: debut - 1] + lignes[fin:]
-            contenu = "\n".join(lignes)
-        elif op_type == "ajouter_a_la_fin":
-            ajout = op.get("contenu", "")
-            contenu = (contenu.rstrip("\n") + "\n" if contenu else "") + ajout
-        elif op_type == "creer_fichier":
+        if op_type == "creer_fichier":
             contenu = op.get("contenu", "")
             crlf = False
+        else:
+            contenu, crlf = _lire_patch_texte(cible)
+            if op_type == "remplacer_texte":
+                ancien = op.get("ancien_texte", "")
+                nouveau = op.get("nouveau_texte", "")
+                if not ancien:
+                    raise VariateurError("remplacer_texte : 'ancien_texte' requis.")
+                n = contenu.count(ancien)
+                if n == 0:
+                    raise VariateurError(f"remplacer_texte : ancien texte introuvable (cible {cible})")
+                if n > 1 and not op.get("toutes"):
+                    if self._strict:
+                        raise VariateurError(f"remplacer_texte : texte present {n} fois, ajouter 'toutes': true")
+                    contenu = contenu.replace(ancien, nouveau, 1)
+                else:
+                    contenu = contenu.replace(ancien, nouveau)
+            elif op_type == "inserer_lignes":
+                ligne = int(op.get("ligne_insertion", 1))
+                lignes = contenu.split("\n")
+                bloc = op.get("contenu", "").split("\n")
+                pos = max(0, min(ligne - 1, len(lignes)))
+                lignes = lignes[:pos] + bloc + lignes[pos:]
+                contenu = "\n".join(lignes)
+            elif op_type == "supprimer_lignes":
+                debut = int(op.get("ligne_debut", 1))
+                fin = int(op.get("ligne_fin", debut))
+                lignes = contenu.split("\n")
+                if debut < 1 or fin > len(lignes):
+                    raise VariateurError(
+                        f"supprimer_lignes : bornes {debut}..{fin} hors fichier ({len(lignes)} lignes)"
+                    )
+                lignes = lignes[: debut - 1] + lignes[fin:]
+                contenu = "\n".join(lignes)
+            elif op_type == "ajouter_a_la_fin":
+                ajout = op.get("contenu", "")
+                contenu = (contenu.rstrip("\n") + "\n" if contenu else "") + ajout
 
         erreur = self._verifier_syntaxe(cible, contenu)
         if erreur:

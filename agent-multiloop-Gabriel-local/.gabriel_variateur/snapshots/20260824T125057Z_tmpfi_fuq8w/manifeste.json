@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "horodatage": "2026-08-24T12:50:57.434854+00:00",
+  "contrat": "C:/Users/Utilisateur/AppData/Local/Temp/tmpfi_fuq8w.json",
+  "repo_root": "C:/agent-multiloop-Gabriel-local-final/agent-multiloop-Gabriel-local",
+  "dossier_sauvegarde": "C:/agent-multiloop-Gabriel-local-final/agent-multiloop-Gabriel-local/.gabriel_variateur/snapshots/20260824T125057Z_tmpfi_fuq8w",
+  "fichiers": [
+    {
+      "rel": "src/core/spectral_core.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/7801a1eb39_spectral_core.py.bak"
+    },
+    {
+      "rel": "src/spectral/non_typical_ratios.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/a64d81077f_non_typical_ratios.py.bak"
+    },
+    {
+      "rel": "src/spectral/rapports_non_typiques.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/da61ca7648_rapports_non_typiques.py.bak"
+    }
+  ]
+}

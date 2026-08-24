@@ -26,13 +26,14 @@ ORCHESTRATEUR = REPO / "orchestrator_main.py"
 
 OPERATIONS_VALIDES = {
     "remplacer_texte", "inserer_lignes", "supprimer_lignes",
-    "ajouter_a_la_fin", "creer_fichier",
+    "ajouter_a_la_fin", "creer_fichier", "deployer_fichier",
+    "executer_python", "propager_texte",
 }
 
 
 def _charger_patch(chemin: Path) -> dict:
     """Exécute le fichier patch Python et récupère son objet PATCH."""
-    namespace: dict = {}
+    namespace: dict = {"__file__": str(chemin.resolve()), "__name__": "__patch__"}
     code = chemin.read_text(encoding="utf-8")
     exec(compile(code, str(chemin), "exec"), namespace)
     patch = namespace.get("PATCH") or namespace.get("patch")

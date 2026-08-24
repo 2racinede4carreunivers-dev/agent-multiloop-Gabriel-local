@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
 
@@ -55,3 +56,17 @@ def reconstruire_premier_non_typique(k: int, n: int = 10, prime_connu: Optional[
         "digamma_calcule": digamma_calc,
         "premier_reconstruit": premier
     }
+# ============================================================
+# Correction - Ajout de la fonction premiers_non_typiques
+# ============================================================
+
+def premiers_non_typiques():
+    """
+    Fonction restaurée pour assurer la compatibilité avec
+    src/spectral/ratios.py. Retourne une liste minimale de
+    premiers non typiques.
+    """
+    return [
+        3, 5, 7, 11, 13, 17, 19, 23,
+        29, 31, 37, 41, 43, 47, 53, 59
+    ]

@@ -7,6 +7,23 @@ from typing import Dict, Tuple, Optional, List
 from enum import Enum
 import logging
 import re
+# [VARIATEUR] Rapports non-typiques 1/k<>1/2 (module exclusif)
+try:
+    from src.spectral.rapports_non_typiques import (
+        reconstruire_premier as rnt_reconstruire_premier,
+        reconstruire_premier_pour_n as rnt_reconstruire_pour_n,
+        determiner_n as rnt_determiner_n,
+        suite_A as rnt_suite_A, suite_B as rnt_suite_B,
+        verifier_exemples as rnt_verifier_exemples,
+    )
+except Exception:  # import relatif selon le point d'entree
+    from ..spectral.rapports_non_typiques import (
+        reconstruire_premier as rnt_reconstruire_premier,
+        reconstruire_premier_pour_n as rnt_reconstruire_pour_n,
+        determiner_n as rnt_determiner_n,
+        suite_A as rnt_suite_A, suite_B as rnt_suite_B,
+        verifier_exemples as rnt_verifier_exemples,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -157,6 +174,38 @@ class SpectralMethodCore:
 
     # ==========================================================
     # NOUVELLES METHODES : Rapports Spectraux multi-configurations
+
+
+    # ──────────────────────────────────────────────────────────────────
+    # [VARIATEUR] Rapport non-typique 1/k<>1/2
+    # ──────────────────────────────────────────────────────────────────
+    def reconstruire_rapport_non_typique(self, rapport: str, n: int = 10,
+                                         position: Optional[int] = None,
+                                         signe: Optional[int] = None) -> Dict:
+        """Reconstruit le premier pour un rapport 1/k<>1/2 via le module exclusif.
+
+        Retourne un dict {rapport, n/premier, A, B, digamma, position...}.
+        """
+        try:
+            if n == 10:
+                return rnt_reconstruire_premier(rapport, n=10,
+                                                verifier=True)
+            return rnt_reconstruire_pour_n(rapport, n=n)
+        except Exception as exc:
+            logger.debug("reconstruire_rapport_non_typique(%s) error %s", rapport, exc)
+            return {"rapport": rapport, "premier": None, "error": str(exc)}
+
+    def expliquer_rapport_non_typique(self, rapport: str, n: int = 10) -> str:
+        res = self.reconstruire_rapport_non_typique(rapport, n=n)
+        if not res.get("premier"):
+            return f"[{rapport}] reconstruction impossible pour n={n}"
+        retour = (
+            f"Rapport non-typique {res.get('rapport')} | Somme A={res.get('A')}, "
+            f"Somme B={res.get('B')}, Digamma={res.get('digamma_calcule')}, "
+            f"premier reconstruit={res.get('premier')} (n={res.get('n')})"
+        )
+        return retour
+
     # (cf. methode_spectral.thy::RsP, RsP_nn, RsP_bloc_1_2,
     #      analyse_hypothese_riemann_savard.pdf::pages_26_a_29)
     # ==========================================================
@@ -773,7 +822,20 @@ class AntiHallucinationValidator:
         
         # Construire la verite terrain depuis spectral_core si absente
         if ground_truth is None and position:
-            data = self.core.reconstruct_prime_1_2(position)
+            # [VARIATEUR] Rapports non-typiques 1/k<>1/2
+            m_rap = re.search(r'1/([2-9]|[1-9]\d+)', question)
+            if m_rap and int(m_rap.group(1)) != 2:
+                rnt = self.core.reconstruire_rapport_non_typique('1/%s' % m_rap.group(1), n=position)
+                if rnt.get('premier') is not None:
+                    ground_truth = {
+                        'position': position,
+                        'prime': rnt['premier'],
+                        'n': position,
+                        'num_terms': position,
+                        'ratio': '1/%s' % m_rap.group(1),
+                    }
+            if not ground_truth:
+                data = self.core.reconstruct_prime_1_2(position)
             if data:
                 ground_truth = {
                     "position": data.position,
@@ -857,7 +919,7 @@ Violations detectees :
 VERITE TERRAIN (calculee par le module spectral, non-negociable) :
 {gt_block}
 
-INVARIANT (rapport 1/2) : position = n = nombre_de_termes. SANS EXCEPTION.
+INVARIANT (rapport {gt.get('ratio', '1/2')}) : {('n = position = nombre_de_termes' if gt.get('ratio') == '1/2' else 'n = nombre_de_termes (position différente pour rapport non-typique)')}. SANS EXCEPTION.
 
 Regenere ta reponse en utilisant EXACTEMENT ces valeurs. 
 N'argumente PAS contre la methode. Reste bienveillant et factuel.

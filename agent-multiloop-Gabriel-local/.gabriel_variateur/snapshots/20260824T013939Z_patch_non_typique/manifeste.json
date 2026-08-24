@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "horodatage": "2026-08-24T01:39:39.037917+00:00",
+  "contrat": "C:/agent-multiloop-Gabriel-local-final/agent-multiloop-Gabriel-local/patch_non_typique.json",
+  "repo_root": "C:/agent-multiloop-Gabriel-local-final/agent-multiloop-Gabriel-local",
+  "dossier_sauvegarde": "C:/agent-multiloop-Gabriel-local-final/agent-multiloop-Gabriel-local/.gabriel_variateur/snapshots/20260824T013939Z_patch_non_typique",
+  "fichiers": [
+    {
+      "rel": "src/spectral/non_typical_ratios.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/01cbe9a7c0_non_typical_ratios.py.bak"
+    }
+  ]
+}

@@ -1,4 +1,14 @@
-from dataclasses import dataclass
+# Patch de transmission toroïdale
+PATCH = {
+    "version": "1.0",
+    "nom": "Extension rapports non-typiques 1/k<>1/2",
+    "operations": [
+        {
+            "op": "creer_fichier",
+            "cible": "src/spectral/non_typical_ratios.py",
+            "role": "spectral",
+            "mots_cles": ["spectral", "ratio", "non_typique"],
+            "contenu": """from dataclasses import dataclass
 from typing import Optional, Dict, Any
 
 @dataclass
@@ -55,3 +65,7 @@ def reconstruire_premier_non_typique(k: int, n: int = 10, prime_connu: Optional[
         "digamma_calcule": digamma_calc,
         "premier_reconstruit": premier
     }
+"""
+        }
+    ]
+}

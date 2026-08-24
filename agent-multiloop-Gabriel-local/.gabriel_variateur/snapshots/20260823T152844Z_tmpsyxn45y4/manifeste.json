@@ -1,0 +1,54 @@
+{
+  "version": "1.0",
+  "horodatage": "2026-08-23T15:28:44.304740+00:00",
+  "contrat": "C:/Users/Utilisateur/AppData/Local/Temp/tmpsyxn45y4.json",
+  "repo_root": "C:/agent-multiloop-Gabriel-local-final/agent-multiloop-Gabriel-local",
+  "dossier_sauvegarde": "C:/agent-multiloop-Gabriel-local-final/agent-multiloop-Gabriel-local/.gabriel_variateur/snapshots/20260823T152844Z_tmpsyxn45y4",
+  "fichiers": [
+    {
+      "rel": "GABRIEL_DOMAIN_SYSTEM_INTEGRATION_GUIDE.md",
+      "existed_before": true,
+      "backup_relatif": "fichiers/dc535efb75_GABRIEL_DOMAIN_SYSTEM_INTEGRATION_GUIDE.md.bak"
+    },
+    {
+      "rel": "docs/archive/LLM_MANAGER_v2_MIGRATION.md",
+      "existed_before": true,
+      "backup_relatif": "fichiers/356e72f3b6_LLM_MANAGER_v2_MIGRATION.md.bak"
+    },
+    {
+      "rel": "guide_utilisateur/08_CONFIGURATION/INDEX.md",
+      "existed_before": true,
+      "backup_relatif": "fichiers/ff939b8a8a_INDEX.md.bak"
+    },
+    {
+      "rel": "src/core/pipeline_with_gap_detection.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/a3382c4f06_pipeline_with_gap_detection.py.bak"
+    },
+    {
+      "rel": "src/core/spectral_core.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/7801a1eb39_spectral_core.py.bak"
+    },
+    {
+      "rel": "src/engines/geometrie_spectrale_engine.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/843b4e72db_geometrie_spectrale_engine.py.bak"
+    },
+    {
+      "rel": "src/spectral/tchebychev_savard_pipeline.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/f164f9aa5b_tchebychev_savard_pipeline.py.bak"
+    },
+    {
+      "rel": "tests/test_geometrie_spectrale_engine.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/fd8ad6e1b2_test_geometrie_spectrale_engine.py.bak"
+    },
+    {
+      "rel": "tests/test_spectral_ratio_configurations.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/7d7269a1b1_test_spectral_ratio_configurations.py.bak"
+    }
+  ]
+}

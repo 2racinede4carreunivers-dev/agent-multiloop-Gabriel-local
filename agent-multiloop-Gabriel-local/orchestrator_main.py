@@ -489,6 +489,7 @@ VARIATEUR_DIR = ".gabriel_variateur"
 OPERATIONS_SUPPORTEES = {
     "remplacer_texte", "inserer_lignes", "supprimer_lignes",
     "ajouter_a_la_fin", "creer_fichier", "deployer_fichier", "executer_python",
+    "propager_texte",
 }
 OPERATIONS_ALIASES = {
     "replace_text": "remplacer_texte", "remplacement": "remplacer_texte",
@@ -502,6 +503,8 @@ OPERATIONS_ALIASES = {
     "create_file": "creer_fichier", "creer": "creer_fichier",
     "deploy_file": "deployer_fichier", "copier": "deployer_fichier",
     "run_python": "executer_python", "python": "executer_python",
+    "propager": "propager_texte", "propager_reseau": "propager_texte",
+    "propagation": "propager_texte", "transmission": "propager_texte",
 }
 
 
@@ -562,6 +565,14 @@ class VariateurMecanique:
         self._snapshot_dir: Optional[Path] = None
         self._dry_run = False
         self._strict = False
+        # Transmission : l'archiviste de correction (module archiviste.py) relie
+        # l'orchestrateur au reseau neuronal de la base (mots-cles → adresses).
+        self._archiviste: Optional[object] = None
+        try:
+            from archiviste import ArchivisteCorrection as _ArchivisteCorrection
+            self._archiviste = _ArchivisteCorrection(self.db_path, self.repo_root)
+        except Exception:
+            self._archiviste = None
 
     def charger_contrat(self, chemin: Path) -> dict:
         if not chemin.exists():
@@ -803,6 +814,123 @@ class VariateurMecanique:
         except Exception as exc:
             return f"{type(exc).__name__}: {exc}"
 
+    # ─────────────────────────────────────────────────────────────────────
+    #  TRANSMISSION : l'orchestrateur interroge l'archiviste (réseau) puis
+    #  applique la correction à TOUS les fichiers impliqués du dépôt.
+    # ─────────────────────────────────────────────────────────────────────
+    def _editer_fichier(self, op: dict, cible: Path) -> None:
+        """Applique une opération d'édition texte à UN fichier (avec copie
+        de sauvegarde avant modification + vérification de syntaxe)."""
+        contenu, crlf = _lire_patch_texte(cible)
+        op_type = op["op"]
+        if op_type == "remplacer_texte":
+            ancien = op.get("ancien_texte", "")
+            nouveau = op.get("nouveau_texte", "")
+            if not ancien:
+                raise VariateurError("remplacer_texte : 'ancien_texte' requis.")
+            n = contenu.count(ancien)
+            if n == 0:
+                raise VariateurError(f"remplacer_texte : ancien texte introuvable (cible {cible})")
+            if n > 1 and not op.get("toutes"):
+                if self._strict:
+                    raise VariateurError(
+                        f"remplacer_texte : texte present {n} fois, ajouter 'toutes': true"
+                    )
+                contenu = contenu.replace(ancien, nouveau, 1)
+            else:
+                contenu = contenu.replace(ancien, nouveau)
+        elif op_type == "inserer_lignes":
+            ligne = int(op.get("ligne_insertion", 1))
+            lignes = contenu.split("\n")
+            bloc = op.get("contenu", "").split("\n")
+            pos = max(0, min(ligne - 1, len(lignes)))
+            lignes = lignes[:pos] + bloc + lignes[pos:]
+            contenu = "\n".join(lignes)
+        elif op_type == "supprimer_lignes":
+            debut = int(op.get("ligne_debut", 1))
+            fin = int(op.get("ligne_fin", debut))
+            lignes = contenu.split("\n")
+            if debut < 1 or fin > len(lignes):
+                raise VariateurError(
+                    f"supprimer_lignes : bornes {debut}..{fin} hors fichier ({len(lignes)} lignes)"
+                )
+            lignes = lignes[: debut - 1] + lignes[fin:]
+            contenu = "\n".join(lignes)
+        elif op_type == "ajouter_a_la_fin":
+            ajout = op.get("contenu", "")
+            contenu = (contenu.rstrip("\n") + "\n" if contenu else "") + ajout
+        elif op_type == "creer_fichier":
+            contenu = op.get("contenu", "")
+            crlf = False
+
+        erreur = self._verifier_syntaxe(cible, contenu)
+        if erreur:
+            raise VariateurError(f"verification syntaxe {cible.name} : {erreur}")
+        if not self._dry_run:
+            self._sauvegarder_fichier(cible)
+            if not cible.parent.exists():
+                cible.parent.mkdir(parents=True, exist_ok=True)
+            _ecrire_patch_texte(cible, contenu, crlf)
+
+    def _adresses_archiviste(self, op: dict) -> list:
+        """Demande à l'archiviste (transmission) les adresses à corriger."""
+        if self._archiviste is None:
+            raise VariateurError(
+                "propager_texte : l'archiviste (archiviste.py, module absent) est "
+                "indisponible pour résoudre le réseau."
+            )
+        mots = [str(m) for m in (op.get("mots_cles") or [])]
+        role = op.get("role")
+        cible_exp = (op.get("cible") or "").strip() or None
+        profondeur = max(1, int(op.get("profondeur", 1)))
+        if not mots and not cible_exp:
+            raise VariateurError(
+                "propager_texte : fournir 'mots_cles' et/ou 'cible' pour le réseau."
+            )
+        adresses = self._archiviste.reseau_de_correction(
+            mots, role=role, profondeur=profondeur, cible_explicite=cible_exp
+        )
+        if not adresses:
+            raise VariateurError("propager_texte : aucune adresse résolue pour le réseau.")
+        chemins: list = []
+        for ad in adresses:
+            rel = ad["rel_path"]
+            p = Path(ad["path"]) if ad.get("path") else self.repo_root / rel
+            if p.is_file():
+                chemins.append(p)
+            else:
+                chemins.append(self.repo_root / rel)
+        return chemins
+
+    def _executer_propagation(self, i: int, op: dict, patch_dir: Path) -> dict:
+        """Applique l'opération d'édition à TOUS les fichiers du réseau."""
+        rep = {"index": i, "type": op["op"], "message": op.get("message", ""), "statut": "ok"}
+        sous = dict(op.get("operation") or op)
+        sous.pop("mots_cles", None)
+        sous.pop("role", None)
+        sous.pop("profondeur", None)
+        sous.pop("operation", None)
+        sous["message"] = op.get("message", "")
+        cibles = self._adresses_archiviste(op)
+        touches: list = []
+        echecs: list = []
+        for cible in cibles:
+            try:
+                self._editer_fichier(sous, cible)
+                touches.append(self._rel_depot(cible))
+            except VariateurError as exc:
+                echecs.append(f"{self._rel_depot(cible)} : {exc}")
+                if self._strict:
+                    raise
+        rep["cible"] = touches[0] if touches else ""
+        rep["cibles_appliquees"] = touches
+        rep["echecs"] = echecs
+        if self._dry_run:
+            rep["statut"] = "simule"
+        if not touches:
+            raise VariateurError(" - ".join(echecs) if echecs else "aucune application réseau")
+        return rep
+
     def _executer_op(self, i: int, op: dict, patch_dir: Path) -> dict:
         op_type = op["op"]
         rep = {"index": i, "type": op_type, "message": op.get("message", ""), "statut": "ok"}
@@ -831,6 +959,9 @@ class VariateurMecanique:
                 )
             rep["detail"] = f"rc=0, sortie {len(proc.stdout)} octets"
             return rep
+
+        if op_type == "propager_texte":
+            return self._executer_propagation(i, op, patch_dir)
 
         cible = self._resoudre_cible(op, patch_dir)
         rep["cible"] = self._rel_depot(cible)
@@ -1015,7 +1146,9 @@ class VariateurMecanique:
             dest = self.repo_root / entree["rel"]
             if entree.get("existed_before"):
                 srcb_rel = entree.get("backup_relatif")
-                srcb = dossier_fichiers / srcb_rel if srcb_rel else None
+                # backup_relatif est relatif au DOSSIER du snapshot
+                # (ex : "fichiers/abc123_fichier.py.bak")
+                srcb = (dossier / srcb_rel) if srcb_rel else None
                 if srcb is None or not srcb.exists():
                     rapport["manquants"].append(entree["rel"])
                     continue
@@ -1132,6 +1265,13 @@ def main() -> None:
             cible = op.get("cible") or op.get("detail") or ""
             raison = f" — {op['raison']}" if etat == "echouee" and op.get("raison") else ""
             print(f"    [{etat}] #{op['index']} {op['type']} -> {cible}{raison}")
+            cibles_reseau = op.get("cibles_appliquees")
+            if cibles_reseau and len(cibles_reseau) > 1:
+                print(f"           fichiers du reseau concernes : {len(cibles_reseau)}")
+                for cr in cibles_reseau:
+                    print(f"             • {cr}")
+            if op.get("echecs"):
+                print(f"           echoues : {len(op['echecs'])}")
         return
 
     # ── Cartographie standard ─────────────────────────────────────────────

@@ -2,24 +2,14 @@
 # Multi-Loop Math Agent - docker-compose.yml
 # Services : agent (multiloop), ollama, ollama-init, isabelle
 # 
-# v5.3 MISE A JOUR :
-# ✓ methode_spectral.thy INCLUS dans l'image Docker
-# ✓ Gabriel expose port 8000 pour communications externes
-# ✓ Isabelle en mode CLI (batch) - integration avec Gabriel
-# ✓ Support pour www.universestaucarre.com via reseau Docker
-# ✓ Permet communication entre Gabriel local et version web
-# ✓ VOLUMES EN READ-WRITE pour corrections dynamiques
-# ✓ validation_hol_unifiee.thy AJOUTE
-# ✓ PORT 8080 UTILISE (evite Docker Desktop backend sur 9000)
-# ✓ Geometrie_du_Spectre PDF monté dans conteneur
-# ✓ GABRIEL_LAUNCHER: gestion propre des signaux
+# v5.3 CORRIGE :
+# ✓ Ports cohérents (Gabriel interne 8000, externe 9001)
+# ✓ .env non monté en double
+# ✓ Volumes RW pour .thy
 # ============================================================
 
 services:
 
-  # ===========================================
-  # SERVICE PRINCIPAL : llm-agent-multiloop
-  # ===========================================
   llm-agent-multiloop:
     build:
       context: .
@@ -34,7 +24,7 @@ services:
       - OLLAMA_HOST=http://ollama:11434
       - DEFAULT_LANGUAGE=fr
       - ISABELLE_HOME=/opt/Isabelle2025-2
-      - GABRIEL_HTTP_PORT=9001
+      - GABRIEL_HTTP_PORT=8000
       - GABRIEL_HOST=0.0.0.0
 
     stdin_open: true
@@ -54,15 +44,11 @@ services:
       - ./config.yaml:/home/agent/app/config.yaml
       - ./tests:/home/agent/app/tests
       - ./scripts:/home/agent/app/scripts
-
-      # OVERRIDE : utiliser la version locale des fichiers .thy (READ-WRITE)
       - ./theories:/home/agent/app/theories
-
       - ./CONFIG_ENV_GUIDE.md:/home/agent/app/CONFIG_ENV_GUIDE.md
       - ./.github:/home/agent/app/.github
       - ./docker-compose.yml:/home/agent/app/docker-compose.yml
       - ./memory:/home/agent/app/memory
-      - ./.env:/home/agent/app/.env
       - agent-data:/home/agent/app/data
       - agent-logs:/home/agent/app/logs
       - ${HOST_DEBAT_DIR:-./data/debats}:/home/agent/app/data/debats-onedrive
@@ -73,9 +59,6 @@ services:
     depends_on:
       - ollama
 
-  # ===========================================
-  # SERVICE : OLLAMA
-  # ===========================================
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
@@ -87,9 +70,6 @@ services:
     networks:
       - agent-network
 
-  # ===========================================
-  # SERVICE : OLLAMA INIT
-  # ===========================================
   ollama-init:
     image: ollama/ollama:latest
     container_name: ollama-init
@@ -107,9 +87,6 @@ services:
       - agent-network
     restart: "no"
 
-  # ===========================================
-  # SERVICE : ISABELLE/HOL
-  # ===========================================
   isabelle:
     image: makarius/isabelle:latest
     container_name: isabelle
@@ -138,7 +115,6 @@ services:
     entrypoint: ["/bin/bash"]
     command: ["-c", "exec /scripts/isabelle-integration.sh"]
 
-# ===========================================
 volumes:
   agent-data:
   agent-logs:

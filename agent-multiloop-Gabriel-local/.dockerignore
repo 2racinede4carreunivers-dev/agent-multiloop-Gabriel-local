@@ -74,7 +74,7 @@ docs/
 examples/
 
 # ---------- Memory et test_reports (specifiques Emergent) ----------
-memory/
+# memory/   -> NECESSAIRE au runtime (motif cognitif) : retiré de l'ignore et copié dans l'image
 test_reports/
 test_result.md
 

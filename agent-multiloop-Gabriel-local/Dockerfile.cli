@@ -40,9 +40,14 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && find /usr/local/lib/python3.11 -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
 # Code applicatif (apres pip pour bon caching)
-COPY --chown=agent:agent main.py main_cli.py config.yaml ./
+COPY --chown=agent:agent main.py main_cli.py config.yaml config_optimized.yaml ./
 COPY --chown=agent:agent src/ ./src/
 COPY --chown=agent:agent theories/ ./theories/
+# Package cognitif « memory » (prerequis runtime : importe par src/*) + scripts d'integration Isabelle
+COPY --chown=agent:agent memory/ ./memory/
+COPY --chown=agent:agent scripts/ ./scripts/
+# Helpers de lancement / nettoyage utilises par docker-compose au runtime
+COPY --chown=agent:agent gabriel_launcher.py port_cleanup.py socket_cleanup.py ./
 
 # Dossiers runtime (data, logs montes via volumes)
 RUN mkdir -p data logs && chown -R agent:agent .

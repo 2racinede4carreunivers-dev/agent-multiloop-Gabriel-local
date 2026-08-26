@@ -41,6 +41,23 @@ except Exception:  # import relatif selon le point d'entree
         suite_A as rnt_suite_A, suite_B as rnt_suite_B,
         verifier_exemples as rnt_verifier_exemples,
     )
+# [VARIATEUR] Rapports non-typiques 1/k<>1/2 (module exclusif)
+try:
+    from src.spectral.rapports_non_typiques import (
+        reconstruire_premier as rnt_reconstruire_premier,
+        reconstruire_premier_pour_n as rnt_reconstruire_pour_n,
+        determiner_n as rnt_determiner_n,
+        suite_A as rnt_suite_A, suite_B as rnt_suite_B,
+        verifier_exemples as rnt_verifier_exemples,
+    )
+except Exception:  # import relatif selon le point d'entree
+    from ..spectral.rapports_non_typiques import (
+        reconstruire_premier as rnt_reconstruire_premier,
+        reconstruire_premier_pour_n as rnt_reconstruire_pour_n,
+        determiner_n as rnt_determiner_n,
+        suite_A as rnt_suite_A, suite_B as rnt_suite_B,
+        verifier_exemples as rnt_verifier_exemples,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -191,6 +208,38 @@ class SpectralMethodCore:
 
     # ==========================================================
     # NOUVELLES METHODES : Rapports Spectraux multi-configurations
+
+
+    # ──────────────────────────────────────────────────────────────────
+    # [VARIATEUR] Rapport non-typique 1/k<>1/2
+    # ──────────────────────────────────────────────────────────────────
+    def reconstruire_rapport_non_typique(self, rapport: str, n: int = 10,
+                                         position: Optional[int] = None,
+                                         signe: Optional[int] = None) -> Dict:
+        """Reconstruit le premier pour un rapport 1/k<>1/2 via le module exclusif.
+
+        Retourne un dict {rapport, n/premier, A, B, digamma, position...}.
+        """
+        try:
+            if n == 10:
+                return rnt_reconstruire_premier(rapport, n=10,
+                                                verifier=True)
+            return rnt_reconstruire_pour_n(rapport, n=n)
+        except Exception as exc:
+            logger.debug("reconstruire_rapport_non_typique(%s) error %s", rapport, exc)
+            return {"rapport": rapport, "premier": None, "error": str(exc)}
+
+    def expliquer_rapport_non_typique(self, rapport: str, n: int = 10) -> str:
+        res = self.reconstruire_rapport_non_typique(rapport, n=n)
+        if not res.get("premier"):
+            return f"[{rapport}] reconstruction impossible pour n={n}"
+        retour = (
+            f"Rapport non-typique {res.get('rapport')} | Somme A={res.get('A')}, "
+            f"Somme B={res.get('B')}, Digamma={res.get('digamma_calcule')}, "
+            f"premier reconstruit={res.get('premier')} (n={res.get('n')})"
+        )
+        return retour
+
 
 
     # ──────────────────────────────────────────────────────────────────
@@ -868,23 +917,28 @@ class AntiHallucinationValidator:
         """
         violations: List[str] = []
         position = self._extract_position(question)
-        
+
         # Construire la verite terrain depuis spectral_core si absente
-        if ground_truth is None and position:
-            # [VARIATEUR] Rapports non-typiques 1/k<>1/2
+        # [VARIATEUR] Rapports non-typiques 1/k<>1/2 (markdown rapport-non-typique.md)
+        #   - n = nombre de TERMES (≠ position du premier).
+        #   - Cas exceptionnel 1/11 n=10 : méthode RÉELLE -> P = 1 611 851.
+        if ground_truth is None:
             m_rap = re.search(r'1/([2-9]|[1-9]\d+)', question)
             if m_rap and int(m_rap.group(1)) != 2:
-                rnt = self.core.reconstruire_rapport_non_typique('1/%s' % m_rap.group(1), n=position)
-                if rnt.get('premier') is not None:
+                m_n = re.search(r'n\s*=\s*(\d+)', question, re.IGNORECASE)
+                n_rnt = int(m_n.group(1)) if m_n else 10
+                rnt = self.core.reconstruire_rapport_non_typique('1/%s' % m_rap.group(1), n=n_rnt)
+                if rnt and rnt.get('premier') is not None:
                     ground_truth = {
-                        'position': position,
+                        'position': n_rnt,
                         'prime': rnt['premier'],
-                        'n': position,
-                        'num_terms': position,
+                        'n': n_rnt,
+                        'num_terms': n_rnt,
                         'ratio': '1/%s' % m_rap.group(1),
+                        'note': rnt.get('note'),
                     }
-            if not ground_truth:
-                data = self.core.reconstruct_prime_1_2(position)
+        if ground_truth is None and position:
+            data = self.core.reconstruct_prime_1_2(position)
             if data:
                 ground_truth = {
                     "position": data.position,
@@ -896,14 +950,18 @@ class AntiHallucinationValidator:
         
         gt = ground_truth or {}
         answer_low = answer.lower()
-        
+
+        # Position de référence : soit citee explicitement, soit deduite des
+        # faits (rapports non-typiques : n = nombre de termes).
+        pos_ref = position or gt.get("position")
+
         # Regle 1 : position citee -> prime correct doit apparaitre
-        if position and "prime" in gt:
+        if pos_ref and "prime" in gt:
             expected_prime = gt["prime"]
             if str(expected_prime) not in answer:
                 violations.append(
-                    f"Le {position}e nombre premier est {expected_prime}, "
-                    f"mais cette valeur n'apparait pas dans la reponse."
+                    f"Le {pos_ref}e nombre premier selon le rapport {gt.get('ratio','1/2')} "
+                    f"est {expected_prime}, mais cette valeur n'apparait pas dans la reponse."
                 )
         
         # Regle 2 : INVARIANT 1/2 - n = position = num_termes

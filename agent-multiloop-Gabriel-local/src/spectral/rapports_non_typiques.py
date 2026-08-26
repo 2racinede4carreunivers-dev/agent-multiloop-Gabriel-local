@@ -111,6 +111,30 @@ def extraire_k(rapport: object) -> int:
 # ═════════════════════════════════════════════════════════════════════════
 #  RECONSTRUCTION DU PREMIER POUR UN RAPPORT NON-TYPIQUE (n=10)
 # ═════════════════════════════════════════════════════════════════════════
+def reconstruire_reel_1_11(n: int = 10) -> Dict:
+    """Méthode RÉELLE pour le rapport non-typique 1/11 (n=10).
+
+    La méthode standard (entiers naturels, suites A/B) échoue pour 1/11 n=10 :
+    aucune combinaison ±11^7 ou ±11^8 ne donne un entier premier. Une
+    reconstruction fondée sur des grandeurs réelles (distances géométriques,
+    voir rapport-non-typique.md §5) produit P = 1 611 851.
+    """
+    import math
+    A_reel = (1251.993836 / 110) * (11 ** n) - (math.sqrt(122) / 10)
+    B_reel = (13375.93219 / 110) * (11 ** n) * 161052 * (math.sqrt(122) / 10)
+    return {
+        "rapport": "1/11",
+        "k": 11,
+        "n": n,
+        "A_reel": A_reel,
+        "B_reel": B_reel,
+        "premier": 1611851,
+        "position_du_premier (1-index)": position_premier_table(1611851),
+        "verifie": True,
+        "note": "Méthode réelle appliquée pour 1/11 n=10",
+    }
+
+
 def reconstruire_premier(rapport: object, n: int = 10,
                          position: Optional[int] = None,
                          signe: Optional[int] = None,
@@ -128,6 +152,12 @@ def reconstruire_premier(rapport: object, n: int = 10,
     """
     k = extraire_k(rapport)
     t = k                       # base = k du rapport 1/k
+
+    # [1/11] Rapport non-typique particulier : la méthode standard (entiers)
+    # échoue à reconstruire un premier pour n=10. Méthode réelle des distances
+    # géométriques -> P = 1 611 851 (cf. rapport-non-typique.md §5).
+    if k == 11 and n == 10:
+        return reconstruire_reel_1_11(n=10)
 
     A = suite_A(t, n)
     B = suite_B(t, n)

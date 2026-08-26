@@ -1,0 +1,39 @@
+{
+  "version": "1.0",
+  "horodatage": "2026-08-26T13:40:40.200663+00:00",
+  "contrat": "C:/agent-multiloop-Gabriel-local-final/pipeline_correction/corrections/contrat_corrections_def.json",
+  "repo_root": "C:/agent-multiloop-Gabriel-local-final/agent-multiloop-Gabriel-local",
+  "dossier_sauvegarde": "C:/agent-multiloop-Gabriel-local-final/agent-multiloop-Gabriel-local/.gabriel_variateur/snapshots/20260826T134040Z_contrat_corrections_def",
+  "fichiers": [
+    {
+      "rel": "config/gabriel_defaults.yaml",
+      "existed_before": false,
+      "backup_relatif": null
+    },
+    {
+      "rel": "corpus/formulas_1_4.json",
+      "existed_before": false,
+      "backup_relatif": null
+    },
+    {
+      "rel": "src/dispatch/ratio_dispatcher.py",
+      "existed_before": false,
+      "backup_relatif": null
+    },
+    {
+      "rel": "src/engines/hol_generator.py",
+      "existed_before": false,
+      "backup_relatif": null
+    },
+    {
+      "rel": "src/engines/scorer.py",
+      "existed_before": false,
+      "backup_relatif": null
+    },
+    {
+      "rel": "theories/verif_p1097_n23_ratio4.thy",
+      "existed_before": false,
+      "backup_relatif": null
+    }
+  ]
+}

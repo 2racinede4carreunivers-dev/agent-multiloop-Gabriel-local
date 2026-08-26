@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
 

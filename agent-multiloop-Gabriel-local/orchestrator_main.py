@@ -741,12 +741,14 @@ class VariateurMecanique:
         if op_type == "deployer_fichier":
             source = self._resoudre_source(op.get("source"), patch_dir)
             if cible:
-                return self._chemin_depuis_relatif(cible, doit_exister=True)
+                # creat_si_absent autorise le deploiement vers une cible inexistante
+                return self._chemin_depuis_relatif(cible, doit_exister=not op.get("creer_si_absent", False))
             hit = self._trouver_index_suffixe(source.name)
             if hit:
                 return Path(hit["path"])
-            if self._est_sous_repo(source):
-                return source
+            if cible or op.get("creer_si_absent"):
+                rel = self._assurer_relatif_sous_repo(source.name)
+                return self.repo_root / rel
             raise VariateurError(f"Deploy : cible non resolue pour {source}")
         if op_type == "creer_fichier":
             if cible:

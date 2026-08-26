@@ -15,6 +15,7 @@ Flow :
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from pathlib import Path
 from typing import Any, Callable
@@ -672,6 +673,51 @@ class Pipeline:
 
         try:
             if intent == "reconstruction":
+
+                # ═══════════════════════════════════════════════════════════════
+                # [VARIATEUR] Rapports non-typiques 1/k<>1/2
+                # Conforme au markdown rapport-non-typique.md :
+                #   - n = nombre de TERMES (≠ position du premier).
+                #   - Reconstruction n=10 via digamma 7e/8e (±) pour 1/3, 1/5, 1/6…
+                #   - Cas exceptionnel 1/11 n=10 : méthode RÉELLE -> P = 1 611 851.
+                # ═══════════════════════════════════════════════════════════════
+                m_rap = re.search(r"1/(\d+)", question_low)
+                k_rap = int(m_rap.group(1)) if m_rap else None
+                if k_rap is not None and k_rap != 2:
+                    m_n = re.search(r"n\s*=\s*(\d+)", question_low)
+                    n_rnt = int(m_n.group(1)) if m_n else 10
+                    res = self.spectral_core.reconstruire_rapport_non_typique(f"1/{k_rap}", n=n_rnt)
+                    premier = None
+                    if isinstance(res, dict):
+                        premier = res.get("premier")
+                    if premier:
+                        if progress_cb:
+                            progress_cb({
+                                "event": "spectral_parse_strategy",
+                                "qid": qid,
+                                "intent": "reconstruction",
+                                "strategy": "rapport_non_typique",
+                                "detail": f"Rapport 1/{k_rap}, n={n_rnt} -> premier={premier}",
+                            })
+                        return {
+                            "position": res.get("position_du_premier (1-index)"),
+                            "n": n_rnt,
+                            "num_terms": n_rnt,
+                            "p": premier,
+                            "prime": premier,
+                            "SA_float": res.get("A") or res.get("A_reel"),
+                            "SB_float": res.get("B") or res.get("B_reel"),
+                            "digamma_calc_float": res.get("digamma_calcule"),
+                            "model": f"1/{k_rap}",
+                            "equation_holds": True,
+                            "note": res.get("note")
+                                     or "rapport non-typique 1/k<>1/2 (methode standard ou reelle)",
+                            "explanation": (
+                                f"Rapport 1/{k_rap}, n={n_rnt} (nombre de termes, "
+                                f"position du premier différente) -> premier = {premier}"
+                            ),
+                            "rappel_markdown": True,
+                        }
 
                 n: int | None = None
                 p: int | None = None

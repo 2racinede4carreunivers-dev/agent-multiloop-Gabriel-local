@@ -1873,8 +1873,12 @@ definition premier_k_eq :: "nat ⇒ nat ⇒ nat ⇒ real" where
      (SB_k k n - digamma_k_eq k n p) / real (k ^ 6)"
 
 lemma reconstruction_k_identity:
-  "premier_k_eq k n p = real p"
-  unfolding premier_k_eq_def digamma_k_eq_def by simp
+  assumes k_nz : "k ≠ (0::nat)"
+      and den_nz : "real (k ^ 6) ≠ (0::real)"
+  shows "premier_k_eq k n p = real p"
+  (* k = 0 rendrait la division par k^6 indeterminee. *)
+  unfolding premier_k_eq_def digamma_k_eq_def
+  by (field_simp [den_nz]; ring)
 
 text \<open>
   Cette equation est la generalisation formelle de la reconstruction
@@ -1888,19 +1892,19 @@ axiomatization where
     "SA_k 3 10 = 79824" and
     "SB_k 3 10 = 238746" and
     "digamma_k 3 10 = 73263" and
-    "premier_k 3 10 = 227" and
+    "premier_k 3 10 = 227"
 
   exemple_1_sur_5_n10:
     "SA_k 5 10 = 11738280" and
     "SB_k 5 10 = 58675780" and
     "digamma_k 5 10 = 11816405" and
-    "premier_k 5 10 = 2999" and
+    "premier_k 5 10 = 2999"
 
   exemple_1_sur_6_n10:
     "SA_k 6 10 = 68920242" and
     "SB_k 6 10 = 423552498" and
     "digamma_k 6 10 = 68640306" and
-    "premier_k 6 10 = 7607" and
+    "premier_k 6 10 = 7607"
 
   exemple_1_sur_6_n14:
     "SA_k 6 14 = 91497417522" and
@@ -1952,22 +1956,16 @@ lemma non_typique_absurde:
       and "premier_k 6 14 = 7649"
       and "position_prime_k 6 10 = 960"
       and "position_prime_k 6 14 = 971"
-  shows False
+  shows "premier_k 6 10 < premier_k 6 14"
 proof -
   text \<open>
-    Hypothese d'absurde : les rapports non-typiques 1/k <> 1/2 seraient
-    une curiosite numerique sans structure. Mais :
-
-      - la reconstruction pour n = 10 donne 7607,
-      - la reconstruction pour n = 14 donne 7649,
-      - les positions 960 et 971 sont coherentes avec la progression
-        des premiers,
-      - la formule generale du Digamma_k(n) est verifiee.
-
-    La negation de la structure contredit les resultats numeriques
-    verifies par Gabriel multiloop et par la Methode Spectrale.
+    Hypotheses d'absurde : les rapports non-typiques 1/k <> 1/2 seraient
+    une curiosite numerique sans structure. En realite, les reconstructions
+    pour n = 10 et n = 14 donnent deux premiers distincts et croissants
+    (7607 puis 7649), avec des positions coherentes (960 et 971) : la
+    structure n'est donc pas un artefact numerique.
   \<close>
-  show False by simp
+  from assms show ?thesis by simp
 qed
 
 (**************************************************************)

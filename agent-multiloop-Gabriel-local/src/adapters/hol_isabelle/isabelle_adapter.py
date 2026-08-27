@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -46,20 +47,28 @@ class IsabelleAdapter:
         """Genere un .thy minimal pour verifier l'equation prime_equation.
         
         CORRECTION MAJEURE (2026-06-14):
-        - digamma_val doit TOUJOURS être calculé comme SB(n) - 64*p
-        - Si digamma_val == p, c'est une erreur (le bug qui persistait)
+        - digamma_val doit TOUJOURS être calculé comme SB(n) - factor*p
+        - Pour un rapport typique 1/2, factor = 2^6 = 64.
+        - Pour TOUT rapport (typique ou non), le facteur du digamma est la
+          6e position de la suite A, soit k^6 (rapport 1/k => factor = k^6,
+          ex. 1/6 => 6^6 = 46656).
+        - Si digamma_val == p, c'est une erreur (le bug qui persistait).
         - On force le recalcul et loggons un avertissement
         """
-        
+
+        # Facteur spectral (6e position de la suite A) : k^6 pour le rapport 1/k.
+        k = self._k_from_model(model)
+        factor = k ** 6
+
         # DÉTECTION ET CORRECTION DU BUG
         if digamma_val is None or digamma_val == p:
             logger.warning(
                 f"⚠️ BUG DÉTECTÉ: digamma_val={digamma_val} pour n={n}, p={p}. "
-                f"C'est incorrect! digamma doit = SB(n) - 64*p, pas p."
+                f"C'est incorrect! digamma doit = SB(n) - {factor}*p, pas p."
             )
-            digamma_val = SB_val - 64 * p
+            digamma_val = SB_val - factor * p
             logger.info(
-                f"✓ CORRECTION: digamma_val recalculé = {SB_val} - 64*{p} = {digamma_val}"
+                f"✓ CORRECTION: digamma_val recalculé = {SB_val} - {factor}*{p} = {digamma_val}"
             )
         
         script = f"""theory {theory_name}
@@ -71,7 +80,8 @@ begin
    FORMULES SPECTRALES:
    SA(n) = (3.25/2) × 2^n - 2
    SB(n) = (6.5/2) × 2^n - 66
-   digamma(n,p) = SB(n) - 64×p  [FORMULE CORRECTE - PAS juste p!]
+   digamma(n,p) = SB(n) - {factor}×p
+   (facteur = 6e position de la suite A = k^6 ; rapport {model} => {factor})
 *)
 
 section "Verification {p} via modele {model}"
@@ -96,7 +106,7 @@ lemma verif_premier_{p}_n_{n}:
 
 (* Verification arithmetique detaillee *)
 lemma digamma_calculation_detail:
-  "SB {n} - 64 * {p} = {digamma_val}"
+  "SB {n} - {factor} * {p} = {digamma_val}"
   unfolding SB_def
   by (norm_num; ring)
 
@@ -151,3 +161,19 @@ end
             return {"status": "timeout", "reason": f"Validation > {timeout}s"}
         except Exception as exc:
             return {"status": "error", "reason": str(exc)}
+
+    @staticmethod
+    def _k_from_model(model: str) -> int:
+        """Extrait le dénominateur k du rapport 1/k depuis le modèle.
+
+        Returns le dénominateur k, ou 2 (rapport typique 1/2) en défaut.
+        Le facteur spectral du digamma vaut alors k^6 (6e position de la suite A),
+        ex. rapport 1/6 -> k=6 -> factor = 6^6 = 46656.
+        """
+        try:
+            m = re.search(r"1/(\d+)", str(model))
+            if m:
+                return int(m.group(1))
+        except (TypeError, ValueError):
+            pass
+        return 2

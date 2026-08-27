@@ -19,6 +19,79 @@ import re
 import uuid
 from pathlib import Path
 from typing import Any, Callable
+def _position_reconstruction(question: str, numbers) -> int:
+    """Retourne LA position (ordre/rang) du premier que l'on doit reconstruire.
+
+    INVARIANT rapport 1/2 :  position = n = nombre de termes dans A et B.
+
+    Avant ce correctif, `_compute_spectral` prenait ``numbers[0]`` : pour une
+    question du type « reconstruis le 47ème nombre premier en rapport 1/2 »,
+    le “1” du rapport « 1/2 » était parfois capté à la place de 47, ce qui
+    produisait n=1 au lieu de n=47 (et donc premier 2 au lieu de 211).
+
+    Priorités :
+      1. expression ordinale « N-ième/ème premier », « N-ième nombre premier » ;
+      2. « position N » / « rang N » ;
+      3. sinon premier entier isolé (en ignorant le “1” d'un rapport « 1/k »).
+    """
+    if numbers is None:
+        numbers = []
+    q = str(question).lower()
+    patterns = [
+        # "47-ième/ème ... (nombre) premier(s)"
+        r"(-?\d+)\s*(?:ième|ème|eme|ieme|e|th|st|nd|rd)\s*"
+        r"(?:nombre\s+)?(?:premier|prime)\b",
+        # "position 47" / "rang 47"
+        r"(?:position|rang)\s+(-?\d+)\b",
+    ]
+    for pat in patterns:
+        m = re.search(pat, q, re.IGNORECASE)
+        if m:
+            try:
+                return int(m.group(1))
+            except (TypeError, ValueError):
+                pass
+    # Repli sécurisé : premier candidat numérique, en retirant le "1" d'un rapport.
+    a_ratio = ("1/" in q or "1 /" in q)
+    for num in numbers:
+        try:
+            n = int(num)
+        except (TypeError, ValueError):
+            continue
+        if a_ratio and n in (1,):
+            continue
+        return n
+    return None
+
+
+def _add_suite_ab_facts(facts: dict, SA, SB) -> dict:
+    """Expose (et garantit) la Somme suite A et la Somme suite B.
+
+    Rapport typique (1/2) ET non-typique (1/k) : toujours transmettre ces deux
+    valeurs dans les faits calculés, pour que la réponse de Gabriel les cite.
+    Les entiers sont conservés exactement (pas de perte de précision flottante).
+    """
+    def _clean(v):
+        if isinstance(v, bool):
+            return int(v)
+        if isinstance(v, int):
+            return v
+        try:
+            f = float(v)
+            return int(f) if f.is_integer() else f
+        except (TypeError, ValueError):
+            return v
+    if facts is None:
+        facts = {}
+    facts["somme_suite_A"] = _clean(SA)
+    facts["somme_suite_B"] = _clean(SB)
+    try:
+        facts["SA_float"] = float(SA if SA is not None else 0)
+        facts["SB_float"] = float(SB if SB is not None else 0)
+    except (TypeError, ValueError):
+        facts["SA_float"] = None
+        facts["SB_float"] = None
+    return facts
 
 from ..adapters.corpus.thy_loader import TheoryLoader
 from ..adapters.hol_isabelle.isabelle_adapter import IsabelleAdapter
@@ -435,7 +508,10 @@ class Pipeline:
                 theory_name=f"verif_p{precomputed_facts.get('p', 0)}_n{precomputed_facts.get('n', 0)}",
                 n=int(precomputed_facts.get("n", 0)),
                 p=int(precomputed_facts.get("p", 0)),
-                model=plan["model"],
+                # Reuse le modele reel du rapport (ex. "1/6" pour un rapport
+                # non-typique) pour que le facteur spectral du digamma soit
+                # k^6 (=6e position de la suite A) et non 64.
+                model=precomputed_facts.get("model") or plan["model"],
                 SA_val=precomputed_facts.get("SA_float", 0),
                 SB_val=precomputed_facts.get("SB_float", 0),
                 digamma_val=precomputed_facts.get("digamma_calc_float", 0),
@@ -699,14 +775,12 @@ class Pipeline:
                                 "strategy": "rapport_non_typique",
                                 "detail": f"Rapport 1/{k_rap}, n={n_rnt} -> premier={premier}",
                             })
-                        return {
+                        return _add_suite_ab_facts({
                             "position": res.get("position_du_premier (1-index)"),
                             "n": n_rnt,
                             "num_terms": n_rnt,
                             "p": premier,
                             "prime": premier,
-                            "SA_float": res.get("A") or res.get("A_reel"),
-                            "SB_float": res.get("B") or res.get("B_reel"),
                             "digamma_calc_float": res.get("digamma_calcule"),
                             "model": f"1/{k_rap}",
                             "equation_holds": True,
@@ -717,7 +791,8 @@ class Pipeline:
                                 f"position du premier différente) -> premier = {premier}"
                             ),
                             "rappel_markdown": True,
-                        }
+                        }, res.get("A") or res.get("A_reel"),
+                           res.get("B") or res.get("B_reel"))
 
                 n: int | None = None
                 p: int | None = None
@@ -793,30 +868,36 @@ class Pipeline:
 
 
                 # NOUVEAU: Utiliser spectral_core pour reconstruction
-                if len(numbers) >= 1:
-                    position = numbers[0]
+                # CORRECTION : position déduite sémantiquement (ordre/rang) pour
+                # ne PAS capter le "1" d'un rapport "1/2" comme position (bug n=1).
+                if numbers or _position_reconstruction(question_low, numbers) is not None:
+                    position = _position_reconstruction(question_low, numbers)
+                    if position is None:
+                        position = numbers[0]
                     logger.info(f"Q[{qid}] Reconstruction via spectral_core: position={position}")
-                    
-                    # Appel stricte du core
+
+                    # Appel stricte du core (méthode spectrale methode_spectral.thy)
                     data = self.spectral_core.reconstruct_prime_1_2(position)
-                    
+
                     if data is None:
                         return {"error": f"Cannot reconstruct prime at position {position}"}
-                    
-                    # Retourner les donnÃ©es validÃ©es
-                    return {
+
+                    # Retourner les données validées + toujours la Somme suite A / B
+                    # Sommes EXACTES (entiers) : SA(n)=(13/8)·2^n-2, SB(n)=(13/4)·2^n-66
+                    _two_n = 1 << position if position is not None else 0
+                    _sa_int = (13 * _two_n) // 8 - 2
+                    _sb_int = (13 * _two_n) // 4 - 66
+                    return _add_suite_ab_facts({
                         "position": data.position,
                         "n": data.position,  # INVARIANT: n = position
                         "num_terms": data.num_terms,  # INVARIANT: num_terms = position
                         "p": data.prime_value,
                         "prime": data.prime_value,
-                        "SA_float": data.SA_sum,
-                        "SB_float": data.SB_sum,
                         "digamma_calc_float": data.digamma_calc,
                         "equation_holds": data.validated,
                         "explanation": self.spectral_core.explain_reconstruction(position),
                         "model": "1/2",
-                    }
+                    }, _sa_int, _sb_int)
                 else:
                     return {"error": "Aucun nombre mentionne pour reconstruction."}
                 result = verify_prime_equation(n, p, model)
@@ -926,6 +1007,14 @@ EXTENSIONS POSSIBLES :
   Pour TOUTE reconstruction:
     position du nombre premier = n = nombre de termes dans A et B
   PAS D'EXCEPTION. PAS D'ALTERNATIVE.
+📌 VALEURS DES SUITES A ET B (RAPPEL MANDATORY):
+  Pour TOUTE reconstruction (rapport typique 1/2 ET rapport non-typique 1/k),
+  ta réponse DOIT citer textuellement les valeurs calculées :
+    - Somme suite A  (SA(n))  :  clé « somme_suite_A »
+    - Somme suite B  (SB(n))  :  clé « somme_suite_B »
+  En plus de la valeur n (nombre de termes), du nombre premier reconstitué et
+  (si disponible) du digamma calculé. Ne JAMAIS inventer ces sommes : prends-les
+  telles quelles depuis les « CHIFFRES CALCULES » fournis ci-dessous.
 """
 
 

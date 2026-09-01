@@ -219,6 +219,60 @@ def reconstruire_equations_ab(
     )
 
 
+def construire_rapport_convolutif(rapport: object, n: int = 10) -> Dict[str, object]:
+    """Produit les faits convolutifs obligatoires pour une requête ``1/k``.
+
+    Les sommes et les équations sont toujours disponibles pour ``n >= 7``.
+    La reconstruction du premier reste volontairement indépendante : quand les
+    quatre candidats Digamma ne permettent pas de le déterminer, le résultat
+    le signale explicitement sans revenir au modèle ``1/2``.
+    """
+    k = _verifier_k_non_typique(rapport)
+    n = int(n)
+    if n < 7:
+        raise ValueError("Le système convolutif A/B exige n >= 7")
+
+    equation_a, equation_b = reconstruire_equations_ab(k, 10, 11)
+    reference = reconstruire_premier(k, n=10)
+    cible = reference if n == 10 else reconstruire_premier_pour_n(k, n)
+
+    reference_faits = {
+        "n": 10,
+        "somme_A": suite_A(k, 10),
+        "somme_B": suite_B(k, 10),
+        "digamma_calcule": reference.get("digamma_calcule"),
+        "premier": reference.get("premier"),
+        "position_premier": reference.get("position_du_premier (1-index)"),
+    }
+    cible_faits = {
+        "n": n,
+        "somme_A": suite_A(k, n),
+        "somme_B": suite_B(k, n),
+        "digamma_calcule": cible.get("digamma_calcule"),
+        "premier": cible.get("premier"),
+        "position_premier": cible.get("position_du_premier (1-index)"),
+    }
+    premier_indetermine = cible_faits["premier"] is None
+    note = cible.get("note")
+    if premier_indetermine:
+        message_indetermine = (
+            "Aucun premier n'a pu être déterminé parmi les quatre "
+            "possibilités Digamma (positions n-3 et n-2, signes +/-)."
+        )
+        note = f"{message_indetermine} {note}" if note else message_indetermine
+
+    return {
+        "rapport": f"1/{k}",
+        "k": k,
+        "equation_A": equation_a.as_dict(),
+        "equation_B": equation_b.as_dict(),
+        "reference_n10": reference_faits,
+        "cible": cible_faits,
+        "premier_indetermine": premier_indetermine,
+        "note": note,
+    }
+
+
 # ═════════════════════════════════════════════════════════════════════════
 #  RECONSTRUCTION DU PREMIER POUR UN RAPPORT NON-TYPIQUE (n=10)
 # ═════════════════════════════════════════════════════════════════════════

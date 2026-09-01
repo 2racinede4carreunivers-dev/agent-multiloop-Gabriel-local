@@ -20,7 +20,7 @@ from .plan_trifocal import (
     POSTULATES, AXIS_DESCRIPTIONS,
 )
 from .rapports_non_typiques import (
-    EquationSomme, equations_ab, reconstruire_equations_ab,
+    EquationSomme, construire_rapport_convolutif, equations_ab, reconstruire_equations_ab,
 )
 
 __all__ = [
@@ -46,5 +46,5 @@ __all__ = [
     "PlanTrifocal", "TrifocalValidation", "TrifocalAxis", "EpipolarPostulate",
     "POSTULATES", "AXIS_DESCRIPTIONS",
     # Rapports non-typiques : équations exactes et convolution géométrique
-    "EquationSomme", "equations_ab", "reconstruire_equations_ab",
+    "EquationSomme", "construire_rapport_convolutif", "equations_ab", "reconstruire_equations_ab",
 ]

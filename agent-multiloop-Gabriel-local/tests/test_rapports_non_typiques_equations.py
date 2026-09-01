@@ -6,11 +6,13 @@ from fractions import Fraction
 import pytest
 
 from src.spectral.rapports_non_typiques import (
+    construire_rapport_convolutif,
     equations_ab,
     reconstruire_equations_ab,
     suite_A,
     suite_B,
 )
+from src.core.spectral_core import SpectralMethodCore
 
 
 @pytest.mark.parametrize("k", [3, 4, 5, 6, 7, 11])
@@ -42,3 +44,28 @@ def test_convolution_geometrique_propage_la_somme_sans_arrondi() -> None:
 def test_rapport_typique_est_refuse_explicitement() -> None:
     with pytest.raises(ValueError, match="non-typique"):
         equations_ab("1/2")
+
+
+def test_rapport_convolutif_transmet_reference_equations_et_absence_de_premier() -> None:
+    rapport = construire_rapport_convolutif("1/23", 27)
+
+    assert rapport["equation_A"]["forme"] == "A(n) = (279313/267674) * 23^n + (-23/22)"
+    assert rapport["equation_B"]["forme"] == "B(n) = (279313/11638) * 23^n + (-3256789581/22)"
+    assert rapport["reference_n10"]["somme_A"] == suite_A(23, 10)
+    assert rapport["reference_n10"]["somme_B"] == suite_B(23, 10)
+    assert rapport["cible"]["somme_A"] == suite_A(23, 27)
+    assert rapport["cible"]["somme_B"] == suite_B(23, 27)
+    assert rapport["premier_indetermine"] is True
+    assert rapport["cible"]["premier"] is None
+    assert "Aucun premier" in str(rapport["note"])
+
+
+def test_rapport_typique_transmet_aussi_les_faits_convolutifs_complets() -> None:
+    rapport = SpectralMethodCore().rapport_convolutif_typique(27)
+
+    assert rapport["equation_A"]["forme"] == "A(n) = (13/8) * 2^n + (-2)"
+    assert rapport["equation_B"]["forme"] == "B(n) = (13/4) * 2^n + (-66)"
+    assert rapport["reference_n10"]["n"] == 10
+    assert rapport["reference_n10"]["premier"] == 29
+    assert rapport["cible"]["n"] == 27
+    assert rapport["cible"]["premier"] == 103

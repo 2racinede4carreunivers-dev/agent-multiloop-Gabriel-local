@@ -750,58 +750,51 @@ class Pipeline:
         try:
             if intent == "reconstruction":
 
-                # ═══════════════════════════════════════════════════════════════
-                # [VARIATEUR] Rapports non-typiques 1/k<>1/2
-                # Conforme au markdown rapport-non-typique.md :
-                #   - n = nombre de TERMES (≠ position du premier).
-                #   - Reconstruction n=10 via digamma 7e/8e (±) pour 1/3, 1/5, 1/6…
-                #   - Cas exceptionnel 1/11 n=10 : méthode RÉELLE -> P = 1 611 851.
-                # ═══════════════════════════════════════════════════════════════
-                m_rap = re.search(r"1/(\d+)", question_low)
-                k_rap = int(m_rap.group(1)) if m_rap else None
-              # ═══════════════════════════════════════════════════════════════
-                # [VARIATEUR] Rapports non-typiques 1/k<>1/2
-                # Conforme au markdown rapport-non-typique.md :
-                #   - n = nombre de TERMES (≠ position du premier).
-                #   - Reconstruction n=10 via digamma 7e/8e (±) pour 1/3, 1/5, 1/6…
-                #   - Cas exceptionnel 1/11 n=10 : méthode RÉELLE -> P = 1 611 851.
-                # ═══════════════════════════════════════════════════════════════
                 m_rap = re.search(r"1/(\d+)", question_low)
                 k_rap = int(m_rap.group(1)) if m_rap else None
                 if k_rap is not None and k_rap != 2:
                     m_n = re.search(r"n\s*=\s*(\d+)", question_low)
                     n_rnt = int(m_n.group(1)) if m_n else 10
-                    res = self.spectral_core.reconstruire_rapport_non_typique(f"1/{k_rap}", n=n_rnt)
-                    premier = None
-                    if isinstance(res, dict):
-                        premier = res.get("premier")
-                    if premier:
-                        if progress_cb:
-                            progress_cb({
-                                "event": "spectral_parse_strategy",
-                                "qid": qid,
-                                "intent": "reconstruction",
-                                "strategy": "rapport_non_typique",
-                                "detail": f"Rapport 1/{k_rap}, n={n_rnt} -> premier={premier}",
-                            })  # <-- CORRECTION : Fermeture '})' appliquée ici
-                        return _add_suite_ab_facts({
-                            "position": res.get("position_du_premier (1-index)"),
-                            "n": n_rnt,
-                            "num_terms": n_rnt,
-                            "p": premier,
-                            "prime": premier,
-                            "digamma_calc_float": res.get("digamma_calcule"),
-                            "model": f"1/{k_rap}",
-                            "equation_holds": True,
-                            "note": res.get("note")
-                                     or "rapport non-typique 1/k<>1/2 (methode standard ou reelle)",
-                            "explanation": (
-                                f"Rapport 1/{k_rap}, n={n_rnt} (nombre de termes, "
-                                f"position du premier différente) -> premier = {premier}"
-                            ),
-                            "rappel_markdown": True,
-                        }, res.get("A") if res.get("A") is not None else res.get("A_reel"),
-                           res.get("B") if res.get("B") is not None else res.get("B_reel"))
+                    rapport = self.spectral_core.rapport_convolutif_non_typique(
+                        f"1/{k_rap}", n=n_rnt
+                    )
+                    reference = rapport["reference_n10"]
+                    cible = rapport["cible"]
+                    premier = cible["premier"]
+                    if progress_cb:
+                        detail = (
+                            f"Rapport 1/{k_rap}, n={n_rnt} -> premier={premier}"
+                            if premier is not None
+                            else f"Rapport 1/{k_rap}, n={n_rnt} -> premier indéterminé"
+                        )
+                        progress_cb({
+                            "event": "spectral_parse_strategy",
+                            "qid": qid,
+                            "intent": "reconstruction",
+                            "strategy": "rapport_non_typique_convolutif",
+                            "detail": detail,
+                        })
+                    return _add_suite_ab_facts({
+                        "position": cible["position_premier"],
+                        "n": n_rnt,
+                        "num_terms": n_rnt,
+                        "p": premier,
+                        "prime": premier,
+                        "digamma_calc_float": cible["digamma_calcule"],
+                        "model": rapport["rapport"],
+                        "equation_holds": premier is not None,
+                        "equation_A": rapport["equation_A"],
+                        "equation_B": rapport["equation_B"],
+                        "reference_n10": reference,
+                        "cible": cible,
+                        "premier_indetermine": rapport["premier_indetermine"],
+                        "note": rapport["note"],
+                        "explanation": (
+                            f"Rapport {rapport['rapport']}, n={n_rnt}: équations A/B "
+                            "et référence n=10 calculées par convolution."
+                        ),
+                        "rappel_markdown": True,
+                    }, cible["somme_A"], cible["somme_B"])
                 n: int | None = None
                 p: int | None = None
 
@@ -879,7 +872,10 @@ class Pipeline:
                 # CORRECTION : position déduite sémantiquement (ordre/rang) pour
                 # ne PAS capter le "1" d'un rapport "1/2" comme position (bug n=1).
                 if numbers or _position_reconstruction(question_low, numbers) is not None:
-                    position = _position_reconstruction(question_low, numbers)
+                    n_explicit = re.search(r"n\s*=\s*(\d+)", question_low)
+                    position = int(n_explicit.group(1)) if n_explicit else _position_reconstruction(
+                        question_low, numbers
+                    )
                     if position is None:
                         position = numbers[0]
                     logger.info(f"Q[{qid}] Reconstruction via spectral_core: position={position}")
@@ -890,22 +886,25 @@ class Pipeline:
                     if data is None:
                         return {"error": f"Cannot reconstruct prime at position {position}"}
 
-                    # Retourner les données validées + toujours la Somme suite A / B
-                    # Sommes EXACTES (entiers) : SA(n)=(13/8)·2^n-2, SB(n)=(13/4)·2^n-66
-                    _two_n = 1 << position if position is not None else 0
-                    _sa_int = (13 * _two_n) // 8 - 2
-                    _sb_int = (13 * _two_n) // 4 - 66
+                    rapport = self.spectral_core.rapport_convolutif_typique(position)
+                    cible = rapport["cible"]
                     return _add_suite_ab_facts({
-                        "position": data.position,
-                        "n": data.position,  # INVARIANT: n = position
-                        "num_terms": data.num_terms,  # INVARIANT: num_terms = position
-                        "p": data.prime_value,
-                        "prime": data.prime_value,
-                        "digamma_calc_float": data.digamma_calc,
+                        "position": cible["position_premier"],
+                        "n": cible["n"],
+                        "num_terms": cible["n"],
+                        "p": cible["premier"],
+                        "prime": cible["premier"],
+                        "digamma_calc_float": cible["digamma_calcule"],
                         "equation_holds": data.validated,
+                        "equation_A": rapport["equation_A"],
+                        "equation_B": rapport["equation_B"],
+                        "reference_n10": rapport["reference_n10"],
+                        "cible": cible,
+                        "premier_indetermine": False,
+                        "note": rapport["note"],
                         "explanation": self.spectral_core.explain_reconstruction(position),
-                        "model": "1/2",
-                    }, _sa_int, _sb_int)
+                        "model": rapport["rapport"],
+                    }, cible["somme_A"], cible["somme_B"])
                 else:
                     return {"error": "Aucun nombre mentionne pour reconstruction."}
                 result = verify_prime_equation(n, p, model)
@@ -1024,5 +1023,3 @@ EXTENSIONS POSSIBLES :
   (si disponible) du digamma calculé. Ne JAMAIS inventer ces sommes : prends-les
   telles quelles depuis les « CHIFFRES CALCULES » fournis ci-dessous.
 """
-
-

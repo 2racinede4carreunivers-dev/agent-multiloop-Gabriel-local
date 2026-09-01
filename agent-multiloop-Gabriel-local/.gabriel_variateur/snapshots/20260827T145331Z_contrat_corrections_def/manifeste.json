@@ -1,0 +1,39 @@
+{
+  "version": "1.0",
+  "horodatage": "2026-08-27T14:53:31.162717+00:00",
+  "contrat": "C:/agent-multiloop-Gabriel-local-final/pipeline_correction/corrections/contrat_corrections_def.json",
+  "repo_root": "C:/agent-multiloop-Gabriel-local-final/agent-multiloop-Gabriel-local",
+  "dossier_sauvegarde": "C:/agent-multiloop-Gabriel-local-final/agent-multiloop-Gabriel-local/.gabriel_variateur/snapshots/20260827T145331Z_contrat_corrections_def",
+  "fichiers": [
+    {
+      "rel": "config/gabriel_defaults.yaml",
+      "existed_before": true,
+      "backup_relatif": "fichiers/d36d76f6ea_gabriel_defaults.yaml.bak"
+    },
+    {
+      "rel": "corpus/formulas_1_4.json",
+      "existed_before": true,
+      "backup_relatif": "fichiers/99445dc41c_formulas_1_4.json.bak"
+    },
+    {
+      "rel": "src/dispatch/ratio_dispatcher.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/34f5069271_ratio_dispatcher.py.bak"
+    },
+    {
+      "rel": "src/engines/hol_generator.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/b70f4a5677_hol_generator.py.bak"
+    },
+    {
+      "rel": "src/engines/scorer.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/c3cfee37a3_scorer.py.bak"
+    },
+    {
+      "rel": "theories/verif_p1097_n23_ratio4.thy",
+      "existed_before": true,
+      "backup_relatif": "fichiers/8425e77255_verif_p1097_n23_ratio4.thy.bak"
+    }
+  ]
+}

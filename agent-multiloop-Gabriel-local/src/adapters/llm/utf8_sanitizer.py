@@ -2,7 +2,7 @@
 UTF-8 Sanitizer - Corrige les caractères parasites et mal encodés.
 
 Problème: Les accents et caractères spéciaux mal encodés causent:
-  'utf-8' codec can't encode character '\udcc3' in position X: surrogates not allowed
+  UTF-8 encoding can fail when an isolated Unicode surrogate is present.
   
 Solution: Nettoyer le texte avant envoi aux LLM.
 """
@@ -35,7 +35,7 @@ class UTF8Sanitizer:
         
         try:
             # Étape 1: Remplacer les surrogates mal formés
-            # Remplacer \udcc3 et autres surrogates par un caractère sûr
+            # Remplacer les surrogates isolés par un caractère sûr.
             cleaned = text.encode('utf-8', errors='replace').decode('utf-8', errors='replace')
             
             # Étape 2: Normaliser Unicode (NFC = Canonical Decomposition + Canonical Composition)

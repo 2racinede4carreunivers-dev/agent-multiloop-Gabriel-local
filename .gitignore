@@ -93,6 +93,11 @@ env/
 *.sublime-project
 *.sublime-workspace
 
+# État local des agents de développement IA
+.sidecar/
+.cline/
+aider_venv/
+
 # ============================================================
 # DATABASE & CACHE (peuvent contenir données sensibles)
 # ============================================================
@@ -225,6 +230,7 @@ coverage_reports/
 *.private
 *.bak
 *.backup
+~$*.xlsx
 # Secrets
 .env
 .env.*
@@ -273,3 +279,5 @@ test_gabriel_v6.1_gap_mixed.zip
 # 4. git commit -m "Remove secrets from history"
 # 5. Avant chaque push: vérifier rien ne fuite
 .credentials
+.aider*
+OllamaSetup.exe

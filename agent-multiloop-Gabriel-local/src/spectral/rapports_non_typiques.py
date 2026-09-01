@@ -31,6 +31,8 @@ from __future__ import annotations
 
 import math
 import re
+from dataclasses import dataclass
+from fractions import Fraction
 from typing import Dict, List, Optional, Tuple
 
 
@@ -106,6 +108,115 @@ def extraire_k(rapport: object) -> int:
         return rapport
     m = re.search(r"1/(\d+)", str(rapport))
     return int(m.group(1)) if m else int(str(rapport).strip())
+
+
+@dataclass(frozen=True)
+class EquationSomme:
+    """Equation exacte d'une somme de suite : S(n) = coefficient * k^n + constante."""
+
+    nom: str
+    k: int
+    coefficient: Fraction
+    constante: Fraction
+
+    def somme(self, n: int) -> Fraction:
+        """Évalue l'équation sans conversion flottante."""
+        return self.coefficient * self.k ** int(n) + self.constante
+
+    @property
+    def innovation(self) -> Fraction:
+        """Terme constant de S(n+1) = k*S(n) + innovation."""
+        return (1 - self.k) * self.constante
+
+    def convoluer(self, valeur_ancre: Fraction, n_ancre: int, n_cible: int) -> Fraction:
+        """Propage une somme par la convolution géométrique exacte vers n_cible."""
+        n_ancre = int(n_ancre)
+        n_cible = int(n_cible)
+        if n_cible < n_ancre:
+            raise ValueError("La convolution requiert n_cible >= n_ancre")
+        delta = n_cible - n_ancre
+        puissance = self.k ** delta
+        noyau = Fraction(puissance - 1, self.k - 1)
+        return puissance * Fraction(valeur_ancre) + self.innovation * noyau
+
+    def as_dict(self) -> Dict[str, object]:
+        """Expose les composantes algébriques sérialisables de l'équation."""
+        return {
+            "nom": self.nom,
+            "k": self.k,
+            "coefficient": self.coefficient,
+            "constante": self.constante,
+            "innovation": self.innovation,
+            "forme": f"{self.nom}(n) = ({self.coefficient}) * {self.k}^n + ({self.constante})",
+        }
+
+
+def _verifier_k_non_typique(rapport: object) -> int:
+    """Valide la base d'un rapport non-typique 1/k."""
+    k = extraire_k(rapport)
+    if k <= 2:
+        raise ValueError("Un rapport non-typique doit être de la forme 1/k avec k >= 3")
+    return k
+
+
+def equations_ab(rapport: object) -> Tuple[EquationSomme, EquationSomme]:
+    """Construit les équations universelles exactes des sommes A et B.
+
+    Les définitions par blocs donnent, pour chaque k >= 3, les identités :
+
+      A(n) = (1 + 1/k + 1/(k^3*(k-1))) * k^n - k/(k-1)
+      B(n) = (k + 1 + 1/(k^2*(k-1))) * k^n
+             + (k^6-k)/(k-1) - k^7/(k-1)
+
+    La première vaut pour n >= 3 et la seconde pour n >= 7, domaines des
+    sommes finies ``suite_A`` et ``suite_B``.
+    """
+    k = _verifier_k_non_typique(rapport)
+    equation_a = EquationSomme(
+        nom="A",
+        k=k,
+        coefficient=Fraction(1) + Fraction(1, k) + Fraction(1, k**3 * (k - 1)),
+        constante=Fraction(-k, k - 1),
+    )
+    equation_b = EquationSomme(
+        nom="B",
+        k=k,
+        coefficient=Fraction(k + 1) + Fraction(1, k**2 * (k - 1)),
+        constante=Fraction(k**6 - k - k**7, k - 1),
+    )
+    return equation_a, equation_b
+
+
+def _reconstruire_equation(
+    nom: str, k: int, n1: int, somme1: int, n2: int, somme2: int
+) -> EquationSomme:
+    """Retrouve exactement coefficient et constante à partir de deux sommes."""
+    n1 = int(n1)
+    n2 = int(n2)
+    if n1 == n2:
+        raise ValueError("La reconstruction exige deux quantités de termes distinctes")
+    denominateur = k**n1 - k**n2
+    coefficient = Fraction(int(somme1) - int(somme2), denominateur)
+    constante = Fraction(int(somme1)) - coefficient * k**n1
+    return EquationSomme(nom, k, coefficient, constante)
+
+
+def reconstruire_equations_ab(
+    rapport: object, n1: int = 10, n2: int = 11
+) -> Tuple[EquationSomme, EquationSomme]:
+    """Reconstruit algébriquement les équations A et B de tout rapport 1/k.
+
+    Aucun arrondi ni coefficient décimal n'est employé : les deux sommes
+    exactes aux indices distincts ``n1`` et ``n2`` déterminent chacune une
+    unique équation affine-géométrique.
+    """
+    k = _verifier_k_non_typique(rapport)
+    if min(int(n1), int(n2)) < 7:
+        raise ValueError("La reconstruction conjointe A/B exige n1 et n2 >= 7")
+    return (
+        _reconstruire_equation("A", k, n1, suite_A(k, n1), n2, suite_A(k, n2)),
+        _reconstruire_equation("B", k, n1, suite_B(k, n1), n2, suite_B(k, n2)),
+    )
 
 
 # ═════════════════════════════════════════════════════════════════════════

@@ -759,6 +759,15 @@ class Pipeline:
                 # ═══════════════════════════════════════════════════════════════
                 m_rap = re.search(r"1/(\d+)", question_low)
                 k_rap = int(m_rap.group(1)) if m_rap else None
+              # ═══════════════════════════════════════════════════════════════
+                # [VARIATEUR] Rapports non-typiques 1/k<>1/2
+                # Conforme au markdown rapport-non-typique.md :
+                #   - n = nombre de TERMES (≠ position du premier).
+                #   - Reconstruction n=10 via digamma 7e/8e (±) pour 1/3, 1/5, 1/6…
+                #   - Cas exceptionnel 1/11 n=10 : méthode RÉELLE -> P = 1 611 851.
+                # ═══════════════════════════════════════════════════════════════
+                m_rap = re.search(r"1/(\d+)", question_low)
+                k_rap = int(m_rap.group(1)) if m_rap else None
                 if k_rap is not None and k_rap != 2:
                     m_n = re.search(r"n\s*=\s*(\d+)", question_low)
                     n_rnt = int(m_n.group(1)) if m_n else 10
@@ -774,7 +783,7 @@ class Pipeline:
                                 "intent": "reconstruction",
                                 "strategy": "rapport_non_typique",
                                 "detail": f"Rapport 1/{k_rap}, n={n_rnt} -> premier={premier}",
-                            })
+                            })  # <-- CORRECTION : Fermeture '})' appliquée ici
                         return _add_suite_ab_facts({
                             "position": res.get("position_du_premier (1-index)"),
                             "n": n_rnt,
@@ -791,9 +800,8 @@ class Pipeline:
                                 f"position du premier différente) -> premier = {premier}"
                             ),
                             "rappel_markdown": True,
-                        }, res.get("A") or res.get("A_reel"),
-                           res.get("B") or res.get("B_reel"))
-
+                        }, res.get("A") if res.get("A") is not None else res.get("A_reel"),
+                           res.get("B") if res.get("B") is not None else res.get("B_reel"))
                 n: int | None = None
                 p: int | None = None
 

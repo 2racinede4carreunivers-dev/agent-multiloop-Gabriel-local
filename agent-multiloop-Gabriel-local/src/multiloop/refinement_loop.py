@@ -9,6 +9,7 @@ Boucle de raffinement multi-loop :
 from __future__ import annotations
 
 import logging
+import json
 from typing import Any, Callable
 
 from ..core.llm_manager import LLMManager
@@ -157,11 +158,10 @@ class RefinementLoop:
             parts.append(base_prompt)
         parts.append(f"QUESTION DE L'UTILISATEUR :\n{ctx.raw_question}\n")
         if facts:
-            facts_lines = ["CHIFFRES CALCULES (a utiliser textuellement) :"]
-            for k, v in facts.items():
-                if isinstance(v, (int, float, str)):
-                    facts_lines.append(f"  - {k} = {v}")
-            parts.append("\n".join(facts_lines))
+            parts.append(
+                "CHIFFRES CALCULES (a utiliser textuellement) :\n"
+                + json.dumps(facts, ensure_ascii=False, default=str, indent=2)
+            )
         if iteration > 1 and last_critique:
             parts.append(REFINEMENT_INSTRUCTION.format(critique=last_critique, score="precedent"))
         parts.append("\nReponds en francais, de maniere structuree et complete.")

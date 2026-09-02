@@ -7,12 +7,19 @@ import pytest
 
 from src.spectral.rapports_non_typiques import (
     construire_rapport_convolutif,
+    construire_suites_reelles,
     equations_ab,
+    equations_suites_reelles,
+    candidats_reconstruction_reelle,
     reconstruire_equations_ab,
+    reconstruire_premier,
+    reconstruire_premier_reel_universel,
     suite_A,
     suite_B,
 )
 from src.core.spectral_core import SpectralMethodCore
+from src.engines.generalization.generalizer import Generalizer
+from src.multiloop.refinement_loop import RefinementLoop
 
 
 @pytest.mark.parametrize("k", [3, 4, 5, 6, 7, 11])
@@ -53,11 +60,46 @@ def test_rapport_convolutif_transmet_reference_equations_et_absence_de_premier()
     assert rapport["equation_B"]["forme"] == "B(n) = (279313/11638) * 23^n + (-3256789581/22)"
     assert rapport["reference_n10"]["somme_A"] == suite_A(23, 10)
     assert rapport["reference_n10"]["somme_B"] == suite_B(23, 10)
+    assert rapport["ancrage_n9"]["somme_A"] == suite_A(23, 9)
+    assert rapport["ancrage_n9"]["somme_B"] == suite_B(23, 9)
     assert rapport["cible"]["somme_A"] == suite_A(23, 27)
     assert rapport["cible"]["somme_B"] == suite_B(23, 27)
     assert rapport["premier_indetermine"] is True
     assert rapport["cible"]["premier"] is None
     assert "Aucun premier" in str(rapport["note"])
+
+
+def test_repli_reel_universel_est_utilise_apres_echec_des_candidates_entiers() -> None:
+    resultat = reconstruire_premier("1/23")
+
+    assert resultat["methode"] == "reelle-universelle-ai-bi"
+    assert resultat["premier"] == 6424727
+
+
+def test_suites_reelles_exposent_les_composantes_ai_bi_pour_toute_longueur() -> None:
+    suites = construire_suites_reelles("1/23", n=27)
+
+    assert len(suites["suite_Ai"]) == 27
+    assert len(suites["suite_Bi"]) == 27
+    assert suites["zeta"]["position"] == 6
+    assert suites["suite_Ai"][9]["position"] == 10
+
+
+def test_equations_reelles_universelles_reconstruisent_les_radicandes_sans_catalogue() -> None:
+    equations = equations_suites_reelles("1/23", n=27)
+
+    assert equations["radicande_A"] == (1 + 23**2) * equations["coefficient_A"] ** 2
+    assert equations["radicande_B"] == (1 + 23**2) * equations["coefficient_B"] ** 2
+    assert "sqrt(1 + 23^2)" in equations["forme_A"]
+
+
+def test_reconstruction_reelle_universelle_essaie_toutes_les_branches() -> None:
+    candidats = candidats_reconstruction_reelle("1/23", n=10)
+    resultat = reconstruire_premier_reel_universel("1/23", n=10)
+
+    assert len(candidats) == 8
+    assert resultat["verifie"] is True
+    assert resultat["premier"] == 6424727
 
 
 def test_rapport_typique_transmet_aussi_les_faits_convolutifs_complets() -> None:
@@ -69,3 +111,43 @@ def test_rapport_typique_transmet_aussi_les_faits_convolutifs_complets() -> None
     assert rapport["reference_n10"]["premier"] == 29
     assert rapport["cible"]["n"] == 27
     assert rapport["cible"]["premier"] == 103
+
+
+def test_resume_convolutif_force_les_ancrages_n10_et_n9() -> None:
+    from src.core.pipeline import Pipeline
+
+    rapport = SpectralMethodCore().rapport_convolutif_non_typique("1/50", 16)
+    rapport.update({
+        "model": "1/50",
+        "equation_holds": False,
+    })
+    resume = Pipeline._append_convolution_summary("Réponse.", rapport)
+
+    assert "Ancrage n=10 : A=99609390943877550, B=4980469531568877550" in resume
+    assert "Ancrage n=9 : A=1992187818877550, B=99609375318877550" in resume
+    assert "Cible n=16 : A=1556396733498086734693877550" in resume
+    assert "Aucun premier n'a pu être déterminé" in resume
+
+
+def test_prompt_non_typique_transmet_les_faits_convolutifs_sans_regle_1_2() -> None:
+    faits = SpectralMethodCore().rapport_convolutif_non_typique("1/27", 19)
+    faits.update({"model": "1/27", "premier_indetermine": True})
+    general = Generalizer().generalize(faits, {"intent": "reconstruction", "model": "1/27"})
+
+    class Ctx:
+        metadata = {}
+        raw_question = "Reconstruire le rapport 1/27 pour n=19"
+
+    from src.core.pipeline import Pipeline
+
+    prompt = Pipeline._build_base_prompt(
+        Pipeline.__new__(Pipeline), Ctx(), {"model": "1/27"}, general, [], faits
+    )
+    rendered = RefinementLoop._build_prompt(
+        RefinementLoop.__new__(RefinementLoop), Ctx(), faits, prompt, "", 1
+    )
+
+    assert "Ne jamais appliquer le modèle 1/2" in prompt
+    assert "A(n) =" in rendered
+    assert '"reference_n10"' in rendered
+    assert '"cible"' in rendered

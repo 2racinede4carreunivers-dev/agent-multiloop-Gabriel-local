@@ -206,6 +206,7 @@ class SpectralMethodCore:
                 "constante": "-66",
             },
             "reference_n10": faits(reference),
+            "ancrage_n9": faits(self.reconstruct_prime_1_2(9)),
             "cible": faits(cible),
             "premier_indetermine": False,
             "note": "Rapport typique : n est aussi la position du premier.",

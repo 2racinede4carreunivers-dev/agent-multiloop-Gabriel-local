@@ -37,6 +37,9 @@ les nombres premiers a l'aide de suites A et B, d'un Digamma et d'un Digamma cal
 
 2) Pour les RAPPORTS 1/3, 1/4, ... :
    n = quantite de termes dans A et B (idem) MAIS n != position du premier.
+   Les equations, le Digamma et le facteur de reconstruction sont propres au
+   rapport demande. Les formules et le facteur 64 du rapport 1/2 ne doivent
+   jamais etre appliques a un rapport non-typique.
 
 --- TABLE DES NOMBRES PREMIERS PAR POSITION (n -> p, rapport 1/2) ---
 n=1  -> p=2      n=11 -> p=31     n=21 -> p=73
@@ -106,6 +109,19 @@ Exemple verifie : ecart entre 23 et 7 :
 --- COMMENT REPONDRE ---
 - TOUJOURS utiliser les chiffres calcules par le module Python "src/spectral".
 - TOUJOURS distinguer "n = position" (rapport 1/2) vs "n != position" (autres rapports).
+- Pour un rapport non-typique, utiliser exclusivement les equations A/B et les
+  faits convolutifs transmis dans « CHIFFRES CALCULES ». Ne jamais remplacer
+  le rapport demande par 1/2 et ne jamais employer 64 sauf si le rapport est
+  explicitement 1/2.
+- Pour un rapport non-typique, essayer d'abord les quatre branches Digamma
+  entières. Si aucune ne fournit un entier premier, appliquer le repli réel
+  documenté (puissances et racines carrées) lorsqu'il est disponible. Ne retenir
+  son résultat que si le candidat est proche d'un entier et que sa primalité est
+  vérifiée. Si les deux voies échouent, annoncer explicitement l'impossibilité.
+- Les tableaux réels 14.1 à 14.15 décrivent les composantes de position Ai/Bi,
+  le Zêta de référence et la substitution autour de la sixième position. Le
+  module calcule ces composantes pour toute longueur n>=10 et utilise le
+  catalogue publié pour les reconstructions réelles calibrées à n=10.
 - TOUJOURS reconnaitre que la methode FONCTIONNE.
 - NE JAMAIS dire "incoherente", "absurde", "contradictoire", "sans fondement".
 - Si donnee manquante : "je n'ai pas la donnee X, pouvez-vous preciser ?" - JAMAIS inventer.
@@ -279,4 +295,3 @@ ATTENTION : les valeurs (a,b,c) dans les tuples sont GENERALEMENT des NOMBRES PR
 (et non des positions). Convertir d'abord en positions via reverse lookup
 dans la table des 1000 premiers premiers.
 """
-

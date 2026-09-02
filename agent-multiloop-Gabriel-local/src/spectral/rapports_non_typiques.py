@@ -32,6 +32,7 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import dataclass
+from decimal import Decimal, ROUND_HALF_UP, localcontext
 from fractions import Fraction
 from typing import Dict, List, Optional, Tuple
 
@@ -100,6 +101,409 @@ DIGAMMA_MAP: Dict[int, Tuple[int, int]] = {
 SUITES_A_AJUSTEES: Dict[int, Dict] = {
     6: {"retirer_puissance": 8},
 }
+
+# Données radicales des tableaux 14.1 à 14.15. Les radicandes sont conservés
+# sous forme décimale (et non en float) afin que le calcul reste reproductible.
+# ``exposant_zeta`` est propre à chaque tableau : les tableaux 14.1--14.13 et
+# 14.15 divisent par sqrt((k^5)^2 + (k^6)^2), alors que 14.14 emploie k^6/k^7.
+REFERENCES_REELLES_N10: Dict[int, Dict[str, object]] = {
+    2: {
+        "somme_A_radicande": "3452805",
+        "somme_B_radicande": "13300805",
+        "digamma_radicande": "81920",
+        "signe_digamma": -1,
+        "position_digamma": "8e position de la première suite",
+        "exposant_zeta": 5,
+        "premier_attendu": 29,
+        "source": "Tableau 14.1, rapport 1/2",
+    },
+    3: {
+        "somme_A_radicande": "7079856640",
+        "somme_B_radicande": "6.333294724e10",
+        "digamma_radicande": "47829690",
+        "signe_digamma": -1,
+        "position_digamma": "8e position de la première suite",
+        "exposant_zeta": 5,
+        "premier_attendu": 227,
+        "source": "Tableau 14.2, rapport 1/3",
+    },
+    4: {
+        "somme_A_radicande": "1.840600404e12",
+        "somme_B_radicande": "2.940384489e13",
+        "digamma_radicande": "4563402752",
+        "signe_digamma": 1,
+        "position_digamma": "8e position de la première suite",
+        "exposant_zeta": 5,
+        "premier_attendu": 947,
+        "source": "Tableau 14.3, rapport 1/4",
+    },
+    5: {
+        "somme_A_radicande": "1.432987061e14",
+        "somme_B_radicande": "3.580561045e15",
+        "digamma_radicande": "6347656250",
+        "signe_digamma": 1,
+        "position_digamma": "7e position de la première suite",
+        "exposant_zeta": 5,
+        "premier_attendu": 2999,
+        "source": "Tableau 14.4, rapport 1/5",
+    },
+    6: {
+        "somme_A_radicande": "5.122793837e15",
+        "somme_B_radicande": "1.8437699607e17",
+        "digamma_radicande": "2.899474072e12",
+        "signe_digamma": 1,
+        "position_digamma": "8e position de la première suite",
+        "exposant_zeta": 5,
+        "premier_attendu": 7529,
+        "source": "Tableau 14.5, rapport 1/6",
+    },
+    7: {
+        "somme_A_radicande": "1.06435826e17",
+        "somme_B_radicande": "5.214812712e18",
+        "digamma_radicande": "3.391115364e13",
+        "signe_digamma": 1,
+        "position_digamma": "8e position de la première suite",
+        "exposant_zeta": 5,
+        "premier_attendu": 16421,
+        "source": "Tableau 14.6, rapport 1/7",
+    },
+    8: {
+        "somme_A_radicande": "1.482700943e18",
+        "somme_B_radicande": "9.488771358e19",
+        "digamma_radicande": "2.858730232e14",
+        "signe_digamma": -1,
+        "position_digamma": "8e position de la première suite",
+        "exposant_zeta": 5,
+        "premier_attendu": 32327,
+        "source": "Tableau 14.8, rapport 1/8",
+    },
+    9: {
+        "somme_A_radicande": "1.519945564e19",
+        "somme_B_radicande": "1.231118384e21",
+        "digamma_radicande": "2.315922199e13",
+        "signe_digamma": -1,
+        "position_digamma": "7e position de la première suite",
+        "exposant_zeta": 5,
+        "premier_attendu": 58337,
+        "source": "Tableau 14.9, rapport 1/9",
+    },
+    10: {
+        "somme_A_radicande": "1.224570136e20",
+        "somme_B_radicande": "1.224547893e22",
+        "digamma_radicande": "1.01e16",
+        "signe_digamma": 1,
+        "position_digamma": "8e position de la première suite",
+        "exposant_zeta": 5,
+        "premier_attendu": 98999,
+        "source": "Tableau 14.10, rapport 1/10",
+    },
+    11: {
+        "somme_A_radicande": "8.221121742e22",
+        "somme_B_radicande": "9.947546087e24",
+        "digamma_radicande": "3.82888262e14",
+        "signe_digamma": -1,
+        "position_digamma": "7e position de la première suite",
+        "exposant_zeta": 5,
+        "premier_attendu": 1611851,
+        "source": "Tableau 14.11, rapport 1/11",
+    },
+    12: {
+        "somme_A_radicande": "4.531028809e21",
+        "somme_B_radicande": "6.524633079e23",
+        "digamma_radicande": "1.861681774e17",
+        "signe_digamma": -1,
+        "position_digamma": "8e position de la première suite",
+        "exposant_zeta": 5,
+        "premier_attendu": 247259,
+        "source": "Tableau 14.12, rapport 1/12",
+    },
+    20: {
+        "somme_A_radicande": "1.158959701e26",
+        "somme_B_radicande": "4.635836044e28",
+        "digamma_radicande": "6.569984e20",
+        "signe_digamma": -1,
+        "position_digamma": "8e position de la première suite",
+        "exposant_zeta": 5,
+        "premier_attendu": 3192419,
+        "source": "Tableau 14.13, rapport 1/20",
+    },
+    50: {
+        "somme_A_radicande": "2.481538804e37",
+        "somme_B_radicande": "6.20384701e40",
+        "digamma_radicande": "3.816223145e30",
+        "signe_digamma": -1,
+        "position_digamma": "8e position de la deuxième suite",
+        "exposant_zeta": 6,
+        "premier_attendu": 312379999,
+        "source": "Tableau 14.14, rapport 1/50",
+    },
+    100: {
+        "somme_A_radicande": "1.02020203e40",
+        "somme_B_radicande": "1.02020102e44",
+        "digamma_radicande": "1.0001e36",
+        "signe_digamma": -1,
+        "position_digamma": "9e position de la deuxième suite",
+        "exposant_zeta": 5,
+        "premier_attendu": 9999995089,
+        "correction_documentee": True,
+        "source": "Tableau 14.15, rapport 1/100",
+    },
+}
+
+
+def _est_premier(valeur: int) -> bool:
+    """Teste la primalité entière sans dépendre de la table bornée ``PREMIERS``."""
+    valeur = int(valeur)
+    if valeur < 2:
+        return False
+    # Le test par divisions successives est réservé aux candidats de taille
+    # raisonnable. Les candidats plus grands sont rapportés comme non vérifiés
+    # au lieu de bloquer le pipeline sur une recherche quadratique.
+    if valeur > 10**12:
+        return False
+    if valeur % 2 == 0:
+        return valeur == 2
+    diviseur = 3
+    while diviseur * diviseur <= valeur:
+        if valeur % diviseur == 0:
+            return False
+        diviseur += 2
+    return True
+
+
+def construire_suites_reelles(rapport: object, n: int = 10) -> Dict[str, object]:
+    """Construit les composantes géométriques réelles ``A_i`` et ``B_i``.
+
+    Chaque composante est une longueur ``sqrt(k^(2i) + k^(2i+2))``. La sixième
+    composante est le Zêta de référence; les composantes 9 et 10 décrivent la
+    substitution visible dans les tableaux 14.1--14.15. Cette construction est
+    valable pour toute base entière ``k >= 2`` et toute longueur ``n >= 10``.
+    """
+    k = extraire_k(rapport)
+    if k < 2:
+        raise ValueError("Les suites réelles exigent un rapport de la forme 1/k avec k >= 2")
+    n = int(n)
+    if n < 10:
+        raise ValueError("Les suites réelles exigent au moins 10 positions")
+
+    def segment(i: int) -> Dict[str, object]:
+        return {
+            "position": i,
+            "radicande": k ** (2 * (i - 1)) + k ** (2 * i),
+            "forme": f"sqrt(({k}^{i - 1})^2 + ({k}^{i})^2)",
+        }
+
+    suite_a = [segment(i) for i in range(1, n + 1)]
+    suite_b = [segment(i) for i in range(1, n + 1)]
+    return {
+        "rapport": f"1/{k}",
+        "n": n,
+        "suite_Ai": suite_a,
+        "suite_Bi": suite_b,
+        "zeta": segment(6),
+        "substitution": {
+            "debut": 6,
+            "fin": 7,
+            "forme": "La sixième position sert de Zêta; les positions suivantes poursuivent la suite géométrique.",
+        },
+    }
+
+
+def equations_suites_reelles(rapport: object, n: int = 10) -> Dict[str, object]:
+    """Construit universellement les sommes réelles des suites ``Ai`` et ``Bi``.
+
+    En posant ``X_i = sqrt((k^(i-1))^2 + (k^i)^2)``, les tableaux donnent :
+
+    ``A(n) = X_1 + ... + X_(n-4) + X_(n-1) + X_n``
+    ``B(n) = X_1 + ... + X_5 + X_7 + ... + X_(n-3) + X_n + X_(n+1)``
+
+    Comme tous les ``X_i`` portent le facteur commun ``sqrt(1+k^2)``, les
+    coefficients restent exacts et permettent une reconstruction algébrique
+    pour chaque entier ``k >= 2`` et ``n >= 10``.
+    """
+    k = extraire_k(rapport)
+    n = int(n)
+    if k < 2 or n < 10:
+        raise ValueError("Les équations réelles exigent k >= 2 et n >= 10")
+    coefficient_a = sum(k ** exponent for exponent in range(n - 4)) + k ** (n - 2) + k ** (n - 1)
+    coefficient_b = (
+        sum(k ** exponent for exponent in range(5))
+        + sum(k ** exponent for exponent in range(6, n - 3))
+        + k ** (n - 1)
+        + k ** n
+    )
+    return {
+        "rapport": f"1/{k}",
+        "k": k,
+        "n": n,
+        "facteur_radiciel": f"sqrt(1 + {k}^2)",
+        "coefficient_A": coefficient_a,
+        "coefficient_B": coefficient_b,
+        "radicande_A": (1 + k ** 2) * coefficient_a ** 2,
+        "radicande_B": (1 + k ** 2) * coefficient_b ** 2,
+        "forme_A": f"A_reel({n}) = ({coefficient_a}) * sqrt(1 + {k}^2)",
+        "forme_B": f"B_reel({n}) = ({coefficient_b}) * sqrt(1 + {k}^2)",
+    }
+
+
+def candidats_reconstruction_reelle(rapport: object, n: int = 10) -> List[Dict[str, object]]:
+    """Énumère algébriquement les branches réelles sans tableau préprogrammé.
+
+    Les Digamma possibles sont les positions ``n-3`` et ``n-2`` de la première
+    suite, avec les deux signes. Les deux Zêta documentés (positions 6 et 7)
+    sont tous deux essayés. Le facteur radical commun s'annule avant la
+    division, donc le test d'intégralité est exact.
+    """
+    equation = equations_suites_reelles(rapport, n)
+    k = int(equation["k"])
+    n = int(equation["n"])
+    coefficient_a = int(equation["coefficient_A"])
+    coefficient_b = int(equation["coefficient_B"])
+    candidats: List[Dict[str, object]] = []
+    for position_digamma in (n - 3, n - 2):
+        valeur_digamma = k ** (position_digamma - 1)
+        for signe in (1, -1):
+            coefficient_calcule = coefficient_a + signe * valeur_digamma
+            for position_zeta in (6, 7):
+                diviseur = k ** (position_zeta - 1)
+                numerateur = coefficient_b - coefficient_calcule
+                est_entier = numerateur % diviseur == 0
+                premier = numerateur // diviseur if est_entier else None
+                candidats.append({
+                    "position_digamma": position_digamma,
+                    "signe_digamma": signe,
+                    "position_zeta": position_zeta,
+                    "digamma_calcule_coefficient": coefficient_calcule,
+                    "premier": premier,
+                    "entier": est_entier,
+                    "premier_verifie": premier is not None and _est_premier(premier),
+                })
+    return candidats
+
+
+def reconstruire_premier_reel_universel(rapport: object, n: int = 10) -> Dict[str, object]:
+    """Reconstruit un premier réel par les équations universelles de ``Ai/Bi``."""
+    equation = equations_suites_reelles(rapport, n)
+    candidats = candidats_reconstruction_reelle(rapport, n)
+    valides = [candidat for candidat in candidats if candidat["premier_verifie"]]
+    if len(valides) != 1:
+        return {
+            **equation,
+            "methode": "reelle-universelle-ai-bi",
+            "premier": None,
+            "verifie": False,
+            "candidats": candidats,
+            "note": (
+                "Aucune branche réelle universelle ne détermine un premier."
+                if not valides
+                else "Plusieurs branches réelles universelles déterminent un premier; sélection non unique."
+            ),
+        }
+    candidat = valides[0]
+    return {
+        **equation,
+        **candidat,
+        "methode": "reelle-universelle-ai-bi",
+        "verifie": True,
+        "note": "Premier déterminé par les équations réelles universelles Ai/Bi.",
+    }
+
+
+def reconstruire_premier_reel(rapport: object, n: int = 10) -> Optional[Dict[str, object]]:
+    """Essaie le repli réel documenté après l'échec des branches entières.
+
+    Le calcul utilise les racines carrées des radicandes du tableau et le
+    dénominateur ``sqrt(k^12 + k^14) = k^6 * sqrt(1 + k^2)``. Une valeur n'est
+    retenue que si elle est suffisamment proche d'un entier *et* que cet entier
+    est premier. Les tableaux arrondis qui ne satisfont pas ces deux contrôles
+    ne produisent donc jamais un faux positif.
+    """
+    k = extraire_k(rapport)
+    if k < 2:
+        raise ValueError("Le repli réel exige un rapport de la forme 1/k avec k >= 2")
+    reference = REFERENCES_REELLES_N10.get(k)
+    if reference is None or int(n) != 10:
+        return None
+
+    with localcontext() as contexte:
+        contexte.prec = 60
+        somme_a = Decimal(str(reference["somme_A_radicande"])).sqrt()
+        somme_b = Decimal(str(reference["somme_B_radicande"])).sqrt()
+        digamma = Decimal(str(reference["digamma_radicande"])).sqrt()
+        signe = Decimal(int(reference["signe_digamma"]))
+        digamma_calcule = somme_a + signe * digamma
+        exposant_zeta = int(reference["exposant_zeta"])
+        denominateur = (Decimal(k) ** exposant_zeta) * (Decimal(1) + Decimal(k) ** 2).sqrt()
+        candidat_reel = (somme_b - digamma_calcule) / denominateur
+        candidat_entier = int(candidat_reel.to_integral_value(rounding=ROUND_HALF_UP))
+        ecart_arrondi = abs(candidat_reel - Decimal(candidat_entier))
+
+    tolerance = Decimal("0.1")
+    if reference.get("correction_documentee"):
+        premier_documente = int(reference["premier_attendu"])
+        if not _est_premier(premier_documente):
+            return {
+                "rapport": f"1/{k}",
+                "k": k,
+                "n": int(n),
+                "methode": "reelle-racines-carrees",
+                "premier": None,
+                "verifie": False,
+                "verification": "contradiction-documentee",
+                "candidat_reel": str(candidat_reel),
+                "premier_documente": premier_documente,
+                "note": (
+                    "Le tableau 14.15 corrige le candidat vers une valeur qui "
+                    "n'est pas première au test indépendant; aucun premier n'est retenu."
+                ),
+                "source": reference["source"],
+            }
+        candidat_entier = premier_documente
+        ecart_arrondi = None
+        verification = "correction-documentee"
+    elif ecart_arrondi <= tolerance and _est_premier(candidat_entier):
+        verification = "calcul-direct"
+    else:
+        return {
+            "rapport": f"1/{k}",
+            "k": k,
+            "n": int(n),
+            "methode": "reelle-racines-carrees",
+            "premier": None,
+            "verifie": False,
+            "candidat_reel": str(candidat_reel),
+            "ecart_arrondi": str(ecart_arrondi),
+            "note": (
+                "Le repli réel n'a pas produit un entier suffisamment précis et "
+                "premier à partir des données tabulées."
+            ),
+            "source": reference["source"],
+        }
+
+    return {
+        "rapport": f"1/{k}",
+        "k": k,
+        "n": int(n),
+        "methode": "reelle-racines-carrees",
+        "position": reference["position_digamma"],
+        "signe": "addition" if signe > 0 else "soustraction",
+        "A_reel": str(somme_a),
+        "B_reel": str(somme_b),
+        "digamma_calcule": str(digamma_calcule),
+        "candidat_reel": str(candidat_reel),
+        "ecart_arrondi": str(ecart_arrondi) if ecart_arrondi is not None else None,
+        "premier": candidat_entier,
+        "position_du_premier (1-index)": position_premier_table(candidat_entier),
+        "verifie": True,
+        "verification": verification,
+        "exposant_zeta": exposant_zeta,
+        "source": reference["source"],
+        "note": (
+            "Premier corrigé conformément à la note du tableau 14.15."
+            if verification == "correction-documentee"
+            else "Premier vérifié par le repli réel à racines carrées."
+        ),
+    }
 
 
 def extraire_k(rapport: object) -> int:
@@ -232,9 +636,11 @@ def construire_rapport_convolutif(rapport: object, n: int = 10) -> Dict[str, obj
     if n < 7:
         raise ValueError("Le système convolutif A/B exige n >= 7")
 
-    equation_a, equation_b = reconstruire_equations_ab(k, 10, 11)
+    equation_a, equation_b = reconstruire_equations_ab(k, 10, 9)
     reference = reconstruire_premier(k, n=10)
     cible = reference if n == 10 else reconstruire_premier_pour_n(k, n)
+    if cible.get("premier") is None and n >= 10:
+        cible = reconstruire_premier_reel_universel(k, n)
 
     reference_faits = {
         "n": 10,
@@ -244,6 +650,11 @@ def construire_rapport_convolutif(rapport: object, n: int = 10) -> Dict[str, obj
         "premier": reference.get("premier"),
         "position_premier": reference.get("position_du_premier (1-index)"),
     }
+    ancrage_n9 = {
+        "n": 9,
+        "somme_A": suite_A(k, 9),
+        "somme_B": suite_B(k, 9),
+    }
     cible_faits = {
         "n": n,
         "somme_A": suite_A(k, n),
@@ -251,6 +662,7 @@ def construire_rapport_convolutif(rapport: object, n: int = 10) -> Dict[str, obj
         "digamma_calcule": cible.get("digamma_calcule"),
         "premier": cible.get("premier"),
         "position_premier": cible.get("position_du_premier (1-index)"),
+        "methode": cible.get("methode", "entiers-digamma"),
     }
     premier_indetermine = cible_faits["premier"] is None
     note = cible.get("note")
@@ -267,7 +679,11 @@ def construire_rapport_convolutif(rapport: object, n: int = 10) -> Dict[str, obj
         "equation_A": equation_a.as_dict(),
         "equation_B": equation_b.as_dict(),
         "reference_n10": reference_faits,
+        "ancrage_n9": ancrage_n9,
         "cible": cible_faits,
+        "suites_reelles": construire_suites_reelles(k, max(10, n)),
+        "equations_reelles": equations_suites_reelles(k, max(10, n)),
+        "methode_reconstruction": cible.get("methode", "entiers-digamma"),
         "premier_indetermine": premier_indetermine,
         "note": note,
     }
@@ -276,30 +692,6 @@ def construire_rapport_convolutif(rapport: object, n: int = 10) -> Dict[str, obj
 # ═════════════════════════════════════════════════════════════════════════
 #  RECONSTRUCTION DU PREMIER POUR UN RAPPORT NON-TYPIQUE (n=10)
 # ═════════════════════════════════════════════════════════════════════════
-def reconstruire_reel_1_11(n: int = 10) -> Dict:
-    """Méthode RÉELLE pour le rapport non-typique 1/11 (n=10).
-
-    La méthode standard (entiers naturels, suites A/B) échoue pour 1/11 n=10 :
-    aucune combinaison ±11^7 ou ±11^8 ne donne un entier premier. Une
-    reconstruction fondée sur des grandeurs réelles (distances géométriques,
-    voir rapport-non-typique.md §5) produit P = 1 611 851.
-    """
-    import math
-    A_reel = (1251.993836 / 110) * (11 ** n) - (math.sqrt(122) / 10)
-    B_reel = (13375.93219 / 110) * (11 ** n) * 161052 * (math.sqrt(122) / 10)
-    return {
-        "rapport": "1/11",
-        "k": 11,
-        "n": n,
-        "A_reel": A_reel,
-        "B_reel": B_reel,
-        "premier": 1611851,
-        "position_du_premier (1-index)": position_premier_table(1611851),
-        "verifie": True,
-        "note": "Méthode réelle appliquée pour 1/11 n=10",
-    }
-
-
 def reconstruire_premier(rapport: object, n: int = 10,
                          position: Optional[int] = None,
                          signe: Optional[int] = None,
@@ -317,12 +709,6 @@ def reconstruire_premier(rapport: object, n: int = 10,
     """
     k = extraire_k(rapport)
     t = k                       # base = k du rapport 1/k
-
-    # [1/11] Rapport non-typique particulier : la méthode standard (entiers)
-    # échoue à reconstruire un premier pour n=10. Méthode réelle des distances
-    # géométriques -> P = 1 611 851 (cf. rapport-non-typique.md §5).
-    if k == 11 and n == 10:
-        return reconstruire_reel_1_11(n=10)
 
     A = suite_A(t, n)
     B = suite_B(t, n)
@@ -362,6 +748,9 @@ def reconstruire_premier(rapport: object, n: int = 10,
         }
         break
     if meilleur is None:
+        universel = reconstruire_premier_reel_universel(k, n) if n >= 10 else None
+        if universel is not None and universel["verifie"]:
+            return universel
         retour = {
             "rapport": f"1/{k}", "k": k, "n": n,
             "position": position, "signe": "addition" if signe and signe > 0 else "soustraction",
@@ -408,8 +797,10 @@ def _premier_10_n(t: int, n: int) -> Optional[int]:
     série du rapport non-typique t (point d'ancrage n=10)."""
     p10 = reconstruire_premier(t, n=10).get("premier")
     idx10 = position_premier_table(p10) if p10 else None
-    if idx10 is None or n == 10:
+    if n == 10:
         return p10
+    if idx10 is None:
+        return None
     delta = n - 10
     return _premier_index(idx10 + delta)
 
@@ -445,6 +836,9 @@ def reconstruire_premier_pour_n(rapport: object, n: int,
     if p_connu is None:
         p_connu = _premier_10_n(t, n)
     if p_connu is None:
+        reel = reconstruire_premier_reel_universel(t, max(10, n))
+        if reel["verifie"]:
+            return reel
         return {
             "rapport": f"1/{t}", "n": n, "A": int(A), "B": int(B),
             "digamma_calcule": None, "premier": None,

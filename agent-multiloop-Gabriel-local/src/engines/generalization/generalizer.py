@@ -45,10 +45,27 @@ class Generalizer:
     def _build_general_form(self, result: dict[str, Any], ctx: dict[str, Any]) -> str:
         intent = ctx.get("intent")
         if intent == "reconstruction":
+            model = str(result.get("model") or ctx.get("model") or "1/2")
+            if model != "1/2":
+                equation_a = result.get("equation_A", {})
+                equation_b = result.get("equation_B", {})
+                return (
+                    f"Rapport non-typique {model}. Utilise exclusivement les équations "
+                    f"calculées : {equation_a.get('forme', 'A(n) inconnue')} ; "
+                    f"{equation_b.get('forme', 'B(n) inconnue')}. "
+                    "Ne pas appliquer la formule du rapport 1/2, ne pas employer le "
+                    "facteur 64, et ne pas affirmer que n est la position du premier. "
+                    "Essayer d'abord les possibilités Digamma entières, puis le "
+                    "repli réel par puissances et racines carrées fourni par le "
+                    "module. Si `premier_indetermine` est vrai, indiquer que ces "
+                    "deux méthodes ne déterminent aucun premier. Les listes "
+                    "`suite_Ai` et `suite_Bi` exposent les composantes réelles "
+                    "par position; ne jamais les remplacer par des valeurs inventées."
+                )
             return (
-                "Forme generale : pour tout p premier et n suffisant, "
-                "prime_equation(n, p) = (SB(n) - digamma_calc(n, p)) / factor = p. "
-                "Factor = 64 (1/2), 729 (1/3), 4096 (1/4)."
+                "Rapport typique 1/2 : pour tout p premier et n suffisant, "
+                "prime_equation(n, p) = (SB(n) - digamma_calc(n, p)) / 64 = p, "
+                "avec n égal à la position du premier."
             )
         if intent == "ratio":
             return (

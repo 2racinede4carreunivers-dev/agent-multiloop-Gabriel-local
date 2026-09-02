@@ -426,7 +426,9 @@ class Pipeline:
             progress_cb({"event": "generalization_done", "qid": qid})
 
         # 6. Construction du prompt grounded + Multi-loop self-critique
-        base_prompt = self._build_base_prompt(ctx, plan, general, expanded)
+        base_prompt = self._build_base_prompt(
+            ctx, plan, general, expanded, precomputed_facts
+        )
         if progress_cb:
             progress_cb({
                 "event": "multiloop_start",
@@ -518,6 +520,16 @@ class Pipeline:
             )
             final.hol_script = hol_script
 
+        if (
+            goal["intent"] == "reconstruction"
+            and precomputed_facts.get("model")
+            and "reference_n10" in precomputed_facts
+            and "ancrage_n9" in precomputed_facts
+        ):
+            final.answer_text = self._append_convolution_summary(
+                final.answer_text, precomputed_facts
+            )
+
         # 8. Axes cognitifs 4+5 : EpistemicClaim + MetaReasoner
         self._annotate_epistemic(final, precomputed_facts, goal, qid)
 
@@ -537,6 +549,43 @@ class Pipeline:
             })
 
         return final
+
+    @staticmethod
+    def _append_convolution_summary(answer_text: str, facts: dict[str, Any]) -> str:
+        """Ajoute les résultats déterministes que toute réponse doit exposer."""
+        marker = "### Résultats convolutifs déterministes"
+        if marker in answer_text:
+            return answer_text
+
+        reference = facts["reference_n10"]
+        ancrage_n9 = facts["ancrage_n9"]
+        cible = facts["cible"]
+        lignes = [
+            marker,
+            f"- Rapport : {facts['model']}",
+            f"- Équation A : {facts['equation_A']['forme']}",
+            f"- Équation B : {facts['equation_B']['forme']}",
+            (
+                f"- Ancrage n=10 : A={reference['somme_A']}, "
+                f"B={reference['somme_B']}, Digamma={reference['digamma_calcule']}, "
+                f"premier={reference['premier']}."
+            ),
+            (
+                f"- Ancrage n=9 : A={ancrage_n9['somme_A']}, "
+                f"B={ancrage_n9['somme_B']}."
+            ),
+            (
+                f"- Cible n={cible['n']} : A={cible['somme_A']}, "
+                f"B={cible['somme_B']}, Digamma={cible['digamma_calcule']}, "
+                f"premier={cible['premier']}."
+            ),
+        ]
+        if facts.get("premier_indetermine"):
+            lignes.append(
+                "- Aucun premier n'a pu être déterminé après les possibilités "
+                "Digamma entières et le repli réel disponible."
+            )
+        return f"{answer_text.rstrip()}\n\n" + "\n".join(lignes)
 
     def _try_process_multi_objective(
         self,
@@ -786,8 +835,12 @@ class Pipeline:
                         "equation_A": rapport["equation_A"],
                         "equation_B": rapport["equation_B"],
                         "reference_n10": reference,
+                        "ancrage_n9": rapport["ancrage_n9"],
                         "cible": cible,
                         "premier_indetermine": rapport["premier_indetermine"],
+                        "suites_reelles": rapport["suites_reelles"],
+                        "equations_reelles": rapport["equations_reelles"],
+                        "methode_reconstruction": cible.get("methode", "entiers-digamma"),
                         "note": rapport["note"],
                         "explanation": (
                             f"Rapport {rapport['rapport']}, n={n_rnt}: équations A/B "
@@ -976,7 +1029,14 @@ class Pipeline:
             return {"error": str(exc)}
         return {}
 
-    def _build_base_prompt(self, ctx, plan: dict, general: dict, expanded: list[str]) -> str:
+    def _build_base_prompt(
+        self,
+        ctx,
+        plan: dict,
+        general: dict,
+        expanded: list[str],
+        precomputed_facts: dict[str, Any] | None = None,
+    ) -> str:
         plan_str = "\n".join(f"  {i+1}. {s}" for i, s in enumerate(plan.get("steps", [])))
         concepts_str = ", ".join(expanded[:15]) if expanded else "(aucun specifique)"
         contextual_prefix = str(ctx.metadata.get("contextual_prefix", "")).strip()
@@ -989,6 +1049,19 @@ class Pipeline:
             )
         else:
             objectives_str = "  (aucun objectif explicite detecte)"
+        model = str((precomputed_facts or {}).get("model") or plan.get("model", "1/2"))
+        if model == "1/2":
+            reconstruction_rule = (
+                "Rapport typique 1/2 : position du nombre premier = n = nombre "
+                "de termes dans A et B. Le facteur Digamma est 64."
+            )
+        else:
+            reconstruction_rule = (
+                f"Rapport non-typique {model} : n est le nombre de termes et "
+                "n'est pas la position du premier. Utilise uniquement les équations "
+                "A/B et les faits convolutifs calculés. Ne jamais appliquer le "
+                "modèle 1/2, le facteur 64 ou la formule digamma_calc(n,p)=SB(n)-64*p."
+            )
         return f"""PLAN COGNITIF SELECTIONNE :
   Strategie : {plan.get('strategy', 'general')}
   Modele spectral : {plan.get('model', '1/2')}
@@ -1010,16 +1083,16 @@ FORME GENERALE :
 EXTENSIONS POSSIBLES :
   {general.get('extension_hint', 'N/A')}
 
-âš ï¸ INVARIANT SPECTRAL (RAPPEL MANDATORY):
-  Pour TOUTE reconstruction:
-    position du nombre premier = n = nombre de termes dans A et B
-  PAS D'EXCEPTION. PAS D'ALTERNATIVE.
+REGLE SPECTRALE APPLICABLE (RAPPEL OBLIGATOIRE):
+  {reconstruction_rule}
 📌 VALEURS DES SUITES A ET B (RAPPEL MANDATORY):
   Pour TOUTE reconstruction (rapport typique 1/2 ET rapport non-typique 1/k),
   ta réponse DOIT citer textuellement les valeurs calculées :
     - Somme suite A  (SA(n))  :  clé « somme_suite_A »
     - Somme suite B  (SB(n))  :  clé « somme_suite_B »
-  En plus de la valeur n (nombre de termes), du nombre premier reconstitué et
-  (si disponible) du digamma calculé. Ne JAMAIS inventer ces sommes : prends-les
-  telles quelles depuis les « CHIFFRES CALCULES » fournis ci-dessous.
+  Cite également les équations A/B et les valeurs de référence n=10. Si le fait
+  « premier_indetermine » vaut vrai, indique explicitement qu'aucun premier n'a
+  pu être déterminé parmi les quatre possibilités Digamma, sans extrapoler.
+  Ne JAMAIS inventer ces sommes : prends-les telles quelles depuis les
+  « CHIFFRES CALCULES » fournis ci-dessous.
 """

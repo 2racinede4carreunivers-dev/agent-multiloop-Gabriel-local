@@ -1829,10 +1829,10 @@ text \<open>
 subsection "Symboles abstraits pour les suites A_k, B_k et la reconstruction"
 
 consts
-  SA_k :: "nat ⇒ nat ⇒ real"
-  SB_k :: "nat ⇒ nat ⇒ real"
-  digamma_k :: "nat ⇒ nat ⇒ real"
-  premier_k :: "nat ⇒ nat ⇒ nat"
+  SA_k :: "nat \<Rightarrow> nat \<Rightarrow> real"
+  SB_k :: "nat \<Rightarrow> nat \<Rightarrow> real"
+  digamma_k :: "nat \<Rightarrow> nat \<Rightarrow> real"
+  premier_k :: "nat \<Rightarrow> nat \<Rightarrow> nat"
 
 text \<open>
   Interpretation :
@@ -1864,17 +1864,17 @@ text \<open>
 
 subsection "Equation generale de reconstruction"
 
-definition digamma_k_eq :: "nat ⇒ nat ⇒ nat ⇒ real" where
+definition digamma_k_eq :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
   "digamma_k_eq k n p =
      (SB_k k n / real (k ^ 6) - real p) * real (k ^ 6)"
 
-definition premier_k_eq :: "nat ⇒ nat ⇒ nat ⇒ real" where
+definition premier_k_eq :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
   "premier_k_eq k n p =
      (SB_k k n - digamma_k_eq k n p) / real (k ^ 6)"
 
 lemma reconstruction_k_identity:
-  assumes k_nz : "k ≠ (0::nat)"
-      and den_nz : "real (k ^ 6) ≠ (0::real)"
+  assumes k_nz : "k \<noteq> (0::nat)"
+      and den_nz : "real (k ^ 6) \<noteq> (0::real)"
   shows "premier_k_eq k n p = real p"
   (* k = 0 rendrait la division par k^6 indeterminee. *)
   unfolding premier_k_eq_def digamma_k_eq_def
@@ -1924,7 +1924,7 @@ text \<open>
 subsection "Caracteristique non-typique : n <> position du premier"
 
 consts
-  position_prime_k :: "nat ⇒ nat ⇒ nat"
+  position_prime_k :: "nat \<Rightarrow> nat \<Rightarrow> nat"
 
 axiomatization where
   position_1_sur_3_n10: "position_prime_k 3 10 = 49" and
@@ -1932,15 +1932,15 @@ axiomatization where
   position_1_sur_6_n14: "position_prime_k 6 14 = 971"
 
 lemma non_typique_n_neq_position_3:
-  "10 ≠ position_prime_k 3 10"
+  "10 \<noteq> position_prime_k 3 10"
   using position_1_sur_3_n10 by simp
 
 lemma non_typique_n_neq_position_6_n10:
-  "10 ≠ position_prime_k 6 10"
+  "10 \<noteq> position_prime_k 6 10"
   using position_1_sur_6_n10 by simp
 
 lemma non_typique_n_neq_position_6_n14:
-  "14 ≠ position_prime_k 6 14"
+  "14 \<noteq> position_prime_k 6 14"
   using position_1_sur_6_n14 by simp
 
 text \<open>

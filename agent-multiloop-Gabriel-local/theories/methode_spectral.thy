@@ -1829,10 +1829,10 @@ text \<open>
 subsection "Symboles abstraits pour les suites A_k, B_k et la reconstruction"
 
 consts
-  SA_k :: "nat ⇒ nat ⇒ real"
-  SB_k :: "nat ⇒ nat ⇒ real"
-  digamma_k :: "nat ⇒ nat ⇒ real"
-  premier_k :: "nat ⇒ nat ⇒ nat"
+  SA_k :: "nat \<Rightarrow> nat \<Rightarrow> real"
+  SB_k :: "nat \<Rightarrow> nat \<Rightarrow> real"
+  digamma_k :: "nat \<Rightarrow> nat \<Rightarrow> real"
+  premier_k :: "nat \<Rightarrow> nat \<Rightarrow> nat"
 
 text \<open>
   Interpretation :
@@ -1864,17 +1864,17 @@ text \<open>
 
 subsection "Equation generale de reconstruction"
 
-definition digamma_k_eq :: "nat ⇒ nat ⇒ nat ⇒ real" where
+definition digamma_k_eq :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
   "digamma_k_eq k n p =
      (SB_k k n / real (k ^ 6) - real p) * real (k ^ 6)"
 
-definition premier_k_eq :: "nat ⇒ nat ⇒ nat ⇒ real" where
+definition premier_k_eq :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
   "premier_k_eq k n p =
      (SB_k k n - digamma_k_eq k n p) / real (k ^ 6)"
 
 lemma reconstruction_k_identity:
-  assumes k_nz : "k ≠ (0::nat)"
-      and den_nz : "real (k ^ 6) ≠ (0::real)"
+  assumes k_nz : "k \<noteq> (0::nat)"
+      and den_nz : "real (k ^ 6) \<noteq> (0::real)"
   shows "premier_k_eq k n p = real p"
   (* k = 0 rendrait la division par k^6 indeterminee. *)
   unfolding premier_k_eq_def digamma_k_eq_def
@@ -1924,7 +1924,7 @@ text \<open>
 subsection "Caracteristique non-typique : n <> position du premier"
 
 consts
-  position_prime_k :: "nat ⇒ nat ⇒ nat"
+  position_prime_k :: "nat \<Rightarrow> nat \<Rightarrow> nat"
 
 axiomatization where
   position_1_sur_3_n10: "position_prime_k 3 10 = 49" and
@@ -1932,15 +1932,15 @@ axiomatization where
   position_1_sur_6_n14: "position_prime_k 6 14 = 971"
 
 lemma non_typique_n_neq_position_3:
-  "10 ≠ position_prime_k 3 10"
+  "10 \<noteq> position_prime_k 3 10"
   using position_1_sur_3_n10 by simp
 
 lemma non_typique_n_neq_position_6_n10:
-  "10 ≠ position_prime_k 6 10"
+  "10 \<noteq> position_prime_k 6 10"
   using position_1_sur_6_n10 by simp
 
 lemma non_typique_n_neq_position_6_n14:
-  "14 ≠ position_prime_k 6 14"
+  "14 \<noteq> position_prime_k 6 14"
   using position_1_sur_6_n14 by simp
 
 text \<open>
@@ -4422,7 +4422,7 @@ text \<open>
  *     1. Les formules fermées exactes pour les sommes A et B,
  *     2. La construction terme à terme (convolutive) des suites,
  *     3. Le mécanisme d'ancrage à n=10 (quatre essais Digamma),
- *     4. La règle de décalage de rang pour n ≠ 10,
+ *     4. La règle de décalage de rang pour n \<noteq> 10,
  *     5. La validation exacte du cas k=8, n=34 (P=32537),
  *     6. Le rapport spectral constant 1/k pour tout k >= 3.
  *****************************************************************************)
@@ -4454,7 +4454,7 @@ text \<open>
   RÈGLE DE RECONSTRUCTION (ancrage n=10 + décalage de rang) :
     1. À n=10 : tester les quatre Digamma ΣA ± A(7) et ΣA ± A(8) ;
        le seul candidat entier premier constitue l'ancrage du rapport.
-    2. Pour n ≠ 10 : rang cible = rang base + n - 10 ;
+    2. Pour n \<noteq> 10 : rang cible = rang base + n - 10 ;
        P cible = tblPremiers[rang cible] ;
        Digamma calculé = ΣB(k,n) - P_cible × k^6.
 
@@ -4542,7 +4542,7 @@ text \<open>
   Les deux formules fermées universelles pour les sommes des suites A et B,
   valables pour tout k >= 2 et tout n >= 1. La relation alphaB = k * alphaA
   garantit algébriquement que le rapport spectral (ΣA(n1)-ΣA(n2))/(ΣB(n1)-ΣB(n2))
-  vaut exactement 1/k pour toute paire (n1, n2) avec n1 ≠ n2.
+  vaut exactement 1/k pour toute paire (n1, n2) avec n1 \<noteq> n2.
 \<close>
 
 definition somme_A_conv :: "nat \<Rightarrow> nat \<Rightarrow> real" where
@@ -4573,7 +4573,7 @@ text \<open>
   pour tout k >= 2 et toute paire d'entiers positifs distincts n1, n2.
 
   La preuve n'utilise que la relation alphaB = k * alphaA et la
-  non-nullité de k^n1 - k^n2 (pour n1 ≠ n2, k >= 2).
+  non-nullité de k^n1 - k^n2 (pour n1 \<noteq> n2, k >= 2).
 \<close>
 
 definition RsP_conv :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> real" where
@@ -4800,10 +4800,10 @@ lemma candidat_k8_pos8_neg_est_32327 :
   unfolding SB_k8_n10_def digamma_k8_pos8_neg_def SA_k8_n10_def zeta_k8_def
   by simp
 
-subsection "XIV.6 — Règle de décalage de rang pour n ≠ 10"
+subsection "XIV.6 — Règle de décalage de rang pour n \<noteq> 10"
 
 text \<open>
-  Une fois l'ancrage obtenu à n=10, la reconstruction pour n ≠ 10
+  Une fois l'ancrage obtenu à n=10, la reconstruction pour n \<noteq> 10
   utilise la règle de décalage de rang :
 
       rang_cible(n) = rang_base + n - 10
@@ -4928,7 +4928,7 @@ subsection "XIV.8 — Rapport spectral de convolution : instance k=8"
 
 text \<open>
   Instance du théorème RsP_conv_constant pour k=8.
-  Pour toute paire (n₁, n₂) avec n₁,n₂ >= 1 et n₁ ≠ n₂,
+  Pour toute paire (n₁, n₂) avec n₁,n₂ >= 1 et n₁ \<noteq> n₂,
   le rapport spectral de convolution vaut exactement 1/8.
 \<close>
 
@@ -4992,7 +4992,7 @@ text \<open>
     en k et n, compatibles avec SA (k=2), A_1_3 (k=3), A_1_4 (k=4).
 
   NIVEAU 3 — RAPPORT SPECTRAL CONSTANT
-    RsP_conv(k, n1, n2) = 1/k pour tout k >= 2, n1 >= 1, n2 >= 1, n1 ≠ n2.
+    RsP_conv(k, n1, n2) = 1/k pour tout k >= 2, n1 >= 1, n2 >= 1, n1 \<noteq> n2.
     Théorème prouvé algébriquement (RsP_conv_constant), sans axiome.
 
   NIVEAU 4 — CONSTRUCTION CONVOLUTIVE (TERME À TERME)
@@ -5003,7 +5003,7 @@ text \<open>
   NIVEAU 5 — MÉCANISME D'ANCRAGE ET DÉCALAGE
     À n=10 : quatre essais Digamma (position 7 ou 8, signe ±) ;
              l'unique candidat premier constitue l'ancrage.
-    À n≠10 : rang_cible = rang_base + n - 10 ; P = nth_prime(rang_cible) ;
+    À n\<noteq>10 : rang_cible = rang_base + n - 10 ; P = nth_prime(rang_cible) ;
              Digamma = ΣB - P×k^6. Validé exactement pour k=8, n=34.
 
   NIVEAU 6 — VALIDATION EXACTE

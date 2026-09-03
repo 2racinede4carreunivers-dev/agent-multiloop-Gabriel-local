@@ -26,15 +26,15 @@ section ‹Définitions de Validation Unifiée›
 subsection ‹Redéfinition des Fonctions Spectrales pour Validation›
 
 (* Validation indépendante de A(n) *)
-definition A_validation :: "nat ⇒ real" where
+definition A_validation :: "nat \<Rightarrow> real" where
   "A_validation n = (13 / 8) * (2 ^ n) - 2"
 
 (* Validation indépendante de B(n) *)
-definition B_validation :: "nat ⇒ real" where
+definition B_validation :: "nat \<Rightarrow> real" where
   "B_validation n = (13 / 4) * (2 ^ n) - 66"
 
 (* Digamma calculé selon formule correcte: D_c = SB(n) - 64*P *)
-definition digamma_validation :: "nat ⇒ nat ⇒ real" where
+definition digamma_validation :: "nat \<Rightarrow> nat \<Rightarrow> real" where
   "digamma_validation n p = B_validation n - 64 * (real p)"
 
 (* Constante normalisatrice Sr2 *)
@@ -48,33 +48,33 @@ definition rsr_validation :: "real" where
 subsection ‹Formules de Reconstruction Première›
 
 (* Reconstruction du n-ième nombre premier selon méthode spectrale *)
-definition prime_nth_reconstruction :: "nat ⇒ real" where
+definition prime_nth_reconstruction :: "nat \<Rightarrow> real" where
   "prime_nth_reconstruction n = 
      (B_validation n - digamma_validation n n) / 64"
 
 (* Équation caractéristique de la méthode *)
-definition spectral_equation :: "nat ⇒ nat ⇒ real" where
+definition spectral_equation :: "nat \<Rightarrow> nat \<Rightarrow> real" where
   "spectral_equation n p = 
      B_validation n - 64 * (real p)"
 
 subsection ‹Rapports Spectraux Asymétriques (RSA)›
 
 (* Somme alternée d'un bloc de nombres *)
-definition alternating_block_sum :: "nat list ⇒ nat ⇒ real" where
+definition alternating_block_sum :: "nat list \<Rightarrow> nat \<Rightarrow> real" where
   "alternating_block_sum primes k =
      (∑ i = 0 ..< length primes.
         (if even i then 1 else -1 : real) * 
         ((real (primes ! i)) ^ k))"
 
 (* Rapport Spectral Asymétrique entre deux blocs *)
-definition RSA_ratio :: "nat list ⇒ nat list ⇒ nat ⇒ real" where
+definition RSA_ratio :: "nat list \<Rightarrow> nat list \<Rightarrow> nat \<Rightarrow> real" where
   "RSA_ratio blockA blockB k =
      let sumA = alternating_block_sum blockA k
          sumB = alternating_block_sum blockB k
      in (sumA - sumB) / max (1e-10) sumB"
 
 (* Propriété de convergence RSA *)
-definition rsa_converges_to_half :: "nat list ⇒ nat list ⇒ bool" where
+definition rsa_converges_to_half :: "nat list \<Rightarrow> nat list \<Rightarrow> bool" where
   "rsa_converges_to_half blockA blockB =
      ∀ ε > 0. ∃ K. ∀ k ≥ K.
        dist (RSA_ratio blockA blockB k) (1/2) < ε"
@@ -86,7 +86,7 @@ datatype convergence_state =
   | Converged
 
 (* Classificateur d'état convergence *)
-definition classify_convergence_state :: "real ⇒ convergence_state" where
+definition classify_convergence_state :: "real \<Rightarrow> convergence_state" where
   "classify_convergence_state value =
      (if dist value (1/2) > 0.3 then Divergent
       else if dist value (1/2) > 0.05 then Converging
@@ -101,12 +101,12 @@ section ‹Analyse des Zéros Riemann - Perspective Spectrale›
 subsection ‹Eigenvalues et Ligne Critique›
 
 (* Zéro de Riemann sur la ligne critique Re = 1/2 *)
-definition riemann_zero_critical :: "ℂ ⇒ bool" where
+definition riemann_zero_critical :: "ℂ \<Rightarrow> bool" where
   "riemann_zero_critical s = 
-     (Complex.re s = 1/2 ∧ s ≠ Complex (1/2) 0)"
+     (Complex.re s = 1/2 ∧ s \<noteq> Complex (1/2) 0)"
 
 (* Opérateur spectral (approche Hilbert-Pólya) *)
-definition spectral_hilbert_operator :: "real ⇒ ℂ" where
+definition spectral_hilbert_operator :: "real \<Rightarrow> ℂ" where
   "spectral_hilbert_operator λ = 
      Complex (1/2) (Real.log (2 * π * λ))"
 
@@ -285,7 +285,7 @@ lemma alternating_sum_bounded:
     sorry
   qed
 
-(* Lemme: RSA bien défini quand dénominateur ≠ 0 *)
+(* Lemme: RSA bien défini quand dénominateur \<noteq> 0 *)
 lemma RSA_ratio_well_defined:
   assumes "length blockB > 0"
   shows "RSA_ratio blockA blockB k ∈ ℝ"

@@ -6,7 +6,7 @@ from typing import Any, Callable
 
 from .pipeline import Pipeline
 from .pipeline_with_gap_detection import PipelineWithGapDetection
-from .types import FinalAnswer
+from .spectral_types import FinalAnswer
 
 
 logger = logging.getLogger(__name__)

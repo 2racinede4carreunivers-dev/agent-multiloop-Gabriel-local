@@ -34,7 +34,7 @@ from rich.table import Table
 from ..adapters.corpus.certainty_kernel import CertaintyKernel
 from ..audit import AuditStore
 from ..core.spectral_core import SpectralMethodCore
-from ..core.types import CandidateAnswer, FinalAnswer
+from ..core.spectral_types import CandidateAnswer, FinalAnswer
 from ..debug_toolkit import (
     MpmathValidator, SympyValidator, ToolkitRegistry, Z3Prover,
 )

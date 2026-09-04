@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from ..core.types import FinalAnswer, QuestionContext
+from ..core.spectral_types import FinalAnswer, QuestionContext
 from ..learning.debugging_expertise import ExpertiseLibrary
 from ..learning.slowmotion_recorder import SlowMotionRecorder
 from ..multiloop.coherence_detector import CoherenceDetector, CoherenceReport

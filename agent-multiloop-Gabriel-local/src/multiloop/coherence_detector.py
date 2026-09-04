@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..core.spectral_core import AntiHallucinationValidator
-from ..core.types import CandidateAnswer
+from ..core.spectral_types import CandidateAnswer
 from .forbidden_vocab import detect_forbidden_word
 
 

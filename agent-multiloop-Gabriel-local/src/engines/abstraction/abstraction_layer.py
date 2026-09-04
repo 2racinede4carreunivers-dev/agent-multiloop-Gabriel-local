@@ -8,7 +8,7 @@ import logging
 import re
 from typing import Any
 
-from ...core.types import CognitiveConcept, QuestionContext, SpectralModel
+from ...core.spectral_types import CognitiveConcept, QuestionContext, SpectralModel
 
 
 logger = logging.getLogger(__name__)

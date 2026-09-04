@@ -19,7 +19,7 @@ from rich.text import Text
 
 from ..core.config import load_config
 from ..core.orchestrator import Orchestrator
-from ..core.types import FinalAnswer
+from ..core.spectral_types import FinalAnswer
 from .ci_status import run_pytest_local
 from .debug_session import DebugSession, MAX_REQUEST_CHARS, MAX_COMMENT_CHARS
 from .keybindings import install_keybindings, save_history as _save_kb_history

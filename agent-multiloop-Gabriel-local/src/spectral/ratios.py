@@ -19,7 +19,7 @@ from src.spectral.non_typical_ratios import (
 )
 
 from .suites import get_suite_functions
-from ..core.types import AsymmetryKind
+from ..core.spectral_types import AsymmetryKind
 
 
 # =============================================================

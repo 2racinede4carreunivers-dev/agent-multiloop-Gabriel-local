@@ -96,7 +96,7 @@ def _add_suite_ab_facts(facts: dict, SA, SB) -> dict:
 from ..adapters.corpus.thy_loader import TheoryLoader
 from ..adapters.hol_isabelle.isabelle_adapter import IsabelleAdapter
 from ..core.llm_manager import LLMManager
-from ..core.types import FinalAnswer, QuestionContext, SpectralModel
+from ..core.spectral_types import FinalAnswer, QuestionContext, SpectralModel
 from ..engines.abstraction import AbstractionLayer
 from ..engines.concept_navigation import Navigator
 from ..engines.generalization import Generalizer

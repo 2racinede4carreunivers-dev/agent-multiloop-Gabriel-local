@@ -16,7 +16,7 @@ from typing import Any
 
 from ..core.llm_manager import LLMManager
 from ..core.spectral_core import AntiHallucinationValidator
-from ..core.types import FinalAnswer
+from ..core.spectral_types import FinalAnswer
 from ..spectral.spectral_knowledge import build_grounded_system_prompt
 
 

@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from ...core.types import PipelineStep, QuestionContext, SpectralModel
+from ...core.spectral_types import PipelineStep, QuestionContext, SpectralModel
 
 
 logger = logging.getLogger(__name__)

@@ -21,7 +21,7 @@ import logging
 import re
 from typing import Optional
 
-from ..core.types import FinalAnswer, QuestionContext
+from ..core.spectral_types import FinalAnswer, QuestionContext
 from ..multiloop.coherence_detector import CoherenceDetector, CoherenceReport
 from ..multiloop.slow_motion_debugger import SlowMotionDebugger, DebugTimeline
 

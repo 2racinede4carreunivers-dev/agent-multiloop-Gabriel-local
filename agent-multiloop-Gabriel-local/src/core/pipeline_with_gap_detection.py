@@ -8,7 +8,7 @@ import re
 import uuid
 from typing import Any, Optional, Callable
 
-from ..core.types import FinalAnswer, QuestionContext
+from ..core.spectral_types import FinalAnswer, QuestionContext
 from ..spectral.composite_absurdity_prover import (
     build_composite_rejection,
     detect_composite_in_gap_request,
@@ -306,7 +306,7 @@ class PipelineWithGapDetection:
     ) -> FinalAnswer:
         """Calcule la courbe demandee et construit un FinalAnswer riche."""
         from pathlib import Path
-        from ..core.types import CandidateAnswer
+        from ..core.spectral_types import CandidateAnswer
         from ..visualization import (
             compute_curve, render_ascii, render_png, MATPLOTLIB_AVAILABLE,
         )
@@ -450,7 +450,7 @@ class PipelineWithGapDetection:
     
     def _build_gap_answer(self, qid: str, question: str, result: GapResult) -> FinalAnswer:
         """Convertit GapResult en FinalAnswer."""
-        from ..core.types import CandidateAnswer
+        from ..core.spectral_types import CandidateAnswer
         
         answer_text = self._render_gap_result(result)
         
@@ -506,7 +506,7 @@ class PipelineWithGapDetection:
         spectrale possible pour un composé) et référence les théorèmes
         Isabelle/HOL correspondants (composite_not_prime_i, etc.).
         """
-        from ..core.types import CandidateAnswer
+        from ..core.spectral_types import CandidateAnswer
 
         lines: list[str] = []
         lines.append("### Requete rejetee : entier compose detecte")

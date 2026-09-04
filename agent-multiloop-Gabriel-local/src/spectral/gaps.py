@@ -17,7 +17,7 @@ from __future__ import annotations
 from fractions import Fraction
 
 from .suites import SA, SA_mix, SB, SB_mix, get_suite_functions
-from ..core.types import GapKind
+from ..core.spectral_types import GapKind
 
 
 def gap_equation(

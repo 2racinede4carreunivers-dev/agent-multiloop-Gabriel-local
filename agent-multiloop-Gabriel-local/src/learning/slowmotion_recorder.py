@@ -15,7 +15,7 @@ import re
 import uuid
 from typing import Any, Optional
 
-from ..core.types import FinalAnswer, QuestionContext
+from ..core.spectral_types import FinalAnswer, QuestionContext
 from ..learning.debugging_expertise import (
     CoherenceSignature,
     DebugSessionRecord,

@@ -13,7 +13,7 @@ import json
 from typing import Any, Callable
 
 from ..core.llm_manager import LLMManager
-from ..core.types import CandidateAnswer, FinalAnswer, QuestionContext
+from ..core.spectral_types import CandidateAnswer, FinalAnswer, QuestionContext
 from ..spectral.spectral_knowledge import build_grounded_system_prompt
 from .critic import Critic
 

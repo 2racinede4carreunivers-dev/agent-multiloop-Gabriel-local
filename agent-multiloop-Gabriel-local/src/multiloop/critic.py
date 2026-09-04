@@ -13,7 +13,7 @@ import logging
 from typing import Any
 
 from ..core.llm_manager import LLMManager
-from ..core.types import CandidateAnswer, QuestionContext
+from ..core.spectral_types import CandidateAnswer, QuestionContext
 
 
 logger = logging.getLogger(__name__)

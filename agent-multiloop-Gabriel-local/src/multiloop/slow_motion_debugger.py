@@ -30,7 +30,7 @@ from typing import Any, Optional
 from ..adapters.corpus.certainty_kernel import CertaintyKernel
 from ..audit import AuditStore
 from ..core.spectral_core import SpectralMethodCore
-from ..core.types import FinalAnswer
+from ..core.spectral_types import FinalAnswer
 from ..spectral.prime_table import nth_prime
 from .certainty_model import CertaintyEvaluation, CertaintyModel
 from .coherence_detector import CoherenceReport

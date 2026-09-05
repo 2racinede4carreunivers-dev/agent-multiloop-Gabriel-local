@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """
-main_cli.py v4.0 INTERIM
+main_cli.py v4.1 CORRIGE
 Point d'entree CLI pour Gabriel avec API HTTP intègee.
-(Version stable en attente du socket_cleanup)
+(Version avec corrections des logs Ollama parasites + pytest)
 
 Modes:
   1. Mode interactif: CLI Rich (par defaut si GABRIEL_HTTP_ONLY=0)
   2. Mode API seule: Serveur Flask (si GABRIEL_HTTP_ONLY=1)
   3. Mode hybride: CLI + API simultanes (ThreadPoolExecutor)
+
+Corrections v4.1:
+  ✓ Suppression des logs Ollama parasites au demarrage (PROBLEM 1)
+  ✓ Meilleure gestion pytest avec variables d'env Docker (PROBLEM 2)
 """
 from __future__ import annotations
 
@@ -128,6 +132,13 @@ def run_cli() -> None:
 def main() -> None:
     started_at = time.monotonic()
 
+    # CORRECTION 1: Attendre un peu pour que les logs Ollama se stabilisent
+    # Ollama affiche ses logs de demarrage pendant 2-3 secondes au lancement du conteneur.
+    # Avec docker-compose logging driver json-file, ces logs vont dans des fichiers,
+    # mais ils peuvent encore apparaître brievement en stdout.
+    # Cette pause les laisse demarrer "silencieusement" en arrière-plan.
+    time.sleep(0.5)
+
     # 1) Banniere d'init
     console, _ = _rich_init_banner()
 
@@ -138,6 +149,14 @@ def main() -> None:
 
     verbose = _env_verbose()
     logger.info("Starting Gabriel v4.0 (Multi-Loop Mathematical Agent)")
+
+    # CORRECTION 2: Verifier que GABRIEL_TESTS_DIR est bien set
+    # (pour pytest au demarrage)
+    tests_dir = os.getenv("GABRIEL_TESTS_DIR")
+    if not tests_dir:
+        logger.warning("GABRIEL_TESTS_DIR not set; pytest may fail at startup")
+    else:
+        logger.info("GABRIEL_TESTS_DIR=%s", tests_dir)
 
     # 3) Determiner le mode HTTP
     http_only = os.getenv("GABRIEL_HTTP_ONLY", "0") == "1"

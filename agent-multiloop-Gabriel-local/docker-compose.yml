@@ -2,10 +2,12 @@
 # Multi-Loop Math Agent - docker-compose.yml
 # Services : agent (multiloop), ollama, ollama-init, isabelle
 # 
-# v5.3 CORRIGE :
+# v5.4 CORRIGE :
 # ✓ Ports cohérents (Gabriel interne 8000, externe 9001)
 # ✓ .env non monté en double
 # ✓ Volumes RW pour .thy
+# ✓ Logs Ollama rediriges (problem 1 resolu)
+# ✓ Pytest monte correctement avec volume tests (problem 2 resolu)
 # ============================================================
 
 services:
@@ -26,6 +28,7 @@ services:
       - ISABELLE_HOME=/opt/Isabelle2025-2
       - GABRIEL_HTTP_PORT=8000
       - GABRIEL_HOST=0.0.0.0
+      - GABRIEL_TESTS_DIR=/home/agent/app/tests
 
     stdin_open: true
     tty: true
@@ -42,7 +45,7 @@ services:
       - ./gabriel_launcher.py:/home/agent/app/gabriel_launcher.py
       - ./port_cleanup.py:/home/agent/app/port_cleanup.py
       - ./config.yaml:/home/agent/app/config.yaml
-      - ./tests:/home/agent/app/tests
+      - ./tests:/home/agent/app/tests:ro
       - ./scripts:/home/agent/app/scripts
       - ./theories:/home/agent/app/theories
       - ./CONFIG_ENV_GUIDE.md:/home/agent/app/CONFIG_ENV_GUIDE.md
@@ -59,6 +62,13 @@ services:
     depends_on:
       - ollama
 
+    # Redirection des logs pour eviter la pollution de l'interface CLI
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
@@ -69,6 +79,16 @@ services:
       - "11434:11434"
     networks:
       - agent-network
+    # Configuration : rediriger les logs Ollama STDOUT vers les fichiers JSON
+    # au lieu de les afficher sur le terminal (resout le probleme des logs parasites a l'entete)
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Desactiver les logs de demarrage trop verbeux
+    environment:
+      - OLLAMA_DEBUG=false
 
   ollama-init:
     image: ollama/ollama:latest
@@ -78,14 +98,20 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command: |
       "
-      echo 'Attente du demarrage d Ollama...'
+      echo 'Attente du demarrage d Ollama...' >> /tmp/ollama-init.log 2>&1
       sleep 30
-      OLLAMA_HOST=http://ollama:11434 ollama pull llama3.2 || true
-      echo 'Modeles telecharges.'
+      OLLAMA_HOST=http://ollama:11434 ollama pull llama3.2 >> /tmp/ollama-init.log 2>&1 || true
+      echo 'Modeles telecharges.' >> /tmp/ollama-init.log 2>&1
       "
     networks:
       - agent-network
     restart: "no"
+    # Redirection des logs ollama-init aussi
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "1"
 
   isabelle:
     image: makarius/isabelle:latest

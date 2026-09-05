@@ -54,8 +54,9 @@ def _find_tests_dir() -> Path:
       2. Execution dans Docker (CWD=/home/agent/app)        -> ./tests (si monte)
       3. Execution dans Docker (avec /app)                   -> /app/tests
       4. Variable d'environnement explicite GABRIEL_TESTS_DIR
+      5. Chemins Docker montes via docker-compose.yml
     """
-    # Priorite 1 : variable d'environnement explicite
+    # Priorite 1 : variable d'environnement explicite (set dans docker-compose.yml)
     env_dir = os.environ.get("GABRIEL_TESTS_DIR")
     if env_dir:
         p = Path(env_dir)
@@ -67,18 +68,23 @@ def _find_tests_dir() -> Path:
     if candidate.is_dir():
         return candidate
 
-    # Priorite 3 : depuis CWD (cas Docker avec WORKDIR)
+    # Priorite 3 : depuis CWD (cas Docker avec WORKDIR==/home/agent/app)
     cwd_candidate = Path.cwd() / "tests"
     if cwd_candidate.is_dir():
         return cwd_candidate
 
-    # Priorite 4 : emplacements connus dans les conteneurs
-    for alt in ("/app/tests", "/home/agent/app/tests", "/workspace/tests"):
+    # Priorite 4 : chemin absolu Docker standard (/home/agent/app/tests monte par compose)
+    docker_std = Path("/home/agent/app/tests")
+    if docker_std.is_dir():
+        return docker_std
+
+    # Priorite 5 : emplacements alternatifs connus
+    for alt in ("/app/tests", "/workspace/tests"):
         p = Path(alt)
         if p.is_dir():
             return p
 
-    # Fallback : on retourne le chemin "ideal" pour avoir un message d'erreur clair
+    # Fallback : on retourne le chemin ideal pour avoir un message d'erreur clair
     return _REPO_ROOT / "tests"
 
 
@@ -125,18 +131,16 @@ def run_pytest_local(timeout_s: int = 120) -> CISummary:
     if not _TESTS_DIR.is_dir():
         msg = (
             f"Tests directory introuvable: {_TESTS_DIR}\n\n"
-            "  Cause probable : Gabriel tourne dans Docker et le dossier 'tests/' n'a\n"
-            "  pas ete monte/copie dans le conteneur. Solutions :\n\n"
-            "  Solution 1 (recommandee) : ajoutez un volume dans docker-compose.yml :\n"
-            "      volumes:\n"
-            "        - ./tests:/app/tests:ro\n\n"
-            "  Solution 2 : sortez de Gabriel (tapez 'quitter') et lancez les tests\n"
-            "  directement sur votre PC avec :\n"
-            "      .\\run-tests.bat   (double-clic possible)\n"
-            "  ou :\n"
+            "  Cause probable : Gabriel tourne dans Docker et le dossier 'tests/'\n"
+            "  n'a pas ete monte/copie dans le conteneur. Solutions :\n\n"
+            "  Solution 1 (RECOMMANDEE - appliquee dans docker-compose.yml v5.4) :\n"
+            "      Verifiez que le volume est presente :\n"
+            "        - ./tests:/home/agent/app/tests:ro\n"
+            "      Et que GABRIEL_TESTS_DIR==/home/agent/app/tests est set.\n\n"
+            "  Solution 2 : lancez les tests directement sur votre PC avec :\n"
             "      python -m pytest tests/ -v\n\n"
-            "  Solution 3 : definissez la variable d'environnement GABRIEL_TESTS_DIR\n"
-            "  vers le chemin absolu du dossier tests/ sur le conteneur."
+            "  Solution 3 : definissez manuellement GABRIEL_TESTS_DIR\n"
+            "      (variable d'environnement dans docker-compose.yml)"
         )
         return CISummary(0, 0, 1, 0, 0, 0.0, False, msg)
 
@@ -172,6 +176,7 @@ def run_pytest_local(timeout_s: int = 120) -> CISummary:
         passed, failed, errors, skipped, duration = _parse_summary_line(summary_line)
 
     total = passed + failed + errors + skipped
+    # OK seulement si : exit code 0 + 0 failed + 0 errors + au moins 1 test passe
     ok = (proc.returncode == 0) and (failed == 0) and (errors == 0) and (passed > 0)
 
     return CISummary(

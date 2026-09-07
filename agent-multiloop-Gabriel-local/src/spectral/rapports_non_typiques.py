@@ -869,3 +869,173 @@ if __name__ == "__main__":
 
     print("\n" + "=" * 70)
     print("FIN DU TEST AUTONOME v7.5")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 13 — COUCHE DE COMPATIBILITÉ v7.4→v7.5
+# ══════════════════════════════════════════════════════════════════════════════
+# Certains modules du pipeline (src/spectral/__init__.py, refinement_loop.py,
+# spectral_knowledge.py) importent des symboles de l'ancienne version.
+# Cette section fournit des aliases et stubs pour éviter tout ImportError
+# sans modifier les fichiers importateurs.
+# NE PAS SUPPRIMER — requis pour la compatibilité pipeline Gabriel.
+
+from dataclasses import dataclass, field
+from typing import Any
+
+
+@dataclass
+class EquationSomme:
+    """Stub de compatibilité v7.4→v7.5.
+
+    L'ancienne classe EquationSomme est remplacée par les fonctions
+    build(), closed_sums() et _info_equations() dans cette version.
+    Ce stub permet aux imports existants de ne pas lever d'erreur.
+    """
+    k: int = 2
+    n: int = 10
+    alpha_A: float = 0.0
+    alpha_B: float = 0.0
+    offset_A: float = 0.0
+    offset_B: float = 0.0
+    somme_A: float = 0.0
+    somme_B: float = 0.0
+    notes: str = "Stub de compatibilité — voir build() et closed_sums()"
+
+    def __post_init__(self):
+        if self.k >= 2 and self.n >= 1:
+            A, B = build(self.k, self.n)
+            self.somme_A = float(sum(A))
+            self.somme_B = float(sum(B))
+            sa_f, sb_f = closed_sums(self.k, self.n)
+            self.alpha_A = float(sa_f)
+            self.alpha_B = float(sb_f)
+
+    def to_dict(self) -> Dict:
+        return {
+            "k": self.k, "n": self.n,
+            "somme_A": self.somme_A,
+            "somme_B": self.somme_B,
+            "alpha_A": self.alpha_A,
+            "alpha_B": self.alpha_B,
+        }
+
+
+# Aliases des anciennes fonctions publiques
+def construire_suites_reelles(rapport: Union[str, int],
+                               n: int = 10) -> Dict:
+    """Alias de compatibilité → construire_rapport_convolutif()."""
+    return construire_rapport_convolutif(rapport, n)
+
+
+def equations_suites_reelles(rapport: Union[str, int]) -> Dict:
+    """Alias de compatibilité → _info_equations()."""
+    k = _extraire_k(rapport)
+    return _info_equations(k)
+
+
+def reconstruire_premier_reel(rapport: Union[str, int],
+                               n: int = 10) -> Dict:
+    """Alias de compatibilité → reconstruire_premier()."""
+    return reconstruire_premier(rapport, n)
+
+
+def reconstruire_premier_reel_universel(rapport: Union[str, int],
+                                         n: int = 10) -> Dict:
+    """Alias de compatibilité → reconstruire_avec_fallback_geo()."""
+    k = _extraire_k(rapport)
+    return reconstruire_avec_fallback_geo(k, n)
+
+
+def candidats_reconstruction_reelle(rapport: Union[str, int],
+                                     n: int = 10) -> List[Dict]:
+    """Alias de compatibilité → digamma_trials_n10()."""
+    k = _extraire_k(rapport)
+    return digamma_trials_n10(k)
+
+
+def equations_ab(rapport: Union[str, int], n: int = 10) -> Dict:
+    """Alias de compatibilité → _info_equations() + build()."""
+    k = _extraire_k(rapport)
+    A, B = build(k, n)
+    info = _info_equations(k)
+    return {**info, "A": A, "B": B,
+            "somme_A": sum(A), "somme_B": sum(B)}
+
+
+def reconstruire_equations_ab(rapport: Union[str, int],
+                               n: int = 10) -> Dict:
+    """Alias de compatibilité → equations_ab()."""
+    return equations_ab(rapport, n)
+
+
+def position_du_premier(rapport: Union[str, int],
+                         C: int) -> Optional[int]:
+    """Retourne le rang du candidat C dans la table des premiers,
+    ou None si C n'est pas premier.  Compatibilité v7.4.
+    """
+    if not _is_prime(C):
+        return None
+    try:
+        primes = _prime_table(200_000)
+        return primes.index(C) + 1 if C in primes else None
+    except Exception:
+        return None
+
+
+def determiner_n(rapport: Union[str, int],
+                  rang_cible: int) -> int:
+    """Retourne n tel que l'ancrage + (n-10) == rang_cible.
+    Compatibilité v7.4.
+    """
+    k = _extraire_k(rapport)
+    ancrages = _ancrage_valide(k)
+    if not ancrages:
+        raise ValueError(f"Aucun ancrage pour k={k}")
+    _, base_rank, _ = ancrages[0]
+    return 10 + (rang_cible - base_rank)
+
+
+def premier_pour_n(rapport: Union[str, int],
+                   n: int = 10) -> Optional[int]:
+    """Retourne le candidat C (int) pour le rapport 1/k à n termes.
+    Compatibilité v7.4 — wrapper simple.
+    """
+    r = reconstruire_premier_pour_n(rapport, n)
+    C = r.get("C")
+    return C if isinstance(C, int) else None
+
+
+# ── Export explicite pour src/spectral/__init__.py ───────────────────────────
+__all__ = [
+    # API publique v7.5
+    "construire_rapport_convolutif",
+    "reconstruire_premier",
+    "reconstruire_premier_pour_n",
+    # Constantes de verdict
+    "EXCLU_HOL", "ANCRAGE_POSSIBLE", "P_CERTIFIE",
+    "C_NON_DECIDE", "BLOQUE",
+    # Tables
+    "ANCHORS", "ANCHORS_MULTIPLES", "DIGAMMA_PARAMS",
+    # Moteur entier
+    "term_a", "term_b", "build", "closed_sums",
+    "digamma_trials_n10", "reconstruct_entier",
+    # Moteur géométrique
+    "facteur_g", "suite_geo_A", "suite_geo_B",
+    "candidats_premiers_geo", "reconstruct_geometrique",
+    "reconstruire_avec_fallback_geo",
+    # Validation
+    "verifier_exemples",
+    # Couche de compatibilité v7.4
+    "EquationSomme",
+    "construire_suites_reelles",
+    "equations_suites_reelles",
+    "reconstruire_premier_reel",
+    "reconstruire_premier_reel_universel",
+    "candidats_reconstruction_reelle",
+    "equations_ab",
+    "reconstruire_equations_ab",
+    "position_du_premier",
+    "determiner_n",
+    "premier_pour_n",
+]

@@ -1876,9 +1876,9 @@ lemma reconstruction_k_identity:
   assumes k_nz : "k \<noteq> (0::nat)"
       and den_nz : "real (k ^ 6) \<noteq> (0::real)"
   shows "premier_k_eq k n p = real p"
-  (* k = 0 rendrait la division par k^6 indeterminee. *)
   unfolding premier_k_eq_def digamma_k_eq_def
-  by (field_simp [den_nz]; ring)
+  using den_nz
+  by (simp add: field_simps)
 
 text \<open>
   Cette equation est la generalisation formelle de la reconstruction
@@ -1886,32 +1886,26 @@ text \<open>
 \<close>
 
 subsection "Exemples numeriques verifies par Gabriel multiloop"
-
 axiomatization where
-  exemple_1_sur_3_n10:
-    "SA_k 3 10 = 79824" and
-    "SB_k 3 10 = 238746" and
-    "digamma_k 3 10 = 73263" and
-    "premier_k 3 10 = 227"
+  exemple_1_sur_3_n10_SA: "SA_k 3 10 = 79824" and
+  exemple_1_sur_3_n10_SB: "SB_k 3 10 = 238746" and
+  exemple_1_sur_3_n10_digamma: "digamma_k 3 10 = 73263" and
+  exemple_1_sur_3_n10_premier: "premier_k 3 10 = 227" and
 
-  exemple_1_sur_5_n10:
-    "SA_k 5 10 = 11738280" and
-    "SB_k 5 10 = 58675780" and
-    "digamma_k 5 10 = 11816405" and
-    "premier_k 5 10 = 2999"
+  exemple_1_sur_5_n10_SA: "SA_k 5 10 = 11738280" and
+  exemple_1_sur_5_n10_SB: "SB_k 5 10 = 58675780" and
+  exemple_1_sur_5_n10_digamma: "digamma_k 5 10 = 11816405" and
+  exemple_1_sur_5_n10_premier: "premier_k 5 10 = 2999" and
 
-  exemple_1_sur_6_n10:
-    "SA_k 6 10 = 68920242" and
-    "SB_k 6 10 = 423552498" and
-    "digamma_k 6 10 = 68640306" and
-    "premier_k 6 10 = 7607"
+  exemple_1_sur_6_n10_SA: "SA_k 6 10 = 68920242" and
+  exemple_1_sur_6_n10_SB: "SB_k 6 10 = 423552498" and
+  exemple_1_sur_6_n10_digamma: "digamma_k 6 10 = 68640306" and
+  exemple_1_sur_6_n10_premier: "premier_k 6 10 = 7607" and
 
-  exemple_1_sur_6_n14:
-    "SA_k 6 14 = 91497417522" and
-    "SB_k 6 14 = 548984458482" and
-    "digamma_k 6 14 = 548627586738" and
-    "premier_k 6 14 = 7649"
-
+  exemple_1_sur_6_n14_SA: "SA_k 6 14 = 91497417522" and
+  exemple_1_sur_6_n14_SB: "SB_k 6 14 = 548984458482" and
+  exemple_1_sur_6_n14_digamma: "digamma_k 6 14 = 548627586738" and
+  exemple_1_sur_6_n14_premier: "premier_k 6 14 = 7649"
 text \<open>
   Ces valeurs sont exactement celles obtenues dans le terminal via :
 
@@ -4535,7 +4529,6 @@ lemma alphaA_conv_k4 : "alphaA_conv 4 = 241 / 96"
 
 lemma alphaB_conv_k4 : "alphaB_conv 4 = 241 / 24"
   unfolding alphaB_conv_def alphaA_conv_def by simp
-
 subsection "XIV.2 — Formules fermées générales"
 
 text \<open>
@@ -4624,12 +4617,35 @@ proof -
 
   have halphaA_ne0 : "alphaA_conv k \<noteq> 0"
   proof -
-    have "2 * (real k ^ 4 - real k ^ 2 + 1) > 0"
-      by (smt (verit) hk_gt1 mult_pos_pos power_gt1 zero_less_power)
-    moreover have "(real k - 1) * real k ^ 3 > 0"
-      using hk_gt1 by positivity
-    ultimately show ?thesis
-      unfolding alphaA_conv_def by (simp add: field_simps)
+    have hk_pos: "real k > 0" using hk_gt1 by simp
+    have hk2: "real k ^ 2 > 1" using hk_gt1 by (simp add: power_gt1)
+    have hk2_pos: "real k ^ 2 > 0" using hk_pos by simp
+
+    (* Étape 1 : k^4 = k^2 * k^2 *)
+    have "4 = (2::nat) + 2" by simp
+    hence "real k ^ 4 = real k ^ (2 + 2)" by simp
+    also have "\<dots> = real k ^ 2 * real k ^ 2" by (simp add: power_add)
+    finally have k4_eq: "real k ^ 4 = real k ^ 2 * real k ^ 2" .
+
+    (* Étape 2 : Construction de l'inégalité stricte *)
+    have p1: "0 < real k ^ 2 - 1" using hk2 by simp
+    have p2: "0 < real k ^ 2 * (real k ^ 2 - 1)"
+      using hk2_pos p1 by (rule mult_pos_pos)
+    have p3: "0 < real k ^ 2 * (real k ^ 2 - 1) + 1"
+      using p2 by simp
+
+    (* Étape 3 : Substitution algébrique *)
+    have p4: "real k ^ 2 * (real k ^ 2 - 1) + 1 = real k ^ 2 * real k ^ 2 - real k ^ 2 + 1"
+      by (simp add: algebra_simps)
+    have p5: "real k ^ 2 * real k ^ 2 - real k ^ 2 + 1 = real k ^ 4 - real k ^ 2 + 1"
+      using k4_eq by simp
+
+    (* Conclusion *)
+    have "0 < real k ^ 4 - real k ^ 2 + 1"
+      using p3 p4 p5 by simp
+    hence "alphaA_conv k > 0"
+      unfolding alphaA_conv_def using hk_gt1 by (auto simp: field_simps)
+    thus ?thesis by simp
   qed
 
   have halphaB_ne0 : "alphaB_conv k \<noteq> 0"
@@ -4639,7 +4655,7 @@ proof -
   have "RsP_conv k n1 n2 =
         ((alphaA_conv k / 2) * ((real k) ^ n1 - (real k) ^ n2)) /
         ((alphaB_conv k / 2) * ((real k) ^ n1 - (real k) ^ n2))"
-    unfolding RsP_conv_def using hA hB by simp
+    unfolding RsP_conv_def hA hB by simp
   also have "\<dots> = alphaA_conv k / alphaB_conv k"
     using hpow_ne halphaB_ne0 by (simp add: field_simps)
   also have "\<dots> = alphaA_conv k / (real k * alphaA_conv k)"
@@ -4648,7 +4664,6 @@ proof -
     using halphaA_ne0 hk_ne0 by (simp add: field_simps)
   finally show ?thesis .
 qed
-
 corollary RsP_conv_k3 :
   assumes "n1 \<ge> 1" "n2 \<ge> 1" "n1 \<noteq> n2"
   shows "RsP_conv 3 n1 n2 = 1 / 3"
@@ -4758,8 +4773,8 @@ text \<open>
 \<close>
 
 definition digamma_option_conv :: "real \<Rightarrow> real \<Rightarrow> int \<Rightarrow> real" where
-  "digamma_option_conv sa_val terme signe =
-     sa_val + real signe * terme"
+  "digamma_option_conv sa_val terme (signe::int) =
+     sa_val + real_of_int signe * terme"
 
 definition candidat_P_conv :: "nat \<Rightarrow> real \<Rightarrow> real \<Rightarrow> real" where
   "candidat_P_conv k sb_val digamma_val =

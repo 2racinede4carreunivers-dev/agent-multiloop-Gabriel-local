@@ -68,16 +68,16 @@ jobs:
 
       - name: Verify Isabelle installation
         run: |
-          /tmp/isabelle/Isabelle2025-2/bin/isabelle version
+          isabelle version
 
       - name: Show repository layout
         run: |
           pwd
           ls -la
-          find . -maxdepth 3 \( -name ROOT -o -name 'methode_spectral.thy' \) | sort
+          find . -maxdepth 5 \( -name ROOT -o -name 'methode_spectral.thy' \) | sort
 
       - name: Build Isabelle session Methode_Spectral
-        working-directory: agent-multiloop-Gabriel-local
+        working-directory: agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local
         run: |
           isabelle build -v Methode_Spectral
 

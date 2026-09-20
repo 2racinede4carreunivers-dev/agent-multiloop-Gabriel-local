@@ -4,6 +4,7 @@
 
 **OUI, c'est possible.** Mais c'est un **projet d'infrastructure complexe** avec des coûts réels.
 
+
 ### Verdict Rapide
 | Aspect | Faisable? | Coût | Risque | ROI |
 |--------|----------|------|--------|-----|

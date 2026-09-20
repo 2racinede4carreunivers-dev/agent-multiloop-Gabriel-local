@@ -12,12 +12,14 @@ try:
         construire_rapport_convolutif as rnt_construire_rapport_convolutif,
         reconstruire_premier as rnt_reconstruire_premier,
         reconstruire_premier_pour_n as rnt_reconstruire_pour_n,
+        criteres_obligatoires as rnt_criteres_obligatoires,
     )
 except Exception:  # import relatif selon le point d'entree
     from ..spectral.rapports_non_typiques import (
         construire_rapport_convolutif as rnt_construire_rapport_convolutif,
         reconstruire_premier as rnt_reconstruire_premier,
         reconstruire_premier_pour_n as rnt_reconstruire_pour_n,
+        criteres_obligatoires as rnt_criteres_obligatoires,
     )
 
 logger = logging.getLogger(__name__)
@@ -191,6 +193,27 @@ class SpectralMethodCore:
                 "position_premier": position,
             }
 
+        # Contrat cognitif à deux niveaux (identique pour le rapport typique) :
+        # niveau 1 entier (quatre possibilités Digamma) -> niveau 2 géométrique
+        # -> énoncé d'absence d'ancrage. Toujours calculé pour que chaque
+        # réponse expose les trois points obligatoires.
+        try:
+            criteres = rnt_criteres_obligatoires(2, n)
+        except Exception as exc:  # pragma: no cover - n < 7 hors domaine
+            logger.debug("criteres_obligatoires(1/2, n=%d) indisponible : %s", n, exc)
+            criteres = {
+                "niveau_1": None,
+                "niveau_2": None,
+                "ancrage_niveau_1": False,
+                "ancrage_niveau_2": False,
+                "ancrage_retourne": False,
+                "aucun_ancrage": None,
+                "point_1_niveau_1": "",
+                "point_2_niveau_2": "",
+                "point_3_verdict": "",
+                "reponse_obligatoire": "",
+            }
+
         return {
             "rapport": "1/2",
             "equation_A": {
@@ -210,6 +233,17 @@ class SpectralMethodCore:
             "cible": faits(cible),
             "premier_indetermine": False,
             "note": "Rapport typique : n est aussi la position du premier.",
+            # ── Contrat cognitif à deux niveaux (critères obligatoires) ──
+            "niveau_1": criteres["niveau_1"],
+            "niveau_2": criteres["niveau_2"],
+            "ancrage_niveau_1": criteres["ancrage_niveau_1"],
+            "ancrage_niveau_2": criteres["ancrage_niveau_2"],
+            "ancrage_retourne": criteres["ancrage_retourne"],
+            "aucun_ancrage": criteres["aucun_ancrage"],
+            "point_1_niveau_1": criteres["point_1_niveau_1"],
+            "point_2_niveau_2": criteres["point_2_niveau_2"],
+            "point_3_verdict": criteres["point_3_verdict"],
+            "criteres_obligatoires": criteres["reponse_obligatoire"],
         }
 
     # ──────────────────────────────────────────────────────────────────

@@ -27,6 +27,20 @@ class PatternMatcher:
         return patterns
 
 
+REGLE_DEUX_NIVEAUX = (
+    "Critères convolutifs obligatoires (niveaux 1 et 2) : (1) exposer d'abord le "
+    "NIVEAU 1 — ENTIER (suites A et B à termes entiers) et ses QUATRE "
+    "possibilités Digamma (positions n-3 et n-2, signes ±), avec le candidat et "
+    "son statut premier/composé pour chacune ; (2) si le niveau 1 ne retourne "
+    "AUCUN premier, donner la démarche de niveau 1 qui n'aboutit pas, PUIS "
+    "déterminer le NIVEAU 2 — GÉOMÉTRIQUE (exactement la même démarche, mais les "
+    "suites A et B sont composées de termes géométriques "
+    "sqrt((k^(i-1))^2 + (k^i)^2)) ; (3) si aucun des deux niveaux ne retourne "
+    "d'ancrage, énoncer explicitement que, pour ce rapport 1/k non typique, le "
+    "système convolutif ne retourne aucun ancrage pour un premier."
+)
+
+
 class Generalizer:
     """Genere des templates a partir de cas particuliers."""
 
@@ -55,17 +69,18 @@ class Generalizer:
                     f"{equation_b.get('forme', 'B(n) inconnue')}. "
                     "Ne pas appliquer la formule du rapport 1/2, ne pas employer le "
                     "facteur 64, et ne pas affirmer que n est la position du premier. "
-                    "Essayer d'abord les possibilités Digamma entières, puis le "
-                    "repli réel par puissances et racines carrées fourni par le "
-                    "module. Si `premier_indetermine` est vrai, indiquer que ces "
-                    "deux méthodes ne déterminent aucun premier. Les listes "
-                    "`suite_Ai` et `suite_Bi` exposent les composantes réelles "
-                    "par position; ne jamais les remplacer par des valeurs inventées."
+                    + REGLE_DEUX_NIVEAUX +
+                    " Les clés `niveau_1`, `niveau_2`, `point_1_niveau_1`, "
+                    "`point_2_niveau_2` et `point_3_verdict` fournissent ces points "
+                    "textuellement. Les listes `suite_Ai` et `suite_Bi` exposent les "
+                    "composantes réelles par position; ne jamais les remplacer par "
+                    "des valeurs inventées."
                 )
             return (
                 "Rapport typique 1/2 : pour tout p premier et n suffisant, "
                 "prime_equation(n, p) = (SB(n) - digamma_calc(n, p)) / 64 = p, "
-                "avec n égal à la position du premier."
+                "avec n égal à la position du premier. "
+                + REGLE_DEUX_NIVEAUX
             )
         if intent == "ratio":
             return (

@@ -551,8 +551,95 @@ class Pipeline:
         return final
 
     @staticmethod
+    def _bloc_criteres_deux_niveaux(facts: dict[str, Any]) -> list[str]:
+        """Rend le bloc des critères convolutifs obligatoires (niveaux 1 et 2).
+
+        Ces points doivent être présents par défaut à chaque requête :
+          1. niveau 1 (entier) et ses quatre possibilités Digamma ;
+          2. si le niveau 1 ne retourne aucun premier : la démarche de niveau 1
+             qui n'aboutit pas, puis la démarche de niveau 2 (géométrique) ;
+          3. si aucun niveau ne retourne d'ancrage : l'énoncé explicite
+             d'absence d'ancrage pour un premier pour ce rapport 1/k.
+        """
+        lignes: list[str] = ["### Critères convolutifs obligatoires (niveaux 1 et 2)"]
+        niveau1 = facts.get("niveau_1") or {}
+        niveau2 = facts.get("niveau_2") or {}
+
+        poss1 = niveau1.get("possibilites") or []
+        lignes.append(
+            "- Niveau 1 — entier (suites A et B à termes entiers k^i), "
+            "quatre possibilités Digamma :"
+        )
+        if poss1:
+            for p in poss1:
+                c = p.get("C")
+                lignes.append(
+                    f"  - {p.get('branche')} : "
+                    f"C={c if c is not None else 'non entier'} [{p.get('verdict')}]"
+                )
+        else:
+            lignes.append("  - (possibilités Digamma non calculées pour ce n)")
+        lignes.append(
+            "- Niveau 1 — ancrage pour un premier : "
+            + ("Oui" if niveau1.get("ancrage_retourne") else "Non")
+        )
+
+        poss2 = niveau2.get("possibilites") or []
+        reelles = niveau2.get("branches_reelles") or []
+        declenche = "Non requis (niveau 1 ancré)" if niveau1.get("ancrage_retourne") else "Oui"
+        lignes.append(
+            "- Niveau 2 — géométrique (termes sqrt((k^(i-1))^2 + (k^i)^2)), "
+            f"déclenché : {declenche}"
+        )
+        if reelles:
+            for b in reelles:
+                c = b.get("C")
+                lignes.append(
+                    f"  - {b.get('branche')} : "
+                    f"C={c if c is not None else 'non entier'} [{b.get('verdict')}]"
+                )
+        elif poss2:
+            for p in poss2:
+                c = p.get("C")
+                lignes.append(
+                    f"  - {p.get('branche')} : "
+                    f"C={c if c is not None else 'non entier'} [{p.get('verdict')}]"
+                )
+        else:
+            lignes.append("  - (branches géométriques non calculées pour ce n)")
+        lignes.append(
+            "- Niveau 2 — ancrage pour un premier : "
+            + ("Oui" if niveau2.get("ancrage_retourne") else "Non")
+        )
+
+        points_presents = False
+        for cle in ("point_1_niveau_1", "point_2_niveau_2", "point_3_verdict"):
+            valeur = facts.get(cle)
+            if valeur:
+                points_presents = True
+                lignes.append(f"- {valeur}")
+        if not points_presents:
+            lignes.append(
+                "- Niveau 1 (entier) exploré en premier ; si aucun premier n'est "
+                "retourné, le niveau 2 (géométrique) est déterminé ; si aucun des "
+                "deux niveaux ne retourne d'ancrage, le système convolutif ne "
+                "retourne aucun ancrage pour un premier pour ce rapport 1/k."
+            )
+        lignes.append(
+            "- Aucun premier non certifié n'est annoncé : les candidats restent "
+            "notés C tant que leur primalité n'est pas établie."
+        )
+        return lignes
+
+    @staticmethod
     def _append_convolution_summary(answer_text: str, facts: dict[str, Any]) -> str:
-        """Ajoute les résultats déterministes que toute réponse doit exposer."""
+        """Ajoute les résultats déterministes que toute réponse doit exposer.
+
+        Contrat à deux niveaux (classeur convolutif général) : le niveau 1
+        (entier, quatre possibilités Digamma) est toujours exposé ; si aucun
+        premier n'en ressort, le niveau 2 (géométrique) est déterminé ; si aucun
+        niveau ne retourne d'ancrage, l'absence d'ancrage est énoncée.
+        """
         marker = "### Résultats convolutifs déterministes"
         if marker in answer_text:
             return answer_text
@@ -585,6 +672,7 @@ class Pipeline:
                 "- Aucun premier n'a pu être déterminé après les possibilités "
                 "Digamma entières et le repli réel disponible."
             )
+        lignes.extend(Pipeline._bloc_criteres_deux_niveaux(facts))
         return f"{answer_text.rstrip()}\n\n" + "\n".join(lignes)
 
     def _try_process_multi_objective(
@@ -1050,17 +1138,36 @@ class Pipeline:
         else:
             objectives_str = "  (aucun objectif explicite detecte)"
         model = str((precomputed_facts or {}).get("model") or plan.get("model", "1/2"))
+        # Critères convolutifs obligatoires, identiques pour les deux rapports
+        # (typique 1/2 et non typique 1/k<>1/2) : ils doivent être présents par
+        # défaut à chaque réponse de Gabriel.
+        regle_deux_niveaux = (
+            "CRITÈRES CONVOLUTIFS OBLIGATOIRES (niveaux 1 et 2) : "
+            "1) expose d'abord le NIVEAU 1 — ENTIER : suites A et B à termes "
+            "entiers, puis les QUATRE possibilités Digamma (positions n-3 et n-2, "
+            "signes + et -) en indiquant pour chacune le candidat et s'il est "
+            "premier ; "
+            "2) si le niveau 1 ne retourne AUCUN premier, donne la démarche de "
+            "niveau 1 qui n'aboutit pas, PUIS détermine le NIVEAU 2 — "
+            "GÉOMÉTRIQUE : exactement la même démarche, mais les suites A et B "
+            "sont composées de termes géométriques sqrt((k^(i-1))^2 + (k^i)^2) ; "
+            "3) si aucun des deux niveaux ne retourne d'ancrage, énonce "
+            "explicitement que, pour le rapport 1/k non typique en question, le "
+            "système convolutif ne retourne aucun ancrage pour un premier."
+        )
         if model == "1/2":
             reconstruction_rule = (
                 "Rapport typique 1/2 : position du nombre premier = n = nombre "
-                "de termes dans A et B. Le facteur Digamma est 64."
+                "de termes dans A et B. Le facteur Digamma est 64 (= 2^6). "
+                + regle_deux_niveaux
             )
         else:
             reconstruction_rule = (
                 f"Rapport non-typique {model} : n est le nombre de termes et "
                 "n'est pas la position du premier. Utilise uniquement les équations "
                 "A/B et les faits convolutifs calculés. Ne jamais appliquer le "
-                "modèle 1/2, le facteur 64 ou la formule digamma_calc(n,p)=SB(n)-64*p."
+                "modèle 1/2, le facteur 64 ou la formule digamma_calc(n,p)=SB(n)-64*p. "
+                + regle_deux_niveaux
             )
         return f"""PLAN COGNITIF SELECTIONNE :
   Strategie : {plan.get('strategy', 'general')}
@@ -1093,6 +1200,17 @@ REGLE SPECTRALE APPLICABLE (RAPPEL OBLIGATOIRE):
   Cite également les équations A/B et les valeurs de référence n=10. Si le fait
   « premier_indetermine » vaut vrai, indique explicitement qu'aucun premier n'a
   pu être déterminé parmi les quatre possibilités Digamma, sans extrapoler.
+📌 CRITÈRES CONVOLUTIFS OBLIGATOIRES (RAPPEL MANDATORY):
+  Chaque réponse DOIT contenir les trois points suivants, repris textuellement
+  depuis les « CHIFFRES CALCULES » :
+    - « point_1_niveau_1 » : niveau 1 (entier) et ses quatre possibilités Digamma ;
+    - « point_2_niveau_2 » : si le niveau 1 ne retourne aucun premier, la démarche
+      de niveau 1 qui n'aboutit pas PUIS la démarche de niveau 2 (géométrique) ;
+    - « point_3_verdict » : si aucun ancrage n'est retourné aux deux niveaux,
+      l'énoncé explicite que le système convolutif ne retourne aucun ancrage pour
+      un premier pour ce rapport 1/k non typique.
+  Utilise aussi les clés « niveau_1 » et « niveau_2 » pour détailler les quatre
+  possibilités Digamma du niveau 1 et les branches du niveau géométrique.
   Ne JAMAIS inventer ces sommes : prends-les telles quelles depuis les
   « CHIFFRES CALCULES » fournis ci-dessous.
 """

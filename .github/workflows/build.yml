@@ -59,7 +59,7 @@ jobs:
           done
 
           if [ "${success}" -ne 1 ]; then
-            echo "::error::Aucun miroir Isabelle n'a repondu. Verifier la disponibilite reseau."
+            echo "::error::Aucun miroir Isabelle n'a repondu."
             exit 8
           fi
 
@@ -77,7 +77,7 @@ jobs:
           find . -maxdepth 5 \( -name ROOT -o -name 'methode_spectral.thy' \) | sort
 
       - name: Build Isabelle session Methode_Spectral
-        working-directory: agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local
+        working-directory: agent-multiloop-Gabriel-local
         run: |
           isabelle build -v Methode_Spectral
 

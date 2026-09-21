@@ -576,10 +576,9 @@ Pour toute question ou problème :
 1. Consultez ce guide complet
 2. Exécutez : `python -m pipeline_correction --help`
 3. Vérifiez les logs : `pipeline_correction/data/logs/`
-4. Contactez l'équipe Gabriel
 
 ---
 
 **Pipeline de Correction v1.0.0**  
 Conçu pour Gabriel Multiloop Agent  
-© 2026 Gabriel Pipeline Team
+© 2026 Philippe Thomas Savard Pipeline 

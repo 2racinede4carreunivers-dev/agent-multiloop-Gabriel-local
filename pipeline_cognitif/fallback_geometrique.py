@@ -26,7 +26,17 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
-from src.core.Suites_geometriques_AB import (
+try:
+    from .Suites_geometriques_AB import (
+    CalculateurSuitesGeometriques,
+    DiagnosticFallback,
+    ExtracteurPremiersGeometriques,
+    PipelineSuitesGeometriques,
+    ResultatSuiteGeo,
+    declencher_fallback_geometrique,
+)
+except ImportError:  # execution directe du script
+    from Suites_geometriques_AB import (
     CalculateurSuitesGeometriques,
     DiagnosticFallback,
     ExtracteurPremiersGeometriques,

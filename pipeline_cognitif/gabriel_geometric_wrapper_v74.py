@@ -18,25 +18,55 @@ import re
 import math
 from fractions import Fraction
 from typing import Dict, Any, List, Optional, Union
-from src.core.metaphore_geometrique import MetaphoreGeometriqueGenerator, Point3D
-from src.core.Suites_geometriques_AB import (
+try:
+    from .metaphore_geometrique import MetaphoreGeometriqueGenerator, Point3D
+except ImportError:  # execution directe du script
+    from metaphore_geometrique import MetaphoreGeometriqueGenerator, Point3D
+try:
+    from .Suites_geometriques_AB import (
     PipelineSuitesGeometriques,
     ResultatSuiteGeo,
 )
-from src.core.fallback_geometrique import (
+except ImportError:  # execution directe du script
+    from Suites_geometriques_AB import (
+    PipelineSuitesGeometriques,
+    ResultatSuiteGeo,
+)
+try:
+    from .fallback_geometrique import (
+    GestionnaireFallbackGeometrique,
+    ResultatReconstruction,
+    TypeApproche,
+)
+except ImportError:  # execution directe du script
+    from fallback_geometrique import (
     GestionnaireFallbackGeometrique,
     ResultatReconstruction,
     TypeApproche,
 )
 
 # ── NOUVEAU v7.5 : Pipeline cognitif niveaux 1 et 2 ──────────────
-from src.core.suites_geometriques_niveau2 import (
+try:
+    from .suites_geometriques_niveau2 import (
     CalculateurNiveau1Entiers,
     CalculateurNiveau2Geometrique,
     MethodeDigamma,
     PipelineNiveau2Geometrique,
 )
-from src.core.reconstruction_premiers_1_sur_k import (
+except ImportError:  # execution directe du script
+    from suites_geometriques_niveau2 import (
+    CalculateurNiveau1Entiers,
+    CalculateurNiveau2Geometrique,
+    MethodeDigamma,
+    PipelineNiveau2Geometrique,
+)
+try:
+    from .reconstruction_premiers_1_sur_k import (
+    Reconstructeur1Sur7,
+    ResultatReconstruction1Sur7,
+)
+except ImportError:  # execution directe du script
+    from reconstruction_premiers_1_sur_k import (
     Reconstructeur1Sur7,
     ResultatReconstruction1Sur7,
 )

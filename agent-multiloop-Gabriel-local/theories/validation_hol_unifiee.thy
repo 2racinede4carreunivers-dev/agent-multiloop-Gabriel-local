@@ -31,7 +31,7 @@
    ============================================================================ *)
 
 theory validation_hol_unifiee
-  imports methode_spectral Complex_Main Real
+  imports methode_spectral Complex_Main
 begin
 
 (* ============================================================================

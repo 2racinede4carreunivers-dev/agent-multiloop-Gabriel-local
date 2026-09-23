@@ -80,10 +80,13 @@ jobs:
         # La session Methode_Spectral est definie dans theories/ROOT
         # (methode_spectral + validation_hol_unifiee + validation_zeta_lean).
         # Le ROOT de agent-multiloop-Gabriel-local/ definit une autre session
-        # (Gabriel_Multiloop) : il faut donc builder depuis theories/.
+        # (Gabriel_Multiloop) : il faut donc builder depuis theories/, avec
+        # '-d .' pour enregistrer theories/ROOT comme repertoire de sessions.
+        # Sans cela, isabelle build ne decouvre pas 'Methode_Spectral' ->
+        # "Undefined session(s): Methode_Spectral".
         working-directory: agent-multiloop-Gabriel-local/theories
         run: |
-          isabelle build -v Methode_Spectral
+          isabelle build -d . -v Methode_Spectral
 
       - name: Create explicit attestation payload
         if: success()
@@ -104,7 +107,7 @@ jobs:
 
       - name: Generate build provenance attestation
         if: success()
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: agent-multiloop-Gabriel-local/theories/methode_spectral.thy
 

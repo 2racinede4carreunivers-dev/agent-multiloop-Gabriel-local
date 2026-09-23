@@ -41,17 +41,19 @@ def _crible(valeur_max: int) -> List[int]:
     """Crible d'Ératosthène : tous les nombres premiers <= valeur_max."""
     if valeur_max < 2:
         return []
-    crible = [True] * (valeur_max + 1)
-    crible[0] = crible[1] = False
+    crible = bytearray([1]) * (valeur_max + 1)
+    crible[0] = crible[1] = 0
     for i in range(2, int(math.sqrt(valeur_max)) + 1):
         if crible[i]:
-            for j in range(i * i, valeur_max + 1, i):
-                crible[j] = False
+            crible[i * i::i] = bytearray((valeur_max - i * i) // i + 1)
     return [i for i in range(2, valeur_max + 1) if crible[i]]
 
 
-# Table des premiers (positions positives 1..n) jusqu'à 120 000.
-PREMIERS: List[int] = _crible(120000)
+# Table des premiers (positions positives 1..n) jusqu'à 20 000 000 — assez
+# large pour couvrir l'ancre la plus élevée du catalogue (1/27 -> 14 330 707,
+# rang 930 152) et son décalage de rang. (Anciennement 120 000 : les ancres
+# 1/13, 1/18, 1/27 dépassaient la table et cassaient la reconstruction.)
+PREMIERS: List[int] = _crible(20_000_000)
 
 
 def _somme_puissances(t: int, debut: int, fin: int) -> int:
@@ -85,22 +87,25 @@ def suite_B(t: int, n: int = 10) -> int:
             + (t ** (n + 1) - t ** (n - 1)))
 
 
-# Digamma : (position, signe) par rapport (n=10). Les valeurs des exemples
-# validés Savard sont encodés littéralement (1/3→8e-pos, 1/5→7e-pos+,
-# 1/6→7e-pos-, 1/2→8e-pos+).
+# Digamma : (position, signe) par rapport (n=10) — ancrage correct de chaque
+# rapport, conforme à la Section XIV.6 (position 8 ou 7, signe +/-).
 DIGAMMA_MAP: Dict[int, Tuple[int, int]] = {
-    2: (8, +1),
-    3: (8, -1),
-    5: (7, +1),
-    6: (7, -1),
+    2:  (8, -1),   # 29     (A8-)
+    3:  (8, -1),   # 227    (A8-)
+    4:  (8, +1),   # 947    (A8+)
+    5:  (7, +1),   # 2999   (A7+)
+    6:  (8, +1),   # 7529   (A8+)
+    7:  (8, -1),   # 16519  (A8-)
+    8:  (8, -1),   # 32327  (A8-)
+    9:  (7, -1),   # 58337  (A7-)
+    13: (8, +1),   # 368939 (A8+)
 }
 
-# Ajustements de forme de la suite A pour certains rapports :
-# l'exemple 1/6 de Savard retire la grande puissance t^8 de la somme A
-# (forme particulière de la suite). On encode cette particularité.
-SUITES_A_AJUSTEES: Dict[int, Dict] = {
-    6: {"retirer_puissance": 8},
-}
+# Ajustements de forme de la suite A : AUCUN. La construction XIV.4 terme à
+# terme est la seule autorisée — l'ancien retrait de t^8 pour 1/6 corrompait
+# la somme A (68 920 242 au lieu de 70 599 858) et décalait l'ancrage vers un
+# mauvais premier (7 607 au lieu de 7 529). Désactivé pour conformité.
+SUITES_A_AJUSTEES: Dict[int, Dict] = {}
 
 # Données radicales des tableaux 14.1 à 14.15. Les radicandes sont conservés
 # sous forme décimale (et non en float) afin que le calcul reste reproductible.
@@ -556,17 +561,17 @@ class EquationSomme:
 
 
 def _verifier_k_non_typique(rapport: object) -> int:
-    """Valide la base d'un rapport non-typique 1/k."""
+    """Valide la base k d'un rapport 1/k (k >= 2 : régime typique 1/2 inclus)."""
     k = extraire_k(rapport)
-    if k <= 2:
-        raise ValueError("Un rapport non-typique doit être de la forme 1/k avec k >= 3")
+    if k < 2:
+        raise ValueError("Un rapport doit être de la forme 1/k avec k >= 2")
     return k
 
 
 def equations_ab(rapport: object) -> Tuple[EquationSomme, EquationSomme]:
     """Construit les équations universelles exactes des sommes A et B.
 
-    Les définitions par blocs donnent, pour chaque k >= 3, les identités :
+    Les définitions par blocs donnent, pour chaque k >= 2, les identités :
 
       A(n) = (1 + 1/k + 1/(k^3*(k-1))) * k^n - k/(k-1)
       B(n) = (k + 1 + 1/(k^2*(k-1))) * k^n
@@ -1109,16 +1114,12 @@ def reconstruire_premier(rapport: object, n: int = 10,
 
     A = suite_A(t, n)
     B = suite_B(t, n)
-    # Ajustement pour certains rapports dont l'exemple Savard expose une suite
-    # A qui retire la grande puissance (ex. 1/6 : A = A_standard - 6^8).
-    ajust = SUITES_A_AJUSTEES.get(k)
-    if ajust is not None and n == 10:
-        A = A - (t ** ajust["retirer_puissance"])
+    # (Aucun ajustement de la suite A : construction XIV.4 terme à terme.)
 
     if position is not None and signe is not None:
         combinaisons = [(int(position), int(signe))]
     else:
-        combinaisons = [(8, +1), (8, -1), (7, +1), (7, -1)]
+        combinaisons = [(8, -1), (8, +1), (7, +1), (7, -1)]
 
     meilleur = None
     for pos, sg in combinaisons:

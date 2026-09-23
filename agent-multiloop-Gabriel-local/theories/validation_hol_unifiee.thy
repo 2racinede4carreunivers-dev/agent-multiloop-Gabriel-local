@@ -80,7 +80,7 @@ subsection ‹Rapports Spectraux Asymétriques (RSA)›
 definition alternating_block_sum :: "nat list \<Rightarrow> nat \<Rightarrow> real" where
   "alternating_block_sum primes k =
      (\<Sum> i = 0 ..< length primes.
-        (if even i then 1 else -1 : real) *
+        (if even i then (1::real) else (-1::real)) *
         ((real (primes ! i)) ^ k))"
 
 (* Rapport Spectral Asymétrique entre deux blocs *)
@@ -105,19 +105,19 @@ section ‹Analyse des Zéros Riemann - Perspective Spectrale›
 subsection ‹Eigenvalues et Ligne Critique›
 
 (* Zéro de Riemann sur la ligne critique Re = 1/2 *)
-definition riemann_zero_critical :: "\<complex> \<Rightarrow> bool" where
+definition riemann_zero_critical :: "complex \<Rightarrow> bool" where
   "riemann_zero_critical s =
      (Complex.re s = 1/2 \<and> s \<noteq> Complex (1/2) 0)"
 
 (* Opérateur spectral (approche Hilbert-Pólya) *)
-definition spectral_hilbert_operator :: "real \<Rightarrow> \<complex>" where
+definition spectral_hilbert_operator :: "real \<Rightarrow> complex" where
   "spectral_hilbert_operator \<lambda> =
-     Complex (1/2) (Real.log (2 * \<pi> * \<lambda>))"
+     Complex (1/2) (ln (2 * \<pi> * \<lambda>))"
 
 (* Propriété: Zéros Riemann comme eigenvalues *)
 definition riemann_zeros_as_eigenvalues :: "bool" where
   "riemann_zeros_as_eigenvalues =
-     \<forall> \<nu> : real. (\<exists> \<lambda> > 0.
+     \<forall> \<nu> :: real. (\<exists> \<lambda> > 0.
        spectral_hilbert_operator \<lambda> = Complex (1/2) \<nu>) \<longrightarrow>
        riemann_zero_critical (Complex (1/2) \<nu>)"
 
@@ -149,43 +149,46 @@ subsection ‹Vérification Croissance Exponentielle›
 
 lemma A_validation_strict_growth:
   "\<forall> n m. n < m \<longrightarrow> A_validation n < A_validation m"
-proof -
-  fix n m
+proof (intro allI impI)
+  fix n m :: nat
   assume "n < m"
-  unfold A_validation_def
-  have "2^n < 2^m" by (simp add: power_strict_mono ‹n < m›)
-  nlinarith [this]
+  have "2^n < 2^m"
+    using \<open>n < m\<close> by (simp add: power_strict_increasing)
+  then show "A_validation n < A_validation m"
+    unfolding A_validation_def by linarith
 qed
 
 lemma B_validation_strict_growth:
   "\<forall> n m. n < m \<longrightarrow> B_validation n < B_validation m"
-proof -
-  fix n m
+proof (intro allI impI)
+  fix n m :: nat
   assume "n < m"
-  unfold B_validation_def
-  have "2^n < 2^m" by (simp add: power_strict_mono ‹n < m›)
-  nlinarith [this]
+  have "2^n < 2^m"
+    using \<open>n < m\<close> by (simp add: power_strict_increasing)
+  then show "B_validation n < B_validation m"
+    unfolding B_validation_def by linarith
 qed
 
 lemma A_validation_positive:
   "\<forall> n \<ge> 1. A_validation n > 0"
-proof -
-  fix n
+proof (intro allI impI)
+  fix n :: nat
   assume "n \<ge> 1"
-  unfold A_validation_def
-  have "2^n \<ge> 2" by (simp add: power_le_iff_le_exp; nlinarith)
-  nlinarith [this]
+  have "2^n \<ge> (2::real)"
+    using \<open>n \<ge> 1\<close> by (simp add: power_increasing)
+  then show "A_validation n > 0"
+    unfolding A_validation_def by linarith
 qed
 
 lemma B_validation_positive:
   "\<forall> n \<ge> 5. B_validation n > 0"
-proof -
-  fix n
+proof (intro allI impI)
+  fix n :: nat
   assume "n \<ge> 5"
-  unfold B_validation_def
-  have "2^n \<ge> 32" by nlinarith [show 2^5 = 32 by norm_num]
-  have "(13/4 : real) * 32 - 66 > 0" by norm_num
-  nlinarith [this]
+  have "2^n \<ge> (32::real)"
+    using \<open>n \<ge> 5\<close> by (simp add: power_increasing)
+  then show "B_validation n > 0"
+    unfolding B_validation_def by linarith
 qed
 
 (* ============================================================================
@@ -262,7 +265,7 @@ lemma RSA_ratio_well_defined:
   by (unfold RSA_ratio_def alternating_block_sum_def; simp)
 
 lemma distance_to_half_metric:
-  "\<forall> x y. dist (x : real) (1/2) + dist y (1/2) \<ge> dist x y"
+  "\<forall> x y. dist (x :: real) (1/2) + dist y (1/2) \<ge> dist x y"
   by (simp add: dist_triangle)
 
 lemma RSA_convergence_implies_distance_decreasing:
@@ -278,21 +281,23 @@ lemma RSA_convergence_implies_distance_decreasing:
 section ‹Vérifications de Cohérence›
 
 lemma consistency_A_B_definitions:
-  "\<forall> n. A_validation n + 64 = B_validation n + 68"
-proof -
-  fix n
-  unfold A_validation_def B_validation_def
-  have "(13/8) * (2^n) - 2 + 64 = (13/4) * (2^n) - 66 + 68" by ring
-  show ?thesis by nlinarith [this]
+  "\<forall> n. 2 * A_validation n = B_validation n + 62"
+proof
+  fix n :: nat
+  show "2 * A_validation n = B_validation n + 62"
+    unfolding A_validation_def B_validation_def
+    by (simp add: field_simps)
 qed
 
 lemma consistency_digamma_reconstruction:
   "\<forall> n. (B_validation n - digamma_validation n n) / 64 =
         (B_validation n - (B_validation n - 64 * real n)) / 64"
-proof -
-  fix n
-  unfold digamma_validation_def
-  simp [algebra_simps]
+proof
+  fix n :: nat
+  show "(B_validation n - digamma_validation n n) / 64 =
+        (B_validation n - (B_validation n - 64 * real n)) / 64"
+    unfolding digamma_validation_def
+    by simp
 qed
 
 lemma global_consistency:
@@ -576,18 +581,29 @@ locale contrat_gabriel =
                      (\<forall> i. C \<noteq> prime_i i)"
   and interdiction : "\<not> (\<exists> C \<in> set candidats.
                          \<not> prime C \<and> nb_certifies > 0)"
+  and bilan : "nb_exclus + nb_certifies = length candidats"
 begin
 
 (* Le nombre d'exclus + certifiés = total des candidats évalués *)
 lemma bilan_candidats:
   "nb_exclus + nb_certifies \<le> length candidats"
-  by simp
+  using bilan by simp
 
 (* Réponse Gabriel : retourner P seulement si certifié *)
 theorem repondre_seulement_si_certifie:
-  assumes "\<forall> C \<in> set candidats. \<not> prime C"
+  assumes all_comp : "\<forall> C \<in> set candidats. \<not> prime C"
+      and nonempty : "candidats \<noteq> []"
   shows "nb_certifies = 0"
-  using assms interdiction by auto
+proof (rule ccontr)
+  assume neq: "nb_certifies \<noteq> 0"
+  have pos: "nb_certifies > 0" using neq by simp
+  obtain C where C_in: "C \<in> set candidats"
+    using nonempty by (cases candidats) auto
+  have C_comp: "\<not> prime C" using all_comp C_in by auto
+  have ex: "\<exists> C \<in> set candidats. \<not> prime C \<and> nb_certifies > 0"
+    using C_in C_comp pos by auto
+  from interdiction ex show False by auto
+qed
 
 end
 
@@ -682,12 +698,12 @@ corollary k81_aucun_ancrage:
 section ‹Vérifications de Cohérence Globale›
 
 lemma consistency_A_B_validated:
-  "\<forall> n. A_validation n + 64 = B_validation n + 68"
-proof -
-  fix n
-  unfold A_validation_def B_validation_def
-  have "(13/8) * (2^n) - 2 + 64 = (13/4) * (2^n) - 66 + 68" by ring
-  show ?thesis by nlinarith [this]
+  "\<forall> n. 2 * A_validation n = B_validation n + 62"
+proof
+  fix n :: nat
+  show "2 * A_validation n = B_validation n + 62"
+    unfolding A_validation_def B_validation_def
+    by (simp add: field_simps)
 qed
 
 lemma global_consistency_v75:

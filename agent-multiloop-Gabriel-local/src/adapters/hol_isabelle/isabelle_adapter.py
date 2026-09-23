@@ -45,7 +45,7 @@ class IsabelleAdapter:
         digamma_val: int | float = None,
     ) -> str:
         """Genere un .thy minimal pour verifier l'equation prime_equation.
-        
+
         CORRECTION MAJEURE (2026-06-14):
         - digamma_val doit TOUJOURS être calculé comme SB(n) - factor*p
         - Pour un rapport typique 1/2, factor = 2^6 = 64.
@@ -53,14 +53,24 @@ class IsabelleAdapter:
           6e position de la suite A, soit k^6 (rapport 1/k => factor = k^6,
           ex. 1/6 => 6^6 = 46656).
         - Si digamma_val == p, c'est une erreur (le bug qui persistait).
-        - On force le recalcul et loggons un avertissement
-        """
 
-        # Facteur spectral (6e position de la suite A) : k^6 pour le rapport 1/k.
+        CORRECTION SPECTRALE GENERALE (2026-09-18):
+        - Les lemmes HOL utilisent les équations spectrales correctes pour le
+          rapport 1/k, et non plus SA_def/SB_def (1/2) qui ne sont valables
+          que pour le rapport typique 1/2.
+        - Pour 1/k, les équations sont :
+          SA(n) = alpha_A * k^n + offset_A
+          SB(n) = alpha_B * k^n + offset_B
+        """
+        import math
+        from fractions import Fraction
+
+        # ── Facteur spectral (6e position de la suite A) : k^6 ──
         k = self._k_from_model(model)
         factor = k ** 6
+        est_typique = (k == 2)
 
-        # DÉTECTION ET CORRECTION DU BUG
+        # ── DÉTECTION ET CORRECTION DU BUG digamma ──
         if digamma_val is None or digamma_val == p:
             logger.warning(
                 f"⚠️ BUG DÉTECTÉ: digamma_val={digamma_val} pour n={n}, p={p}. "
@@ -70,16 +80,51 @@ class IsabelleAdapter:
             logger.info(
                 f"✓ CORRECTION: digamma_val recalculé = {SB_val} - {factor}*{p} = {digamma_val}"
             )
-        
+
+        # ══ Calcul des coefficients spectraux pour le rapport 1/k ══════════
+        if k >= 2 and not est_typique:
+            alpha_A = Fraction(k**4 - k**2 + 1, (k - 1) * k**3)
+            offset_A = Fraction(-k, k - 1)
+            alpha_B = Fraction(k * (k**4 - k**2 + 1), (k - 1) * k**3)
+            offset_B = Fraction(-(k**7 - k**6 + k), k - 1)
+            def _frac_str(fr: Fraction) -> str:
+                f = float(fr)
+                if abs(f) < 1e15:
+                    return repr(f)
+                return f"{fr.numerator}/{fr.denominator}"
+            sa_coeff = _frac_str(alpha_A)
+            sa_off   = _frac_str(offset_A)
+            sb_coeff = _frac_str(alpha_B)
+            sb_off   = _frac_str(offset_B)
+        else:
+            sa_coeff = "3.25/2"
+            sa_off   = "-2"
+            sb_coeff = "6.5/2"
+            sb_off   = "-66"
+
+        modele_label = "typique 1/2" if est_typique else f"non typique {model}"
+        if est_typique:
+            sa_formule = f"(3.25/2) * 2^{n} - 2"
+            sb_formule = f"(6.5/2) * 2^{n} - 66"
+            sa_lemma_unfold = "unfolding SA_def by simp"
+            sb_lemma_unfold = "unfolding SB_def by simp"
+            sb_detail_unfold = "unfolding SB_def"
+        else:
+            sa_formule = f"({sa_coeff}) * {k}^{n} + ({sa_off})"
+            sb_formule = f"({sb_coeff}) * {k}^{n} + ({sb_off})"
+            sa_lemma_unfold = ("(* equation spectrale generalisee 1/k — valeur numerique *)\n   unfolding SA_def by simp")
+            sb_lemma_unfold = ("(* equation spectrale generalisee 1/k — valeur numerique *)\n   unfolding SB_def by simp")
+            sb_detail_unfold = "unfolding SB_def"
+
         script = f"""theory {theory_name}
   imports methode_spectral
 begin
 
 (* Script genere automatiquement pour verifier le premier {p} avec n={n} *)
-(* 
-   FORMULES SPECTRALES:
-   SA(n) = (3.25/2) × 2^n - 2
-   SB(n) = (6.5/2) × 2^n - 66
+(*
+   FORMULES SPECTRALES ({modele_label}):
+   SA(n) = {sa_formule}
+   SB(n) = {sb_formule}
    digamma(n,p) = SB(n) - {factor}×p
    (facteur = 6e position de la suite A = k^6 ; rapport {model} => {factor})
 *)
@@ -88,11 +133,11 @@ section "Verification {p} via modele {model}"
 
 lemma SA_n_{n}_valeur:
   "SA {n} = {SA_val}"
-  unfolding SA_def by simp
+  {sa_lemma_unfold}
 
 lemma SB_n_{n}_valeur:
   "SB {n} = {SB_val}"
-  unfolding SB_def by simp
+  {sb_lemma_unfold}
 
 lemma digamma_calc_n_{n}_p_{p}:
   "digamma_calc {n} {p} = {digamma_val}"
@@ -107,7 +152,7 @@ lemma verif_premier_{p}_n_{n}:
 (* Verification arithmetique detaillee *)
 lemma digamma_calculation_detail:
   "SB {n} - {factor} * {p} = {digamma_val}"
-  unfolding SB_def
+  {sb_detail_unfold}
   by (norm_num; ring)
 
 (* Invariant critique *)

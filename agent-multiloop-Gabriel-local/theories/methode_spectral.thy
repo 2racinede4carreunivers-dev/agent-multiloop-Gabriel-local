@@ -1817,8 +1817,8 @@ text \<open>
                    print(c.reconstruire_rapport_non_typique('1/6', n=14))"
 
         {'rapport': '1/6', 'n': 14, 'A': 91497417522, 'B': 548984458482,
-         'digamma_calcule': 548627586738, 'premier': 7649,
-         'position_du_premier (1-index)': 971}
+         'digamma_calcule': 548632252338, 'premier': 7549,
+         'position_du_premier (1-index)': 958}
 
   Ces resultats constituent une validation numerique externe de la Methode
   Spectrale : un agent cognitif independant (Gabriel multiloop) reconstruit
@@ -1846,14 +1846,14 @@ subsection "Forme generale des suites A_k et B_k pour n = 10"
 axiomatization where
   SA_k_n10:
     "SA_k k 10 =
-       (real k ^ 1) + (real k ^ 2) + (real k ^ 4) + (real k ^ 5) +
-       (real k ^ 6) + (real k ^ 7) + (real k ^ 8) +
+       (real k ^ 1) + (real k ^ 2) + (real k ^ 3) + (real k ^ 4) +
+       (real k ^ 5) + (real k ^ 6) + (real k ^ 7) + (real k ^ 8) +
        ((real k ^ 9) - (real k ^ 7)) + ((real k ^ 10) - (real k ^ 8))" and
 
   SB_k_n10:
     "SB_k k 10 =
-       (real k ^ 1) + (real k ^ 2) + (real k ^ 4) + (real k ^ 5) +
-       (real k ^ 7) + (real k ^ 8) + (real k ^ 9) +
+       (real k ^ 1) + (real k ^ 2) + (real k ^ 3) + (real k ^ 4) +
+       (real k ^ 5) + (real k ^ 7) + (real k ^ 8) + (real k ^ 9) +
        ((real k ^ 10) - (real k ^ 8)) + ((real k ^ 11) - (real k ^ 9))"
 
 text \<open>
@@ -1896,15 +1896,15 @@ axiomatization where
   exemple_1_sur_5_n10_digamma: "digamma_k 5 10 = 11816405" and
   exemple_1_sur_5_n10_premier: "premier_k 5 10 = 2999" and
 
-  exemple_1_sur_6_n10_SA: "SA_k 6 10 = 68920242" and
+  exemple_1_sur_6_n10_SA: "SA_k 6 10 = 70599858" and
   exemple_1_sur_6_n10_SB: "SB_k 6 10 = 423552498" and
-  exemple_1_sur_6_n10_digamma: "digamma_k 6 10 = 68640306" and
-  exemple_1_sur_6_n10_premier: "premier_k 6 10 = 7607" and
+  exemple_1_sur_6_n10_digamma: "digamma_k 6 10 = 72279474" and
+  exemple_1_sur_6_n10_premier: "premier_k 6 10 = 7529" and
 
   exemple_1_sur_6_n14_SA: "SA_k 6 14 = 91497417522" and
   exemple_1_sur_6_n14_SB: "SB_k 6 14 = 548984458482" and
-  exemple_1_sur_6_n14_digamma: "digamma_k 6 14 = 548627586738" and
-  exemple_1_sur_6_n14_premier: "premier_k 6 14 = 7649"
+  exemple_1_sur_6_n14_digamma: "digamma_k 6 14 = 548632252338" and
+  exemple_1_sur_6_n14_premier: "premier_k 6 14 = 7549"
 text \<open>
   Ces valeurs sont exactement celles obtenues dans le terminal via :
 
@@ -1921,8 +1921,8 @@ consts
 
 axiomatization where
   position_1_sur_3_n10: "position_prime_k 3 10 = 49" and
-  position_1_sur_6_n10: "position_prime_k 6 10 = 960" and
-  position_1_sur_6_n14: "position_prime_k 6 14 = 971"
+  position_1_sur_6_n10: "position_prime_k 6 10 = 954" and
+  position_1_sur_6_n14: "position_prime_k 6 14 = 958"
 
 lemma non_typique_n_neq_position_3:
   "10 \<noteq> position_prime_k 3 10"
@@ -1945,17 +1945,17 @@ text \<open>
 subsection "Preuve par l'absurde : les rapports non-typiques ne sont pas un artefact"
 
 lemma non_typique_absurde:
-  assumes "premier_k 6 10 = 7607"
-      and "premier_k 6 14 = 7649"
-      and "position_prime_k 6 10 = 960"
-      and "position_prime_k 6 14 = 971"
+  assumes "premier_k 6 10 = 7529"
+      and "premier_k 6 14 = 7549"
+      and "position_prime_k 6 10 = 954"
+      and "position_prime_k 6 14 = 958"
   shows "premier_k 6 10 < premier_k 6 14"
 proof -
   text \<open>
     Hypotheses d'absurde : les rapports non-typiques 1/k <> 1/2 seraient
     une curiosite numerique sans structure. En realite, les reconstructions
     pour n = 10 et n = 14 donnent deux premiers distincts et croissants
-    (7607 puis 7649), avec des positions coherentes (960 et 971) : la
+    (7529 puis 7549), avec des positions coherentes (954 et 958) : la
     structure n'est donc pas un artefact numerique.
   \<close>
   from assms show ?thesis by simp
@@ -4456,6 +4456,36 @@ text \<open>
       Somme B exacte = 45 646 739 917 146 867 644 966 107 124 296
       Digamma exact  = 45 646 739 917 146 867 644 957 577 744 968
       Contrôle       : (ΣB - Digamma) / k^6 = 32 537 ✓
+\<close>
+
+text \<open>
+  RÉCONCILIATION TYPIQUE (1/2) ET NON-TYPIQUE (1/k) — CONCORDANCE PIPELINE
+
+  Le pipeline cognitif (PipelineCognitifNiveaux, v7.5) distingue deux régimes
+  qui PARTAGENT exactement les mêmes constantes Savard et les mêmes formes
+  fermées (les lemmes somme_A_conv_k2_eq_SA et somme_B_conv_k2_eq_SB le
+  prouvent pour k = 2) :
+
+    RAPPORT TYPIQUE 1/2 (k = 2) :
+      - n = quantité de termes = position du premier dans P
+        (2 = 1er, 3 = 2e, 5 = 3e, ..., 29 = 10e, ... infini).
+      - Ancrage n = 10 : Digamma = S_A(10) - 2^8 = 1406
+        → P = (S_B(10) - 1406) / 2^6 = 29.
+      - Pour n \<noteq> 10 : Digamma = S_B(n) - P_n * 2^6, où P_n est le n-ième
+        premier (ex. n = 9 : (1598 - 23 * 64) = 126 → P = 23).
+
+    RAPPORTS NON-TYPIQUES 1/k (k >= 3) :
+      - Ancrage à n = 10 par les quatre essais Digamma ; le candidat premier
+        unique constitue l'ancrage (rang base, premier base).
+      - Pour n \<noteq> 10 : rang_cible = rang_base + n - 10 ;
+        Digamma = S_B(k,n) - P_cible * k^6 (règle XIV.6).
+
+    ORDRE D'ANCRAGE DÉTERMINISTE (implémentation) :
+      Les quatre essais sont tentés dans l'ordre (position 8, signe −),
+      (position 8, signe +), (position 7, signe +), (position 7, signe −) ;
+      le PREMIER candidat entier premier dans cet ordre est retenu. Cet ordre
+      reproduit exactement le catalogue d'ancrages de XIV.6 (k = 3..9) ainsi
+      que l'ancre typique 29 pour k = 2, validé numériquement par le pipeline.
 \<close>
 
 subsection "XIV.1 — Constantes Savard universelles"

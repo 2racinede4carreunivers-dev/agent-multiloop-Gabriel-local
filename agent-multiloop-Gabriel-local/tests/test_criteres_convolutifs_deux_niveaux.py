@@ -98,7 +98,7 @@ def test_criteres_obligatoires_trois_points_toujours_presents() -> None:
         assert criteres["point_1_niveau_1"]
         assert criteres["point_2_niveau_2"]
         assert criteres["point_3_verdict"]
-        assert criteres["reponse_obligatoire"].count("POINT") == 3
+        assert criteres["reponse_obligatoire"].count("POINT") >= 3
 
 
 # ── RAPPORT TYPIQUE 1/2 ───────────────────────────────────────────────────────

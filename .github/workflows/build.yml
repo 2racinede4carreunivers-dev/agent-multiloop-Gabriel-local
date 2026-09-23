@@ -77,7 +77,11 @@ jobs:
           find . -maxdepth 5 \( -name ROOT -o -name 'methode_spectral.thy' \) | sort
 
       - name: Build Isabelle session Methode_Spectral
-        working-directory: agent-multiloop-Gabriel-local
+        # La session Methode_Spectral est definie dans theories/ROOT
+        # (methode_spectral + validation_hol_unifiee + validation_zeta_lean).
+        # Le ROOT de agent-multiloop-Gabriel-local/ definit une autre session
+        # (Gabriel_Multiloop) : il faut donc builder depuis theories/.
+        working-directory: agent-multiloop-Gabriel-local/theories
         run: |
           isabelle build -v Methode_Spectral
 

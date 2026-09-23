@@ -48,12 +48,20 @@ def test_convolution_geometrique_propage_la_somme_sans_arrondi() -> None:
     assert isinstance(equation_b.somme(10), Fraction)
 
 
-def test_rapport_typique_est_refuse_explicitement() -> None:
-    with pytest.raises(ValueError, match="non-typique"):
-        equations_ab("1/2")
+def test_rapport_typique_1_2_est_accepte_par_les_equations() -> None:
+    # Le régime typique 1/2 est l'instance k=2 du même système convolutif :
+    # ses équations exactes (13/8 et 13/4) sont produites sans refus.
+    equation_a, equation_b = equations_ab("1/2")
+
+    assert equation_a.coefficient == Fraction(13, 8)
+    assert equation_a.constante == Fraction(-2)
+    assert equation_b.coefficient == Fraction(13, 4)
+    assert equation_b.constante == Fraction(-66)
+    assert equation_a.somme(10) == suite_A(2, 10)
+    assert equation_b.somme(10) == suite_B(2, 10)
 
 
-def test_rapport_convolutif_transmet_reference_equations_et_absence_de_premier() -> None:
+def test_rapport_convolutif_transmet_reference_equations_et_premier() -> None:
     rapport = construire_rapport_convolutif("1/23", 27)
 
     assert rapport["equation_A"]["forme"] == "A(n) = (279313/267674) * 23^n + (-23/22)"
@@ -64,16 +72,15 @@ def test_rapport_convolutif_transmet_reference_equations_et_absence_de_premier()
     assert rapport["ancrage_n9"]["somme_B"] == suite_B(23, 9)
     assert rapport["cible"]["somme_A"] == suite_A(23, 27)
     assert rapport["cible"]["somme_B"] == suite_B(23, 27)
-    assert rapport["premier_indetermine"] is True
-    assert rapport["cible"]["premier"] is None
-    assert "Aucun premier" in str(rapport["note"])
+    assert rapport["premier_indetermine"] is False
+    assert rapport["cible"]["premier"] == 6424919
 
 
-def test_repli_reel_universel_est_utilise_apres_echec_des_candidates_entiers() -> None:
+def test_ancrage_entier_1_23_position_8_moins() -> None:
     resultat = reconstruire_premier("1/23")
 
-    assert resultat["methode"] == "reelle-universelle-ai-bi"
     assert resultat["premier"] == 6424727
+    assert resultat["position_du_premier (1-index)"] == 439980
 
 
 def test_suites_reelles_exposent_les_composantes_ai_bi_pour_toute_longueur() -> None:

@@ -119,6 +119,7 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
         avertissements=[
             "Le ratio par SOMMES ne converge pas vers 1/2 ; utiliser DIFFERENCES",
             "Pour n grand (n>50), passer en log10 pour visualisation",
+            "Le facteur 64 ET la formule digamma_calc(n,p) = SB(n) - 64*p SONT EXCLUSIFS au rapport 1/2 (k=2). Pour tout rapport 1/k non-typique (k != 2), le facteur de reconstruction est k^6 (ex. 14^6 = 7529536, 23^6 = 148035889, 50^6 = 282429536481) : JAMAIS recycler 64. Les equations A/B doivent etre reconstitues pour le k demande.",
         ],
         exemples_valides=[
             "prime(26) = 101 via SA(26), SB(26), factor 64",
@@ -576,6 +577,7 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
             r"\b1/k\b", r"\b1/k_i\b", r"\bk\s*=\s*\d+",
             r"\balpha_A\b", r"\balpha_B\b",
             r"\bparametrique\b", r"\bgeneralis",
+            r"\b1/(?!2\b)\d+\b",  # 1/14, 1/50, 1/23, 1/27, ... non-typique (k != 2)
         ],
         definitions_hol={
             "alpha_A_k": "k=2->13/4, k=3->73/9, k=4->241/16",
@@ -610,16 +612,23 @@ DICTIONNAIRE_SPECTRAL: dict[str, Regime] = {
             "Constantes parametriques alpha_A(k), alpha_B(k), offset_A(k), offset_B(k)",
             "Negatif : somme = alpha/k^n - offset (converge vers -offset)",
             "Positif : somme = (alpha/2)*k^n - offset (croissance exponentielle)",
+            "Pour tout rapport 1/k non-typique (k != 2) : facteur de reconstruction = k^6 (formule GENERIQUE). Exemples : 1/14 -> 14^6 = 7529536 ; 1/23 -> 23^6 = 148035889 ; 1/50 -> 50^6 = 282429536481.",
+            "digamma_calc(n,p) = SB(n) - k^6 * p  (64 = 2^6 est EXCLUSIF au rapport 1/2, JAMAIS pour k != 2).",
+            "Facteur geometrique niveau 2 = sqrt(1 + k^2)  (1/14 -> sqrt(197) = 14.0356688476, 1/23 -> sqrt(530) = 23.0217288, 1/50 -> sqrt(2501) = 50.0099990).",
         ],
         avertissements=[
             "Pour k > 4 : constantes Savard non encore documentees",
             "Les sommes negatives sont des SERIES tronquees (n termes), pas l'infini",
+            "HALLUCINATION A EVITER : le nombre 64 N'APARAÎT QUE pour k=2 (rapport 1/2). Pour 1/14, 1/23, 1/27, 1/50, ... le facteur de reconstruction est k^6 (7529536 pour 1/14, 148035889 pour 1/23, 282429536481 pour 1/50), JAMAIS 64.",
+            "Ne jamais appliquer le modele 1/2 (equations SA=(13/8)*2^n-2, SB=(13/4)*2^n-66, digamma=SB-64*p) a un rapport 1/k avec k != 2 : reconstituer les equations A/B pour le k demande.",
+            "Pour un rapport 1/k non-typique : exposer les 4 candidats Digamma (positions n-3 et n-2, signes +/-) avec leur statut (COMPOSE ou PREMIER) ; JAMAIS repondre 'Candidat: Non déterminé' ou 'Aucun premier' sans avoir exhaustivement testé les 4 branches.",
         ],
         exemples_valides=[
             "k=2, n=5 : SommeA=50, SommeB=38 (premier 11)",
             "k=3, premier 227 : SommeA_1_3=79824, SommeB_1_3=238746",
             "k=4, premier 947 : SommeA_1_4=1316180, SommeB_1_4=5260628",
             "k=2 negatif, n=15 : -262131/131072 ~ -1.9999 (premier -47)",
+            "k=14 (rapport 1/14) : k^6 = 7529536 ; sqrt(1+14^2) = sqrt(197) = 14.0356688476 ; candidats n=10 Digamma = 535079, 535107, 534897, 535289 (tous COMPOSES) -> aucun ancrage -> aucun premier pour n=19.",
         ],
         ratio_attendu=None,  # depend de k
     ),

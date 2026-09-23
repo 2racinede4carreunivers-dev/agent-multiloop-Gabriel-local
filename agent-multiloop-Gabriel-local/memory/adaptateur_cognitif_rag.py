@@ -53,11 +53,13 @@ REGLE 2 - PUISSANCE OBLIGATOIRE:
    Indices POSITIFS -> ^ (entiere)
    Indices NEGATIFS -> powr (continue)
 
-REGLE 3 - FACTEUR DE RECONSTRUCTION:
-   Regime 1/2 -> 64
-   Regime 1/3 -> 729
-   Regime 1/4 -> 4096
-   JAMAIS de generalisations
+REGLE 3 - FACTEUR DE RECONSTRUCTION (generique k^6, jamais 64 hors 1/2) :
+   Regime 1/2 -> 64            (EXCLUSIF : 2^6 = 64, JAMAIS pour 1/k avec k != 2)
+   Regime 1/3 -> 729           (3^6)
+   Regime 1/4 -> 4096          (4^6)
+   Regime 1/k, k != 2 -> k^6   (GENERATEUR : 1/14 -> 7529536, 1/23 -> 148035889, 1/50 -> 282429536481)
+   digamma_calc(n,p) = SB(n) - k^6 * p   (formule GENERIQUE ; 64 est le cas particulier k=2)
+   Facteur geometrique niveau 2 = sqrt(1 + k^2)   (1/14 -> sqrt(197) = 14.0356688476)
 
 REGLE 4 - CONSTANTES RIGIDES:
    D29=256, D31=1280, K6=-(37127/256) - SA_mix(6)

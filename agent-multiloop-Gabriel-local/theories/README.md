@@ -29,20 +29,20 @@
 
 Ce dépôt contient la formalisation complète en **Isabelle/HOL** de la **Méthode Spectrale** — une approche géométrique originale de la distribution des nombres premiers développée par **Philippe Thomas Savard**.
 
-L'idée centrale : chaque nombre premier `p` peut être reconstruit comme :
+L'idée centrale : chaque nombre premier `p` peut être reconstruit comme selon le modèle du système convolutif :
 
 ```
 p = (SB(k, n) − Γ_c) / k⁶
 ```
 
-où `SA` et `SB` sont deux suites spectrales paramétrées par un rapport `1/k`, et `Γ_c` (le Digamma calculé) est une valeur résiduelle extraite de `SA`.
+où `SA` et `SB` sont deux suites spectrales paramétrées par un rapport `1/k`, et `Γ_c` (le Digamma calculé) est une valeur résiduelle extraite de `SA` facteur de correction applicable +/- à la suite A et est de 1 à 4 des possibilités de la 7ième où de la 8ième position.
 
 **Résultat central :** Le rapport des différences consécutives est un invariant constant :
 ```
 RsP(k, n1, n2) = (SA(k,n1) − SA(k,n2)) / (SB(k,n1) − SB(k,n2)) = 1/k
 ```
 
-Ce résultat est **prouvé formellement dans Isabelle/HOL sans sorry** pour tous les régimes.
+Ce résultat est **prouvé formellement dans Isabelle/HOL et le pipeline HOL incluant 3 validation mthode_spectral.thy la validation principal et les deux contre validation validant dans le même sens que la validation principale validation_hol_unifie.thy et validation_zeta_lean.thy** pour tous les régimes 1/k et la valeur générsalisée de n associée a ces régimes.
 
 ---
 
@@ -149,7 +149,7 @@ SB(2,n) = (13/4) × 2ⁿ − 66
 | 11 | 14521/6655 ≈ 2.181968 | 14521/605 ≈ 24.002 | 11/10 = 1.1 | 17715621/10 ≈ 1771562 | 1 771 561 |
 | 50 | ≈ 2.040000 | ≈ 102.000 | 50/49 ≈ 1.0204 | très grand | 15 625 000 000 |
 
-### Théorème central (prouvé dans Isabelle/HOL sans sorry)
+### Théorème central (prouvé dans Isabelle/HOL )
 
 ```isabelle
 theorem RsP_conv_constant:
@@ -218,8 +218,7 @@ Pour chaque branche, le candidat premier est :
 P_candidat = (SB(k,n) − Γ_c) / k⁶
 ```
 
-**Règle de sélection :** Une seule branche produit un entier premier — c'est elle qui est retenue.
-Les trois autres donnent des composés ou des non-entiers → exclusion automatique.
+
 
 **Définition HOL :**
 ```isabelle

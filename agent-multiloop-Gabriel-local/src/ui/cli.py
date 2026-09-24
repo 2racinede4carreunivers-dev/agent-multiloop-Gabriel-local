@@ -3571,3 +3571,11 @@ def run_cli() -> None:
     """Point d'entree synchrone."""
     cli = CLIInterface()
     asyncio.run(cli.interactive_mode())
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CLINE INTEGRATION (Option 2 - Hybrid Fusion)
+# ═══════════════════════════════════════════════════════════════════════════
+from .cli_cline_extension import integrate_cline_in_cli
+
+integrate_cline_in_cli(CLIInterface)

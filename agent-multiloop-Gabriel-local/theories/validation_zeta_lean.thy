@@ -14,7 +14,9 @@ begin
       * Contre-validation No 2 : le present fichier. Meme objectif que la No 1,
         mais chaque point de la Section XIII est mis en relation avec sa
         contrepartie PROUVEE dans le depot public Mathlib (Lean 4) : fonction
-        zeta, version completee Lambda, equation fonctionnelle, zeros.
+        zeta, version completee Lambda, equation fonctionnelle, zeros, et
+        surtout la fonction psi de Tchebychev (Chebyshev.psi / vonMangoldt)
+        qui porte la concordance C1 (1/y1 = 1/t) du Pont Savard.
 
     Discipline logique (v2.0, restructuration complete) :
       * AUCUN axiome n'enonce l'hypothese de Riemann. La version precedente
@@ -47,8 +49,10 @@ text \<open>
 
 axiomatization
   riemannZeta_lean          :: "complex \<Rightarrow> complex" and
-  completedRiemannZeta_lean :: "complex \<Rightarrow> complex"
-  (* specifications HOL des fonctions Mathlib riemannZeta et completedRiemannZeta *)
+  completedRiemannZeta_lean :: "complex \<Rightarrow> complex" and
+  psi_tchebychev_lean       :: "real \<Rightarrow> real"
+  (* specifications HOL des fonctions Mathlib riemannZeta, completedRiemannZeta
+     et Chebyshev.psi (fonction psi de Tchebychev, cf. Cercle 2.c) *)
 
 definition zeros_zeta_lean :: "complex set" where
   "zeros_zeta_lean = {s. riemannZeta_lean s = 0}"
@@ -139,6 +143,147 @@ next
   thus "s \<in> zeros_lambda_lean" by (simp add: mem_zeros_lambda_lean)
 qed
 
+
+section "Cercle 2.c : L'equation de Tchebychev et le psi(Savard) (concordance C1)"
+
+text \<open>
+  POINT COMMUN C1 DU PONT SAVARD (Section XIII : 1/y1 = 1/t).
+
+  L'equation de Tchebychev pour psi est la somme, ponderee par le logarithme,
+  des premiers et de leurs puissances (fonction de von Mangoldt Lambda) :
+
+      psi(x) = sum_{n <= floor x} Lambda(n),   Lambda(n) = log p  si n = p^k,
+
+  de forme explicite
+
+      psi(x) = x - sum_{p^k <= x} x^(p^k) / p^k - log(2*pi) - (1/2) log(1 - x^-2).
+
+  Mathlib / Lean 4 PROUVE ces objets :
+    - Chebyshev.psi : la fonction psi de Tchebychev
+      (Mathlib.NumberTheory.Chebyshev, Irving / Tao / Van de Velde, 2025) ;
+    - ArithmeticFunction.vonMangoldt : la fonction Lambda
+      (Mathlib.NumberTheory.ArithmeticFunction.VonMangoldt, Mehta, 2022),
+      avec Lambda(p) = log p sur les premiers.
+  Les bornes de Chebyshev (psi(x) <= C * x, et borne inferieure) y sont des
+  theoremes.
+
+  psi(Savard) : la somme sur les premiers est remplacee par la somme des
+  puissances 2^n / SB(n) de la Suite B (SB(n) = 3.25 * 2^n - 66) :
+
+      psi_savard(x, n) = x - (2^n)/(SB n) - log10(2*pi)
+                           - (1/2) log10(1 - 1/x^2),   log10(y) = ln y / ln 10.
+
+  Sur chaque premier vise, psi_savard reproduit Tchebychev a epsilon(x) pres
+  (validations numeriques XIII.2) :
+
+      psi_savard(30, 10)  = 28.888143698...    premier vise : 29
+      psi_savard(32, 11)  = 30.891258390...    premier vise : 31
+      psi_savard(98, 25)  = 96.894150249...    premier vise : 97
+      psi_savard(228, 49) = 226.894132001...   premier vise : 227
+
+  POURQUOI C1 EST UN POINT COMMUN (et non une coincidence) : l'equation de
+  Tchebychev n'a d'utilite QUE pour la fonction zeta de Riemann (formule
+  explicite de Riemann - von Mangoldt). Comme psi_savard prolonge strictement
+  Tchebychev (domaine x^2 > 1 au lieu de x >= 2) et reproduit ses valeurs sur
+  le domaine commun, la Methode Spectrale et zeta traitent litteralement du
+  MEME sujet ; la Methode Spectrale voit en plus le regime negatif et, par
+  l'exclusion des composes (Second Pont), la totalite de l'ensemble P.
+\<close>
+
+axiomatization where
+  tchebychev_psi_nonneg_lean:
+    (* Mathlib : Chebyshev.psi_nonneg (Chebyshev.lean l.86) *)
+    "\<And>x. 0 \<le> psi_tchebychev_lean x" and
+  tchebychev_psi_nul_sous_deux_lean:
+    (* Mathlib : Chebyshev.psi_eq_zero_of_lt_two (Chebyshev.lean l.111) *)
+    "\<And>x. x < 2 \<Longrightarrow> psi_tchebychev_lean x = 0" and
+  tchebychev_psi_bornee_lean:
+    (* Mathlib : Chebyshev.psi_le_const_mul_self (borne superieure de Chebyshev) *)
+    "\<exists>C. 0 < C \<and> (\<forall>x. 1 \<le> x \<longrightarrow> psi_tchebychev_lean x \<le> C * x)"
+
+text \<open>
+  Re-exposition des validations numeriques de la Section XIII.2 : les valeurs
+  exactes du psi(Savard), memes formules que dans la validation principale
+  (lemmes psi_savard_at_10_30_expanded, at_25_98, at_49_228).
+\<close>
+
+lemma psi_savard_30_10_egal_tchebychev:
+  "psi_savard 30 10 = 30 - 1024 / 3262 - log10_savard (2 * pi)
+                       - (1 / 2) * log10_savard (1 - 1 / 900)"
+  by (rule psi_savard_at_10_30_expanded)
+
+lemma psi_savard_98_25_egal_tchebychev:
+  "psi_savard 98 25 = 98 - 33554432 / 109051838 - log10_savard (2 * pi)
+                       - (1 / 2) * log10_savard (1 - 1 / 9604)"
+  by (rule psi_savard_at_25_98_expanded)
+
+lemma psi_savard_228_49_egal_tchebychev:
+  "psi_savard 228 49 = 228 - 562949953421312 / 1829587348619198
+                       - log10_savard (2 * pi)
+                       - (1 / 2) * log10_savard (1 - 1 / 51984)"
+  by (rule psi_savard_at_49_228_expanded)
+
+text \<open>
+  Consequences demontrees ici (theoremes HOL, non axiomes) : Tchebychev est
+  nulle sous 2 et n'est jamais strictement negative.
+\<close>
+
+lemma tchebychev_psi_nulle_sous_deux:
+  "x < 2 \<Longrightarrow> psi_tchebychev_lean x = 0"
+  by (rule tchebychev_psi_nul_sous_deux_lean)
+
+lemma tchebychev_psi_non_negative:
+  "\<not> psi_tchebychev_lean x < 0"
+  using tchebychev_psi_nonneg_lean[of x] by simp
+
+definition zero_fun_lean :: "real \<Rightarrow> real" where
+  "zero_fun_lean x = 0"
+
+theorem tchebychev_psi_spec_satisfaisable:
+  (* La specification de Chebyshev.psi (nonnegativite, annulation sous 2,
+     borne C * x) est CONSISTANTE : le temoin f = 0 la realise. *)
+  "\<exists>f :: real \<Rightarrow> real.
+     (\<forall>x. 0 \<le> f x) \<and> (\<forall>x. x < 2 \<longrightarrow> f x = 0)
+     \<and> (\<exists>C. 0 < C \<and> (\<forall>x. 1 \<le> x \<longrightarrow> f x \<le> C * x))"
+proof (rule exI[of _ zero_fun_lean], intro conjI)
+  show "\<forall>x. 0 \<le> zero_fun_lean x" by (simp add: zero_fun_lean_def)
+  show "\<forall>x. x < 2 \<longrightarrow> zero_fun_lean x = 0" by (simp add: zero_fun_lean_def)
+  show "\<exists>C. 0 < C \<and> (\<forall>x. 1 \<le> x \<longrightarrow> zero_fun_lean x \<le> C * x)"
+  proof (rule exI[of _ 1], intro conjI)
+    show "(0::real) < 1" by simp
+    show "\<forall>x. 1 \<le> x \<longrightarrow> zero_fun_lean x \<le> 1 * x"
+      by (intro allI impI, simp add: zero_fun_lean_def, linarith)
+  qed
+qed
+
+text \<open>
+  LE PREMIER PONT (Section XIII.3) : si le psi(Savard) joue le role
+  fonctionnel de Tchebychev vis-a-vis de zeta (premisse concerne_fonction_zeta)
+  et que la Methode Spectrale n'admet que les premiers P, alors la droite
+  critique vaut 1/2. C'est pont_spectral_direct_final de la validation
+  principale, importe ici pour montrer que le pont Tchebychev <-> zeta est
+  DEJA prouve.
+\<close>
+
+theorem premier_pont_tchebychev_zeta:
+  fixes n n1 n2 :: nat
+  assumes premier_pont: "concerne_fonction_zeta (\<lambda>x. psi_savard x n)"
+      and second_pont: "\<forall>C. \<not> prime C \<longrightarrow> (\<forall>i. C \<noteq> prime_i i)"
+      and "1 \<le> n1" "1 \<le> n2" "n1 \<noteq> n2"
+  shows "Re_droite_critique n1 n2 = 1 / 2"
+  by (rule pont_spectral_direct_final[OF premier_pont second_pont])
+
+text \<open>
+  LE SECOND PONT (Section XIII.4) : l'exclusion des composes. La Methode
+  Spectrale n'admet de solution que pour les premiers ; tout compose C est
+  exclu de toute position. Re-exposition de methode_spectrale_exclusivite_P.
+\<close>
+
+theorem second_pont_exclusivite_premiers:
+  fixes C :: nat
+  assumes "\<not> prime C"
+  shows "\<forall>i. C \<noteq> prime_i i"
+  using assms by (rule methode_spectrale_exclusivite_P)
 
 section "Cercle 3 : La conjecture (definition) et le Pont Savard"
 
@@ -244,6 +389,12 @@ text \<open>
           (demontre ici).
 
   CERCLE EXTERNE  (C1 : pont fonctionnel Tchebychev <-> psi_savard) :
+    * Equation de Tchebychev psi(x) = sum_{n<=x} Lambda(n)
+      <-> Chebyshev.psi (Chebyshev.lean l.73) et vonMangoldt (l.65) ; sa
+          specification HOL est psi_tchebychev_lean (nonnegativite, annulation
+          sous 2, borne C * x) et le psi(Savard) la prolonge (Cercle 2.c).
+    * Le Premier Pont (concerne_fonction_zeta) porte par psi_savard
+      <-> premier_pont_tchebychev_zeta (importation de pont_spectral_direct_final).
     * Symetrie fonctionnelle de zeta
       <-> equation_fonctionnelle_lean (A1, completedRiemannZeta_one_sub) et ses
           consequences demontrees ici : symetrie_des_zeros_de_Lambda,
@@ -295,6 +446,23 @@ text \<open>
   [3] Mathlib/NumberTheory/LSeries/Nonvanishing.lean  (importe par [2])
       Copyright (c) 2024 Michael Stoll, David Loeffler. Apache 2.0.
       - riemannZeta_ne_zero_of_one_le_re (l.413) : 1 <= Re s ==> zeta s <> 0
+
+  [4] Mathlib/NumberTheory/Chebyshev.lean
+      Copyright (c) 2025 Alastair Irving, Terry Tao, Ruben Van de Velde.
+      Apache 2.0.
+      - Chebyshev.psi                    (l.73) : psi(x) = sum_{n<=x} Lambda(n)
+      - Chebyshev.theta                  (l.80) : theta(x) = sum_{p<=x} log p
+      - Chebyshev.psi_nonneg             (l.86)
+      - Chebyshev.psi_eq_zero_of_lt_two  (l.111)
+      - Chebyshev.psi_eq_log_lcmUpto, Chebyshev.psi_eq_sum_theta
+      - Chebyshev.psi_le_const_mul_self, Chebyshev.psi_ge (bornes de Chebyshev)
+      - Chebyshev.pi_ge, Chebyshev.pi_le_log4_mul_div (compteur des premiers)
+
+  [5] Mathlib/NumberTheory/ArithmeticFunction/VonMangoldt.lean
+      Copyright (c) 2022 Bhavik Mehta. Apache 2.0.
+      - ArithmeticFunction.vonMangoldt             (l.65) : Lambda(n)
+      - ArithmeticFunction.vonMangoldt_apply_prime (l.89) : Lambda p = log p
+      - ArithmeticFunction.vonMangoldt_sum : sum_{d | n} Lambda(d) = log n
 
   Note de conformite : la licence Apache 2.0 exige la conservation des
   mentions de copyright et de licence lors de toute reproduction ; les

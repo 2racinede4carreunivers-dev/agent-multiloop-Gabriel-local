@@ -2,101 +2,304 @@ theory validation_zeta_lean
   imports methode_spectral
 begin
 
-(****************************************************************************
- * FICHIER DE VALIDATION INTER-ASSISTANTS : LEAN 4 (Mathlib) <-> ISABELLE/HOL
- *
- * Ce fichier établit les points communs entre la formalisation analytique de
- * Lean 4 (Mathlib.NumberTheory.LSeries.RiemannZeta) et la Méthode Spectrale.
- * Il ré-importe la Section XIII (Le Pont Savard) de methode_spectral.thy pour
- * contre-valider positivement l'alignement RsP = Re(rho) = 1/2.
- ****************************************************************************)
+(*  ==========================================================================
+    CONTRE-VALIDATION No 2 (INTER-ASSISTANTS) : LEAN 4 / MATHLIB <-> ISABELLE/HOL
+    ==========================================================================
+    Pipeline HOL/Isabelle du depot agent-multiloop-Gabriel-local :
+      * Validation principale  : methode_spectral.thy
+        (objectif : Section XIII, Le Pont Savard, equation RsP = Re(s) = 1/2).
+      * Contre-validation No 1 : validation_hol_unifiee.thy
+        (completude et liens causaux internes de la validation principale,
+        organises en cercles concentriques autour de l'equation du Pont Savard).
+      * Contre-validation No 2 : le present fichier. Meme objectif que la No 1,
+        mais chaque point de la Section XIII est mis en relation avec sa
+        contrepartie PROUVEE dans le depot public Mathlib (Lean 4) : fonction
+        zeta, version completee Lambda, equation fonctionnelle, zeros.
 
-section "1. Spécification des points communs (Lean 4 Mathlib)"
+    Discipline logique (v2.0, restructuration complete) :
+      * AUCUN axiome n'enonce l'hypothese de Riemann. La version precedente
+        axiomatisait "tout zero de la bande critique a Re = 1/2", ce qui
+        rendait l'alignement circulaire ; cette circularite est supprimee.
+      * Les seuls axiomes SPECIFIENT des theoremes deja demontres dans Mathlib
+        (noms, enonces, numeros de ligne et auteurs cites en fin de fichier).
+      * L'hypothese de Riemann est une DEFINITION booleenne (cercle 3) ; le pont
+        vers RsP = 1/2 est un theoreme CONDITIONNEL, et la direction
+        constructive RsP = 1/2 est INCONDITIONNELLE (Section XIII).
+    ==========================================================================  *)
+
+section "Cercle 1 : Objets specifies depuis Mathlib (zeta, Lambda, zeros)"
 
 text \<open>
-  Points communs identifiés entre la théorie Lean 4 Mathlib et la Méthode Spectrale :
-    (1) L'existence de la fonction Zeta non complétée et de la version complétée (Lambda).
-    (2) L'équation fonctionnelle de symétrie (completedRiemannZeta_one_sub en Lean).
-    (3) Le domaine critique 0 < Re(s) < 1 et son axe central Re(s) = 1/2.
+  Contreparties Lean 4 / Mathlib des objets de la Section XIII de la
+  validation principale (verifiees sur le clone local de mathlib4) :
+
+    riemannZeta          : la fonction zeta de Riemann, zeta : C -> C
+                           (Mathlib.NumberTheory.LSeries.RiemannZeta).
+    completedRiemannZeta : la version completee,
+                           Lambda(s) = pi^(-s/2) Gamma(s/2) zeta(s)
+                           (meme fichier).
+    riemannZetaZeros     : l'ensemble des zeros, image reciproque de {0}
+                           par zeta (Mathlib.NumberTheory.LSeries.ZetaZeros).
+
+  Les deux constantes ci-dessous sont non interpretees : elles REPRESENTENT
+  les fonctions Lean dans la logique HOL, aux fins de comparaison formelle.
 \<close>
 
-consts
-  riemannZeta_lean :: "complex \<Rightarrow> complex"
+axiomatization
+  riemannZeta_lean          :: "complex \<Rightarrow> complex" and
   completedRiemannZeta_lean :: "complex \<Rightarrow> complex"
+  (* specifications HOL des fonctions Mathlib riemannZeta et completedRiemannZeta *)
+
+definition zeros_zeta_lean :: "complex set" where
+  "zeros_zeta_lean = {s. riemannZeta_lean s = 0}"
+  (* pendant de Mathlib.riemannZetaZeros *)
+
+definition zeros_lambda_lean :: "complex set" where
+  "zeros_lambda_lean = {s. completedRiemannZeta_lean s = 0}"
+
+definition bande_critique_lean :: "complex \<Rightarrow> bool" where
+  "bande_critique_lean s = (0 < Re s \<and> Re s < 1)"
+
+definition axe_critique_lean :: "complex \<Rightarrow> bool" where
+  "axe_critique_lean s = (Re s = 1 / 2)"
+
+lemma mem_zeros_zeta_lean:
+  "s \<in> zeros_zeta_lean \<longleftrightarrow> riemannZeta_lean s = 0"
+  unfolding zeros_zeta_lean_def by simp
+
+lemma mem_zeros_lambda_lean:
+  "s \<in> zeros_lambda_lean \<longleftrightarrow> completedRiemannZeta_lean s = 0"
+  unfolding zeros_lambda_lean_def by simp
+
+section "Cercle 2 : Faits etablis dans Mathlib (theoremes prouves, specifies ici)"
+
+text \<open>
+  Les deux axiomes ci-dessous SPECIFIENT des theoremes demontres dans Mathlib
+  (Lean 4) ; ils n'apportent aucun contenu conjectural :
+
+    A1  Equation fonctionnelle de la fonction completee :
+          completedRiemannZeta_one_sub : Lambda(1 - s) = Lambda(s)
+          (Mathlib.NumberTheory.LSeries.RiemannZeta, theoreme, ligne 106).
+
+    A2  Non-annulation au bord droit de la bande critique :
+          riemannZeta_ne_zero_of_one_le_re : 1 <= Re s ==> zeta s <> 0
+          (Mathlib.NumberTheory.LSeries.Nonvanishing, lemme, ligne 413).
+\<close>
 
 axiomatization where
-  (* Équation fonctionnelle Lean 4 : completedRiemannZeta (1 - s) = completedRiemannZeta s *)
-  completedRiemannZeta_one_sub_lean:
+  equation_fonctionnelle_lean:
     "\<And>s. completedRiemannZeta_lean (1 - s) = completedRiemannZeta_lean s" and
-  
-  (* Zéros dans la bande critique selon Lean 4 *)
-  is_critical_zero_lean:
-    "\<And>s. riemannZeta_lean s = 0 \<Longrightarrow> Re s > 0 \<Longrightarrow> Re s < 1 \<Longrightarrow> Re s = 1/2"
+  non_annulation_bande_lean:
+    "\<And>s. 1 \<le> Re s \<Longrightarrow> riemannZeta_lean s \<noteq> 0"
 
-section "2. Pont d'alignement et contre-validation du Pont Savard"
+subsection "Cercle 2.b : Consequences demontrees ici (theoremes HOL, non axiomes)"
 
 text \<open>
-  Le locale 'lean_savard_bridge' relie la formalisation analytique de Lean 4
-  aux concepts de la Section XIII (ensemble_savard, RsP_un_demi_general).
+  Les resultats de cette sous-section sont DEMONTRES dans Isabelle/HOL a
+  partir des seules specifications A1-A2 : ils ne presument rien de la
+  position des zeros. En particulier, l'axe Re = 1/2 apparait deja comme
+  axe de symetrie structurel des zeros de la fonction completee.
 \<close>
 
-locale lean_savard_bridge =
-  fixes s :: complex
-    and n1 n2 :: nat
-  assumes zero_critique : "riemannZeta_lean s = 0 \<and> Re s > 0 \<and> Re s < 1"
-      and indices_valides: "n1 \<ge> 1" "n2 \<ge> 1" "n1 \<noteq> n2"
+lemma zero_zeta_sous_le_bord_superieur:
+  (* Tout zero de zeta est strictement sous le bord Re = 1 (via A2). *)
+  assumes "riemannZeta_lean s = 0"
+  shows "Re s < 1"
+proof (rule ccontr)
+  assume "\<not> Re s < 1"
+  hence "1 \<le> Re s" by simp
+  hence "riemannZeta_lean s \<noteq> 0" by (rule non_annulation_bande_lean)
+  thus False using assms by simp
+qed
+
+lemma symetrie_des_zeros_de_Lambda:
+  (* Symetrie fonctionnelle des zeros de Lambda (via A1). *)
+  assumes "completedRiemannZeta_lean s = 0"
+  shows "completedRiemannZeta_lean (1 - s) = 0"
+proof -
+  have "completedRiemannZeta_lean (1 - s) = completedRiemannZeta_lean s"
+    by (rule equation_fonctionnelle_lean)
+  thus ?thesis using assms by simp
+qed
+
+lemma zeros_lambda_involution_critique:
+  (* L'involution s |-> 1 - s preserve les zeros de Lambda (deux sens). *)
+  "s \<in> zeros_lambda_lean \<longleftrightarrow> (1 - s) \<in> zeros_lambda_lean"
+proof
+  assume "s \<in> zeros_lambda_lean"
+  hence "completedRiemannZeta_lean s = 0" by (simp add: mem_zeros_lambda_lean)
+  hence "completedRiemannZeta_lean (1 - s) = 0" by (rule symetrie_des_zeros_de_Lambda)
+  thus "(1 - s) \<in> zeros_lambda_lean" by (simp add: mem_zeros_lambda_lean)
+next
+  assume "(1 - s) \<in> zeros_lambda_lean"
+  hence h: "completedRiemannZeta_lean (1 - s) = 0" by (simp add: mem_zeros_lambda_lean)
+  have "completedRiemannZeta_lean s = completedRiemannZeta_lean (1 - s)"
+    using equation_fonctionnelle_lean[of s] by simp
+  hence "completedRiemannZeta_lean s = 0" using h by simp
+  thus "s \<in> zeros_lambda_lean" by (simp add: mem_zeros_lambda_lean)
+qed
+
+
+section "Cercle 3 : La conjecture (definition) et le Pont Savard"
+
+text \<open>
+  L'hypothese de Riemann est enoncee comme une DEFINITION booleenne (la
+  forme Lean de la conjecture). Elle n'est JAMAIS axiomatisee : les theoremes
+  d'alignement qui suivent sont strictement CONDITIONNELS, et la direction
+  constructive (RsP = 1/2) reste INCONDITIONNELLE via la Section XIII de la
+  validation principale.
+\<close>
+
+definition hypothese_Riemann_lean :: bool where
+  "hypothese_Riemann_lean =
+     (\<forall>s. riemannZeta_lean s = 0 \<and> bande_critique_lean s \<longrightarrow> axe_critique_lean s)"
+
+locale pont_savard_lean =
+  fixes s :: complex  (* un zero critique cote Lean *)
+    and n1 n2 :: nat  (* deux positions entieres strictement positives *)
+  assumes zero_critique: "riemannZeta_lean s = 0"
+      and en_bande_critique: "bande_critique_lean s"
+      and positions: "1 \<le> n1" "1 \<le> n2" "n1 \<noteq> n2"
 begin
 
 text \<open>
-  1. Points communs démontrés :
-     La partie réelle du zéro de Zeta Lean coïncide exactement avec la partie réelle
-     définie dans la Section XIII (Re_droite_critique).
+  Dans le contexte d'un zero critique, SANS l'hypothese de Riemann, on
+  dispose deja de deux faits inconditionnels : le bord superieur de la bande
+  (cote Lean, via A2) et la valeur constructive du rapport spectral (cote
+  Methode Spectrale, via la Section XIII).
 \<close>
 
-lemma alignement_points_communs:
-  shows "Re s = Re_droite_critique n1 n2"
-proof -
-  have h_lean : "Re s = 1/2"
-    using zero_critique is_critical_zero_lean by blast
-  have h_savard: "Re_droite_critique n1 n2 = 1/2"
-    using synthese_pont_savard[OF indices_valides] by simp
-  thus ?thesis
-    using h_lean h_savard by simp
-qed
+lemma zero_sous_le_bord: "Re s < 1"
+  using zero_critique by (rule zero_zeta_sous_le_bord_superieur)
 
-text \<open>
-  2. Contre-validation positive :
-     L'invariant spectral RsP(n1, n2) de la Méthode Spectrale confirme et supporte
-     l'alignement Re(rho) = 1/2 issu de la spécification Lean.
-\<close>
+lemma rsp_constructif_inconditionnel: "RsP n1 n2 = 1 / 2"
+  using positions by (rule RsP_universel_entier_naturel)
 
-theorem contre_validation_positive_savard:
-  shows "RsP n1 n2 = Re s \<and> RsP n1 n2 = 1/2"
+theorem alignement_sous_HR:
+  (* Sous HR : le zero critique s'aligne exactement sur le rapport spectral. *)
+  assumes hRH: "hypothese_Riemann_lean"
+  shows "Re s = RsP n1 n2"
 proof -
-  have "RsP n1 n2 = 1/2"
-    using RsP_universel_entier_naturel[OF indices_valides] by assumption
-  moreover have "Re s = 1/2"
-    using zero_critique is_critical_zero_lean by blast
+  from hRH zero_critique en_bande_critique have "Re s = 1 / 2"
+    unfolding hypothese_Riemann_lean_def axe_critique_lean_def by blast
+  moreover note rsp_constructif_inconditionnel
   ultimately show ?thesis by simp
 qed
 
 end
 
-section "3. Théorème d'Universalité et Satisfaisabilité Globale"
+theorem equivalence_HR_alignement_savard:
+  (* Coeur de la contre-validation : la conjecture est TRANSPORTEE d'un
+     langage a l'autre, sans jamais etre supposee. *)
+  "hypothese_Riemann_lean \<longleftrightarrow>
+   (\<forall>s. riemannZeta_lean s = 0 \<and> bande_critique_lean s \<longrightarrow> Re s = RsP 1 2)"
+proof -
+  have h12: "RsP (1::nat) (2::nat) = 1 / 2"
+    using RsP_universel_entier_naturel[of 1 2] by simp
+  show ?thesis
+    unfolding hypothese_Riemann_lean_def axe_critique_lean_def
+    by (auto simp: h12)
+qed
 
-text \<open>
-  Preuve que le système de contre-validation est satisfaisable et constructif,
-  s'appuyant directement sur le théorème 'ensemble_savard_satisfaisable' de la Section XIII.
-\<close>
+subsection "Cercle 3.b : Direction constructive inconditionnelle (Section XIII)"
 
-theorem satisfaisabilite_inter_assistants:
-  shows "ensemble_savard 0 (1 / 2) 0 (RsP 1 2)"
+theorem direction_constructive_inconditionnelle:
+  fixes n1 n2 :: nat
+  assumes hn: "1 \<le> n1" "1 \<le> n2" "n1 \<noteq> n2"
+  shows "Re_droite_critique n1 n2 = RsP n1 n2 \<and> RsP n1 n2 = 1 / 2"
+  using synthese_pont_savard[OF hn] by assumption
+
+theorem temoin_satisfaisabilite_inter_assistants:
+  "ensemble_savard 0 (1 / 2) 0 (RsP 1 2)"
   by (rule ensemble_savard_satisfaisable)
 
-theorem conclusion_pont_savard_valide:
-  fixes n1 n2 :: nat
-  assumes "n1 \<ge> 1" "n2 \<ge> 1" "n1 \<noteq> n2"
-  shows "Re_droite_critique n1 n2 = RsP n1 n2 \<and> RsP n1 n2 = 1 / 2"
-  using synthese_pont_savard[OF assms] by assumption
+text \<open>
+  Ces deux theoremes sont INCONDITIONNELS : ils reposent uniquement sur la
+  validation principale. Le rapport spectral vaut 1/2 par calcul constructif
+  (RsP_universel_entier_naturel, via RsP_un_demi_general), et le locale
+  ensemble_savard admet le temoin concret (0, 1/2, 0, RsP 1 2) par le
+  theoreme ensemble_savard_satisfaisable.
+\<close>
+
+section "Synthese : correspondance des points (Section XIII <-> Mathlib)"
+
+text \<open>
+  Mise en relation des points de la Section XIII (validation principale,
+  equation du Pont Savard, trois concordances C1-C2-C3) avec les enonces
+  Mathlib correspondants :
+
+  CERCLE CENTRAL  (C3 : 1/y2 = 1/ms3, l'alignement) :
+    * Re(rho) = 1/2 (Section XIII : hypothese_critique, Re_droite_critique)
+      <-> axe_critique_lean (Re s = 1/2), bande_critique_lean (0 < Re s < 1).
+    * RsP = 1/2 (RsP_universel_entier_naturel, inconditionnel)
+      <-> alignement_sous_HR (conditionnel) + equivalence_HR_alignement_savard.
+
+  CERCLE MEDIAN  (C2 : positions des premiers, domaine) :
+    * Fonction zeta et nombres premiers, formule explicite (fait F1, Sec. XIII)
+      <-> zeta_eq_tsum_one_div_nat_cpow (serie de Dirichlet pour Re s > 1,
+          RiemannZeta.lean l.207) et riemannZeta_residue_one (residu 1 au
+          pole s = 1, l.242).
+    * Domaine verrouille : aucun zero a droite de la bande
+      <-> non_annulation_bande_lean (A2) + zero_zeta_sous_le_bord_superieur
+          (demontre ici).
+
+  CERCLE EXTERNE  (C1 : pont fonctionnel Tchebychev <-> psi_savard) :
+    * Symetrie fonctionnelle de zeta
+      <-> equation_fonctionnelle_lean (A1, completedRiemannZeta_one_sub) et ses
+          consequences demontrees ici : symetrie_des_zeros_de_Lambda,
+          zeros_lambda_involution_critique.
+    * Structure fine de l'ensemble des zeros
+      <-> riemannZetaZeros ferme et discret, fini sur tout compact
+          (ZetaZeros.lean : isClosed_riemannZetaZeros l.60,
+          isDiscrete_riemannZetaZeros l.63,
+          IsCompact.inter_riemannZetaZeros_finite l.67).
+
+  Conclusion : les trois cercles de la contre-validation No 2 se referment
+  sur la Section XIII exactement comme ceux de la contre-validation No 1
+  (validation_hol_unifiee.thy), avec en plus l'ancrage externe Mathlib.
+\<close>
+
+section "References externes (Mathlib, Lean 4) et licence Apache 2.0"
+
+text \<open>
+  Ce fichier SPECIFIE des enonces de la bibliotheque Mathlib pour Lean 4, a
+  des fins de contre-validation inter-assistants. Aucun code Lean n'est
+  reproduit : seuls les NOMS et les ENONCES mathematiques sont cites a titre
+  de reference croisee, avec attribution des auteurs et de la licence.
+
+  Depot   : https://github.com/leanprover-community/mathlib4
+  Licence : Apache License, Version 2.0 (voir le fichier LICENSE du depot).
+  Copyright (c) les contributeurs de Mathlib (The Mathlib Contributors).
+
+  Fichiers et declarations references (verifies sur le clone local
+  C:/Users/thomasphiliippesavar/OneDrive/Mathlib) :
+
+  [1] Mathlib/NumberTheory/LSeries/RiemannZeta.lean
+      Copyright (c) 2023 David Loeffler. Apache 2.0.
+      - riemannZeta : C -> C                         (fonction zeta)
+      - completedRiemannZeta, completedRiemannZeta0  (versions completees)
+      - completedRiemannZeta_one_sub   (l.106) : Lambda(1 - s) = Lambda(s)
+      - riemannZeta_one_sub            (l.178) : equation fonctionnelle de zeta
+      - zeta_eq_tsum_one_div_nat_cpow  (l.207) : serie de Dirichlet, Re s > 1
+      - riemannZeta_residue_one        (l.242) : residu 1 au pole s = 1
+      - differentiableAt_riemannZeta / differentiableAt_completedZeta
+
+  [2] Mathlib/NumberTheory/LSeries/ZetaZeros.lean
+      Copyright (c) 2026 Huanyu Zheng. Apache 2.0.
+      - riemannZetaZeros                        (l.36) : zeta inverse de {0}
+      - mem_riemannZetaZeros                    (l.38) : appartenance
+      - isClosed_riemannZetaZeros               (l.60) : ensemble ferme
+      - isDiscrete_riemannZetaZeros             (l.63) : ensemble discret
+      - IsCompact.inter_riemannZetaZeros_finite (l.67) : fini sur tout compact
+
+  [3] Mathlib/NumberTheory/LSeries/Nonvanishing.lean  (importe par [2])
+      Copyright (c) 2024 Michael Stoll, David Loeffler. Apache 2.0.
+      - riemannZeta_ne_zero_of_one_le_re (l.413) : 1 <= Re s ==> zeta s <> 0
+
+  Note de conformite : la licence Apache 2.0 exige la conservation des
+  mentions de copyright et de licence lors de toute reproduction ; les
+  elements ci-dessus etant des citations nominales (aucune ligne de code
+  reprise), la presente attribution y satisfait.
+\<close>
 
 end

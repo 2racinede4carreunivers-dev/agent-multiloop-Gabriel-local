@@ -764,4 +764,24 @@ Date   : 06 septembre 2026
 Lieu   : Lévis, Chaudière-Appalaches, Canada
 "
 
+
+section "References externes (Mathlib, Lean 4) et licence"
+
+text "
+  Le present fichier est la contre-validation No 1 (interne) de la validation
+  principale (methode_spectral.thy, Section XIII - Le Pont Savard). La
+  contre-validation No 2 (validation_zeta_lean.thy) cite des enonces de la
+  bibliotheque Mathlib pour Lean 4, mis en relation avec les memes points :
+
+    Mathlib.NumberTheory.LSeries.RiemannZeta  (Copyright (c) 2023 David Loeffler)
+    Mathlib.NumberTheory.LSeries.ZetaZeros    (Copyright (c) 2026 Huanyu Zheng)
+    Mathlib.NumberTheory.LSeries.Nonvanishing (Copyright (c) 2024 Michael Stoll,
+                                               David Loeffler)
+
+  Depot : https://github.com/leanprover-community/mathlib4 -- Apache License 2.0.
+  Aucun code Lean n'est reproduit ; seuls les noms et enonces sont cites a
+  titre de reference croisee. Attribution complete en fin de
+  validation_zeta_lean.thy.
+"
+
 end

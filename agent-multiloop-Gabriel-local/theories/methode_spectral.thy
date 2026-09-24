@@ -5070,6 +5070,25 @@ text \<open>
 
 
 
+section "References externes - Mathlib (Lean 4)"
+
+text \<open>
+  La contre-validation inter-assistants validation_zeta_lean.thy met en
+  relation les points de la presente validation principale (Section XIII,
+  Le Pont Savard) avec des enonces de la bibliotheque Mathlib pour Lean 4 :
+
+    Mathlib.NumberTheory.LSeries.RiemannZeta  (Copyright (c) 2023 David Loeffler)
+    Mathlib.NumberTheory.LSeries.ZetaZeros    (Copyright (c) 2026 Huanyu Zheng)
+    Mathlib.NumberTheory.LSeries.Nonvanishing (Copyright (c) 2024 Michael Stoll,
+                                               David Loeffler)
+
+  Depot : https://github.com/leanprover-community/mathlib4
+  Licence : Apache License, Version 2.0. Les enonces sont cites par nom
+  uniquement ; aucun code Lean n'est reproduit. Detail complet et
+  conformite de licence : section References externes de
+  validation_zeta_lean.thy.
+\<close>
+
 section "License - Apache 2.0 (adaptation pour methode_spectral.thy)"
 
 text \<open>

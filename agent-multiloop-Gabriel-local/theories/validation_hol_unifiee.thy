@@ -38,9 +38,9 @@ begin
    SECTION 1 : DÉFINITIONS DE VALIDATION
    ============================================================================ *)
 
-section ‹Définitions de Validation Unifiée›
+section "Définitions de Validation Unifiée"
 
-subsection ‹Redéfinition des Fonctions Spectrales pour Validation›
+subsection "Redéfinition des Fonctions Spectrales pour Validation"
 
 (* Validation indépendante de A(n) *)
 definition A_validation :: "nat \<Rightarrow> real" where
@@ -62,7 +62,7 @@ definition Sr2_validation :: "real" where
 definition rsr_validation :: "real" where
   "rsr_validation = 1 / 2"
 
-subsection ‹Formules de Reconstruction Première›
+subsection "Formules de Reconstruction Première"
 
 (* Reconstruction du n-ième nombre premier selon méthode spectrale *)
 definition prime_nth_reconstruction :: "nat \<Rightarrow> real" where
@@ -74,7 +74,7 @@ definition spectral_equation :: "nat \<Rightarrow> nat \<Rightarrow> real" where
   "spectral_equation n p =
      B_validation n - 64 * (real p)"
 
-subsection ‹Rapports Spectraux Asymétriques (RSA)›
+subsection "Rapports Spectraux Asymétriques (RSA)"
 
 (* Somme alternée d'un bloc de nombres *)
 definition alternating_block_sum :: "nat list \<Rightarrow> nat \<Rightarrow> real" where
@@ -100,9 +100,9 @@ definition rsa_converges_to_half :: "nat list \<Rightarrow> nat list \<Rightarro
    SECTION 2 : ANALYSE ZÉROS RIEMANN
    ============================================================================ *)
 
-section ‹Analyse des Zéros Riemann - Perspective Spectrale›
+section "Analyse des Zéros Riemann - Perspective Spectrale"
 
-subsection ‹Eigenvalues et Ligne Critique›
+subsection "Eigenvalues et Ligne Critique"
 
 (* Zéro de Riemann sur la ligne critique Re = 1/2 *)
 definition riemann_zero_critical :: "complex \<Rightarrow> bool" where
@@ -125,9 +125,9 @@ definition riemann_zeros_as_eigenvalues :: "bool" where
    SECTION 3 : CORRESPONDANCES ET COHÉRENCES
    ============================================================================ *)
 
-section ‹Correspondances avec methode_spectral.thy›
+section "Correspondances avec methode_spectral.thy"
 
-subsection ‹Vérification Cohérence A(n) et B(n)›
+subsection "Vérification Cohérence A(n) et B(n)"
 
 lemma A_validation_coherence:
   "\<forall> n. A_validation n = (13/8) * (2^n) - 2"
@@ -145,7 +145,7 @@ lemma rsr_validation_coherence:
   "rsr_validation = 1/2"
   by (unfold rsr_validation_def; norm_num)
 
-subsection ‹Vérification Croissance Exponentielle›
+subsection "Vérification Croissance Exponentielle"
 
 lemma A_validation_strict_growth:
   "\<forall> n m. n < m \<longrightarrow> A_validation n < A_validation m"
@@ -195,7 +195,7 @@ qed
    SECTION 4 : FORMULE CORRECTE DE DIGAMMA
    ============================================================================ *)
 
-section ‹Formule Digamma: D_c = SB(n) - 64*P›
+section "Formule Digamma: D_c = SB(n) - 64*P"
 
 lemma digamma_formula_correct:
   "\<forall> n p. digamma_validation n p = B_validation n - 64 * (real p)"
@@ -213,9 +213,9 @@ lemma digamma_at_position:
    SECTION 5 : THÉORÈMES CENTRAUX DE VALIDATION
    ============================================================================ *)
 
-section ‹Théorèmes Centraux›
+section "Théorèmes Centraux"
 
-subsection ‹Reconstruction Première Valide›
+subsection "Reconstruction Première Valide"
 
 (* -----------------------------------------------------------------------
    THÉORÈME: prime_nth_reconstruction produit des entiers strictement positifs
@@ -240,14 +240,14 @@ proof -
     using h eq by (intro exI[of _ n]; simp)
 qed
 
-subsection ‹Zéros Riemann et Eigenvalues›
+subsection "Zéros Riemann et Eigenvalues"
 
 theorem riemann_zeros_eigenvalues_correspondence:
   shows "riemann_zeros_as_eigenvalues \<longrightarrow>
          (\<forall> \<nu>. riemann_zero_critical (Complex (1/2) \<nu>))"
   by (unfold riemann_zeros_as_eigenvalues_def; simp)
 
-subsection ‹Normalisation par Sr2›
+subsection "Normalisation par Sr2"
 
 theorem Sr2_normalization_property:
   shows "\<forall> x > 0. Sr2_validation * x = (3/2) * x"
@@ -257,7 +257,7 @@ theorem Sr2_normalization_property:
    SECTION 6 : LEMMES DE SUPPORT
    ============================================================================ *)
 
-section ‹Lemmes de Support›
+section "Lemmes de Support"
 
 lemma RSA_ratio_well_defined:
   assumes "length blockB > 0"
@@ -278,7 +278,7 @@ lemma RSA_convergence_implies_distance_decreasing:
    SECTION 7 : VÉRIFICATIONS DE COHÉRENCE
    ============================================================================ *)
 
-section ‹Vérifications de Cohérence›
+section "Vérifications de Cohérence"
 
 lemma consistency_A_B_definitions:
   "\<forall> n. 2 * A_validation n = B_validation n + 62"
@@ -320,7 +320,7 @@ lemma global_consistency:
      k=27 → P=14330707 rang=930152 (S_A−(2k^8−k^6), règle spéciale)
    ============================================================================ *)
 
-section ‹Catalogue d'Ancrages v7.5›
+section "Catalogue d'Ancrages v7.5"
 
 (* Type : ancrage certifié = (k, premier_ancrage, rang_ancrage, branche) *)
 
@@ -348,9 +348,9 @@ lemma ancrage_k18:  "ancrage_valide 18 1883429   140885  ''A8+''"  by (unfold an
    Un composé ne peut occuper aucune position de premier spectral.
    ============================================================================ *)
 
-section ‹Exclusion Formelle des Composés C›
+section "Exclusion Formelle des Composés C"
 
-subsection ‹Définitions — Candidat C et Verdicts›
+subsection "Définitions — Candidat C et Verdicts"
 
 (* Un candidat C est le résultat algébrique de la reconstruction *)
 (* C = (S_B - Digamma) / Zêta — l'identité ne prouve pas prime(C) *)
@@ -375,7 +375,7 @@ lemma identite_algebrique_ne_prouve_pas_primalite:
      True"
   by simp
 
-subsection ‹Règle d'Exclusion HOL — Composés›
+subsection "Règle d'Exclusion HOL — Composés"
 
 (* -----------------------------------------------------------------------
    THÉORÈME FONDAMENTAL D'EXCLUSION
@@ -418,7 +418,7 @@ theorem verdict_exclu_implique_exclusion:
   using composite_exclusion_HOL assms
   unfolding verdict_exclu_HOL_def by blast
 
-subsection ‹Exclusion par Branche — Quatre Digamma›
+subsection "Exclusion par Branche — Quatre Digamma"
 
 (* Les quatre branches Digamma à n=10 *)
 datatype branche_digamma = A7plus | A7moins | A8plus | A8moins
@@ -449,9 +449,9 @@ lemma toutes_branches_composées_implique_bloqué:
    Si x ∉ ℕ → D_C ne correspond à aucune position entière → exclusion.
    ============================================================================ *)
 
-section ‹Contrôle de Domaine par Inversion S_A›
+section "Contrôle de Domaine par Inversion S_A"
 
-subsection ‹Définitions — Inversion de la Suite A›
+subsection "Définitions — Inversion de la Suite A"
 
 (* Valeur x réelle telle que S_A(k,x) = v *)
 (* Pour k=2 : S_A(x) = (13/8)·2^x − 2 ⟹ x = log₂((8/13)(v+2)) *)
@@ -481,7 +481,7 @@ proof -
     using C_val by auto
 qed
 
-subsection ‹Forme Générale du Contrôle de Domaine›
+subsection "Forme Générale du Contrôle de Domaine"
 
 (* -----------------------------------------------------------------------
    LEMME : Si x_reel ∉ ℕ, alors D_C n'a pas de position entière dans S_A.
@@ -510,9 +510,9 @@ theorem interdiction_C_non_decide_est_P:
    5 étapes : CONSTRUIRE → IDENTIFIER → CERTIFIER → HOL → RÉPONDRE
    ============================================================================ *)
 
-section ‹Chaîne de Validation CONSTRUIRE → RÉPONDRE›
+section "Chaîne de Validation CONSTRUIRE → RÉPONDRE"
 
-subsection ‹Types de Statut›
+subsection "Types de Statut"
 
 (* Statuts possibles pour un candidat C *)
 datatype statut_C =
@@ -557,7 +557,7 @@ proof -
     by (unfold valider_candidat_def; split if_splits; simp_all)
 qed
 
-subsection ‹Résumé HOL pour le Contrat Gabriel›
+subsection "Résumé HOL pour le Contrat Gabriel"
 
 (* -----------------------------------------------------------------------
    LOCALE : Contrat de réponse Gabriel Multiloop
@@ -615,7 +615,7 @@ end
    Trois autres branches retournent EXCLU_HOL.
    ============================================================================ *)
 
-section ‹Exemple Positif — Ancrage Certifié 1/13›
+section "Exemple Positif — Ancrage Certifié 1/13"
 
 (* Les quatre branches de 1/13 à n=10 *)
 definition branches_k13 :: "(nat \<times> bool) list" where
@@ -661,7 +661,7 @@ qed
    Toutes les branches retournent des composés à n=10 — état BLOQUÉ à n=17.
    ============================================================================ *)
 
-section ‹Exemple Négatif — Blocage 1/81›
+section "Exemple Négatif — Blocage 1/81"
 
 definition branches_k81 :: "(nat \<times> bool) list" where
   "branches_k81 = [
@@ -695,7 +695,7 @@ corollary k81_aucun_ancrage:
    SECTION 14 : VÉRIFICATIONS DE COHÉRENCE GLOBALE
    ============================================================================ *)
 
-section ‹Vérifications de Cohérence Globale›
+section "Vérifications de Cohérence Globale"
 
 lemma consistency_A_B_validated:
   "\<forall> n. 2 * A_validation n = B_validation n + 62"
@@ -718,9 +718,9 @@ lemma global_consistency_v75:
    SECTION 15 : RÉSUMÉ ET CONCLUSIONS v7.5
    ============================================================================ *)
 
-section ‹Résumé et Conclusions v7.5›
+section "Résumé et Conclusions v7.5"
 
-text ‹
+text "
 ╭────────────────────────────────────────────────────────────────────────╮
 │           VALIDATION HOL UNIFIÉE v7.5 — CONCLUSIONS                   │
 ╰────────────────────────────────────────────────────────────────────────╯
@@ -762,6 +762,6 @@ STATUT :
 Auteur : Philippe Thomas Savard
 Date   : 06 septembre 2026
 Lieu   : Lévis, Chaudière-Appalaches, Canada
-›
+"
 
 end

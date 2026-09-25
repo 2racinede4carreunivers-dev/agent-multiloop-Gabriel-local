@@ -168,7 +168,8 @@ text \<open>
   theoremes.
 
   psi(Savard) : la somme sur les premiers est remplacee par la somme des
-  puissances 2^n / SB(n) de la Suite B (SB(n) = 3.25 * 2^n - 66) :
+  puissances 2^n / SB(n) de la Suite B, ou (definition SB de la validation
+  principale) SB(n) = (6.5 / 2) * 2^n - 66, soit SB(10) = 3262 :
 
       psi_savard(x, n) = x - (2^n)/(SB n) - log10(2*pi)
                            - (1/2) log10(1 - 1/x^2),   log10(y) = ln y / ln 10.
@@ -252,7 +253,8 @@ proof (rule exI[of _ zero_fun_lean], intro conjI)
   proof (rule exI[of _ 1], intro conjI)
     show "(0::real) < 1" by simp
     show "\<forall>x. 1 \<le> x \<longrightarrow> zero_fun_lean x \<le> 1 * x"
-      by (intro allI impI, simp add: zero_fun_lean_def, linarith)
+      unfolding zero_fun_lean_def
+      by (intro allI impI, linarith)
   qed
 qed
 
@@ -269,9 +271,9 @@ theorem premier_pont_tchebychev_zeta:
   fixes n n1 n2 :: nat
   assumes premier_pont: "concerne_fonction_zeta (\<lambda>x. psi_savard x n)"
       and second_pont: "\<forall>C. \<not> prime C \<longrightarrow> (\<forall>i. C \<noteq> prime_i i)"
-      and "1 \<le> n1" "1 \<le> n2" "n1 \<noteq> n2"
+      and h1: "1 \<le> n1" and h2: "1 \<le> n2" and h3: "n1 \<noteq> n2"
   shows "Re_droite_critique n1 n2 = 1 / 2"
-  by (rule pont_spectral_direct_final[OF premier_pont second_pont])
+  by (rule pont_spectral_direct_final[OF premier_pont second_pont h1 h2 h3])
 
 text \<open>
   LE SECOND PONT (Section XIII.4) : l'exclusion des composes. La Methode
@@ -342,8 +344,7 @@ proof -
   have h12: "RsP (1::nat) (2::nat) = 1 / 2"
     using RsP_universel_entier_naturel[of 1 2] by simp
   show ?thesis
-    unfolding hypothese_Riemann_lean_def axe_critique_lean_def
-    by (auto simp: h12)
+    by (metis hypothese_Riemann_lean_def axe_critique_lean_def h12)
 qed
 
 subsection "Cercle 3.b : Direction constructive inconditionnelle (Section XIII)"

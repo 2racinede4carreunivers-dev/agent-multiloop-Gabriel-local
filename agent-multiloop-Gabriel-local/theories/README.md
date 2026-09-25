@@ -137,6 +137,141 @@ SA(2,n) = (13/8) × 2ⁿ − 2
 SB(2,n) = (13/4) × 2ⁿ − 66
 ```
 
+Exemple de suites A et B géométrique :
+Suites A et B de 10 termes(n=10) :
+(((1^1 )^2+t^1 )^2 )^(1/2)+(((t^1 )^2+t^2 )^2 )^(1/2)+((t^2 )^2+(t^3 )^2 )^(1/2)+((t^3 )^2+(t^4 )^2 )^(1/2)+((t^4 )^2+(t^5 )^2 )^(1/2)+((t^5 )^2+(t^6 )^2 )^(1/2)+((t^6 )^2+〖(t〗^7 )^2 )^(1/2)+((t^7 )^2+〖(t〗^8 )^2 )^(1/2)+((t^8-t^6 )^2+(t^9-t^7 )^2 )^(1/2)+((t^9-t^7 )^2+(t^10-t^8 )^2 )^(1/2)=Somme suite A.
+
+(((1^1 )^2+t^1 )^2 )^(1/2)+(((t^1 )^2+t^2 )^2 )^(1/2)+((t^2 )^2+(t^3 )^2 )^(1/2)+((t^3 )^2+(t^4 )^2 )^(1/2)+((t^4 )^2+(t^5 )^2 )^(1/2)+((t^6 )^2+(t^7 )^2 )^(1/2)+((t^7 )^2+〖(t〗^8 )^2 )^(1/2)+((t^8 )^2+〖(t〗^9 )^2 )^(1/2)+((t^10-t^8 )^2+(t^11-t^9 )^2 )^(1/2)+((t^11-t^9 )^2+(t^12-t^10 )^2 )^(1/2)=Somme suite B.
+
+Reconstruire le nombre premier pour n=10
+
+4 possibilités pour le Digamma :
+	Additionner la 8ième position de la suite A à la somme de la suite A 10 termes(n=10).
+	Soustraire la 8ième position de la suite A à la somme suite A 10 termes(n=10).
+	Additionner la 7ième position de la suite A de la somme de la suite A 10 termes(n=10).
+	Soustraire la 7ième position de la suite A de la somme de la suite A 10 termes(n=10).
+
+Les 4 possibilités permettent de déterminer la valeur du Digamma calculé.
+
+Suites A et B de 9 termes(n=9) :
+(((1^1 )^2+t^1 )^2 )^(1/2)+(((t^1 )^2+t^2 )^2 )^(1/2)+((t^2 )^2+(t^3 )^2 )^(1/2)+((t^3 )^2+(t^4 )^2 )^(1/2)+((t^4 )^2+(t^5 )^2 )^(1/2)+((t^5 )^2+(t^6 )^2 )^(1/2)+((t^6 )^2+〖(t〗^7 )^2 )^(1/2)+((t^7-t^5 )^2+(t^8-t^6 )^2 )^(1/2)+((t^8-t^6 )^2+(t^9-t^7 )^2 )^(1/2)=Somme suite A.
+
+
+(((1^1 )^2+t^1 )^2 )^(1/2)+(((t^1 )^2+t^2 )^2 )^(1/2)+((t^2 )^2+(t^3 )^2 )^(1/2)+((t^3 )^2+(t^4 )^2 )^(1/2)+((t^4 )^2+(t^5 )^2 )^(1/2)+((t^6 )^2+(t^7 )^2 )^(1/2)+((t^7 )^2+〖(t〗^8 )^2 )^(1/2)+((t^8-t^6 )^2+(t^9-t^7 )^2 )^(1/2)+((t^9-t^7 )^2+(t^10-t^8 )^2 )^(1/2)=Somme suite B.
+
+
+
+Reconstruire les équations des suites A et B servant à déterminer la somme de ces suites pour toutes les valeurs de n.
+
+1.Coefficient A :
+
+(Sommes Suite A(10 termes)-Somme suite A(9termes))/t^8 =Coefficient A.
+
+Coefficient B :
+
+(Sommes Suite B(10 termes)-Somme suite B(9termes))/t^8 =Coefficient B.
+
+
+2. Reconstruire les suites A et B déterminant la somme des suites A et B pour toutes les valeurs n.
+
+(Coeffiecient A)/x×k^n-Reste=Somme suite A.
+
+(Coefficient A)/((Somme suite A)/k^10 )=Reste+x.
+
+(Reste+x)-la valeur entière=x
+
+La valeur de ( Reste+x) forme deux blocs A et B. A étant la partie entière de la valeur (Reste+x)  et B formant la partie<1 qui est décimale de (Reste+x).
+
+(Coefficient A)/x×k^10-Reste=Somme suite A+Reste.
+
+Somme suite A-(Somme suite+Reste)=Reste.
+
+Équation reconstruit A généralisant la valeur de n :(Coefficient A)/x×k^n-Reste=Somme suite A.
+Quand n est un entier strictement positif.
+
+(Coeffiecient B)/x×k^n-Reste=Somme suite B.
+
+(Coefficient B)/((Somme suite B)/k^10 )=Reste+x.
+
+(Reste+x)-la valeur entière=x
+
+La valeur de ( Reste+x) forme deux blocs A et B. A étant la partie entière de la valeur (Reste+x)  et B formant la partie<1 qui est décimale de (Reste+x).
+
+(Coefficient B)/x×k^10-Reste=Somme suite B+Reste.
+
+Somme suite B-(Somme suite+Reste)=Reste.
+
+Équation reconstruit A généralisant la valeur de n :(Coefficient B)/x×k^n-Reste=Somme suite B.
+Quand n est un entier strictement positif.
+
+
+
+Approche généralisée pour le niveau 1 : 
+
+t^1+t^2+t^3+t^4+t^5+t^6+t^7+t^8+(t^9-t^7 )+(t^10-t^8 )=Somme suite A
+t^1+t^2+t^3+t^4+t^5+t^7+t^8+t^9+(t^10-t^8 )+(t^11-t^9 )=Somme suite B
+Digamma 4 possibilités :
+	– 8ième position suite A -t^8
+	+ 8ième position suite A +t^8
+	– 7ième position suite A -t^7
+	+ 7ième position suite A +t^7
+Digamma calculé :
+	Somme suite A 〖-t〗^8
+	Somme suite A 〖+t〗^8
+	Somme suite A 〖-t〗^7
+	Somme suite A 〖+t〗^7
+
+Déterminer le premier :
+((Somme suite B-Digamma calculé)/(6ième position suite A (Zêta))=Nombre premier.
+
+Déterminer les équations déterminant les sommes des suites A et B pour la valeur généralisée de n
+
+Déterminer le coefficient A :((Somme suite A n=10)-Somme suite A n=9))/(t^8)
+
+Déterminer le coefficient B : ((Somme suite B n=10)-Somme suite B n=9))/(t^8)
+
+Déterminer l’équation A : 
+
+(Coefficient A)/((Somme suite A n=10)/t^10 )=x+Reste
+
+(x+Reste)-Valeur réelle=x
+
+(Coefficient A)/x×t^10=Somme suite A+Reste
+(Somme suite A+Reste)-(Somme suite A)=Reste
+
+Équation A : (Coefficient A)/x×t^n-Reste=Somme suite A
+
+Quand n est un eniter strictement positif.
+Déterminer l’équation B : 
+
+(Coefficient B)/((Somme suite B n=10)/t^10 )=x+Reste
+
+(x+Reste)-Valeur réelle=x
+
+(Coefficient B)/x×t^10=Somme suite B+Reste
+(Somme suite B+Reste)-(Somme suite B)=Reste
+
+Équation A : (Coefficient A)/x×t^n-Reste=Somme suite B
+
+Quand n est un eniter strictement positif.
+
+Cette équation est tiré de :
+
+Si q≠1,S=1+q+q^2+q^3…q^n=(1-q^(n+1))/(1-q).
+
+
+## 1. Règle fondamentale : reconstruction initiale pour n = 10
+
+Pour chaque rapport non-typique 1/k, la reconstruction du premier se fait toujours en
+premier pour n = 10. Cette valeur sert d’ancre pour déterminer ensuite les premiers
+pour n > 10 (ordre croissant) et n < 10 (ordre décroissant).
+
+## 2. Méthode standard (entiers naturels)
+
+Les suites A et B sont construites à l’aide des puissances entières t^i, où t est la base
+du rapport (ex. t = 3 pour 1/3, t = 5 pour 1/5, etc.).
+
+
 ### Table des constantes par régime
 
 | k | α_A(k) | α_B(k) | Δ_A(k) | Δ_B(k) | Diviseur k⁶ |

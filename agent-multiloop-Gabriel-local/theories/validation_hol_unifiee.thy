@@ -86,15 +86,14 @@ definition alternating_block_sum :: "nat list \<Rightarrow> nat \<Rightarrow> re
 (* Rapport Spectral Asymétrique entre deux blocs *)
 definition RSA_ratio :: "nat list \<Rightarrow> nat list \<Rightarrow> nat \<Rightarrow> real" where
   "RSA_ratio blockA blockB k =
-     let sumA = alternating_block_sum blockA k
-         sumB = alternating_block_sum blockB k
-     in (sumA - sumB) / max (1e-10) sumB"
+     (alternating_block_sum blockA k - alternating_block_sum blockB k)
+       / max (1 / 10 ^ 10) (alternating_block_sum blockB k)"
 
 (* Propriété de convergence RSA *)
 definition rsa_converges_to_half :: "nat list \<Rightarrow> nat list \<Rightarrow> bool" where
   "rsa_converges_to_half blockA blockB =
-     \<forall> \<epsilon> > 0. \<exists> K. \<forall> k \<ge> K.
-       dist (RSA_ratio blockA blockB k) (1/2) < \<epsilon>"
+     (\<forall>\<epsilon>. 0 < \<epsilon> \<longrightarrow> (\<exists>K. \<forall>k. K \<le> k \<longrightarrow>
+        dist (RSA_ratio blockA blockB k) (1/2) < \<epsilon>))"
 
 (* ============================================================================
    SECTION 2 : ANALYSE ZÉROS RIEMANN
@@ -107,19 +106,19 @@ subsection "Eigenvalues et Ligne Critique"
 (* Zéro de Riemann sur la ligne critique Re = 1/2 *)
 definition riemann_zero_critical :: "complex \<Rightarrow> bool" where
   "riemann_zero_critical s =
-     (Complex.re s = 1/2 \<and> s \<noteq> Complex (1/2) 0)"
+     (Re s = 1/2 \<and> s \<noteq> Complex (1/2) 0)"
 
 (* Opérateur spectral (approche Hilbert-Pólya) *)
 definition spectral_hilbert_operator :: "real \<Rightarrow> complex" where
-  "spectral_hilbert_operator \<lambda> =
-     Complex (1/2) (ln (2 * \<pi> * \<lambda>))"
+  "spectral_hilbert_operator t =
+     Complex (1/2) (ln (2 * pi * t))"
 
 (* Propriété: Zéros Riemann comme eigenvalues *)
 definition riemann_zeros_as_eigenvalues :: "bool" where
   "riemann_zeros_as_eigenvalues =
-     \<forall> \<nu> :: real. (\<exists> \<lambda> > 0.
-       spectral_hilbert_operator \<lambda> = Complex (1/2) \<nu>) \<longrightarrow>
-       riemann_zero_critical (Complex (1/2) \<nu>)"
+     (\<forall>(\<nu> :: real). (\<exists>t. 0 < t \<and>
+       spectral_hilbert_operator t = Complex (1/2) \<nu>) \<longrightarrow>
+       riemann_zero_critical (Complex (1/2) \<nu>))"
 
 (* ============================================================================
    SECTION 3 : CORRESPONDANCES ET COHÉRENCES
@@ -230,7 +229,7 @@ subsection "Reconstruction Première Valide"
    ----------------------------------------------------------------------- *)
 theorem prime_reconstruction_validity:
   assumes h: "n > 0"
-  shows "\<exists> p > 0. prime_nth_reconstruction n = real p"
+  shows "\<exists>p. 0 < p \<and> prime_nth_reconstruction n = real p"
 proof -
   have eq: "prime_nth_reconstruction n = real n"
     unfolding prime_nth_reconstruction_def
@@ -250,7 +249,7 @@ theorem riemann_zeros_eigenvalues_correspondence:
 subsection "Normalisation par Sr2"
 
 theorem Sr2_normalization_property:
-  shows "\<forall> x > 0. Sr2_validation * x = (3/2) * x"
+  shows "(\<forall>x. 0 < x \<longrightarrow> Sr2_validation * x = (3/2) * x)"
   by (unfold Sr2_validation_def; simp)
 
 (* ============================================================================
@@ -270,8 +269,8 @@ lemma distance_to_half_metric:
 
 lemma RSA_convergence_implies_distance_decreasing:
   assumes "rsa_converges_to_half blockA blockB"
-  shows "\<forall> \<epsilon> > 0. \<exists> N. \<forall> k \<ge> N.
-    dist (RSA_ratio blockA blockB k) (1/2) < \<epsilon>"
+  shows "(\<forall>\<epsilon>. 0 < \<epsilon> \<longrightarrow> (\<exists>N. \<forall>k. N \<le> k \<longrightarrow>
+    dist (RSA_ratio blockA blockB k) (1/2) < \<epsilon>))"
   by (unfold rsa_converges_to_half_def; exact assms)
 
 (* ============================================================================
@@ -355,14 +354,14 @@ subsection "Définitions — Candidat C et Verdicts"
 (* Un candidat C est le résultat algébrique de la reconstruction *)
 (* C = (S_B - Digamma) / Zêta — l'identité ne prouve pas prime(C) *)
 definition candidat_C :: "nat \<Rightarrow> nat \<Rightarrow> real \<Rightarrow> real \<Rightarrow> nat" where
-  "candidat_C k n somme_B digamma_val =
-     nat (floor ((somme_B - digamma_val) / (real k ^ 6)))"
+  "candidat_C k n somme_val digamma_val =
+     nat (floor ((somme_val - digamma_val) / (real k ^ 6)))"
 
 (* Identité algébrique de reconstruction *)
 definition identite_reconstruction :: "nat \<Rightarrow> nat \<Rightarrow> real \<Rightarrow> real \<Rightarrow> bool" where
-  "identite_reconstruction k n somme_B digamma_val =
-     ((somme_B - digamma_val) / (real k ^ 6) =
-      real (candidat_C k n somme_B digamma_val))"
+  "identite_reconstruction k n somme_val digamma_val =
+     ((somme_val - digamma_val) / (real k ^ 6) =
+      real (candidat_C k n somme_val digamma_val))"
 
 (* -----------------------------------------------------------------------
    LEMME D'IDENTITÉ
@@ -399,7 +398,7 @@ proof (rule allI)
 qed
 
 (* Corollaire : un composé est exclu de toutes les positions spectrales *)
-corollary composé_exclu_toute_position:
+corollary compose_exclu_toute_position:
   fixes C :: "nat"
   assumes "\<not> prime C"
   shows "\<forall> rang :: nat. C \<noteq> prime_i rang"
@@ -432,7 +431,7 @@ definition verdict_branche :: "nat \<Rightarrow> branche_digamma \<Rightarrow> n
    LEMME : Si toutes les branches retournent EXCLU_HOL, l'état est BLOQUÉ.
    Source : onglet «Checklist 1-81» — étape 19 (k=81, n=17 BLOQUÉ).
    ----------------------------------------------------------------------- *)
-lemma toutes_branches_composées_implique_bloqué:
+lemma toutes_branches_composees_implique_bloque:
   assumes "\<not> prime C1" "\<not> prime C2" "\<not> prime C3" "\<not> prime C4"
   shows "\<forall> b :: branche_digamma.
     verdict_branche k b (case b of
@@ -518,20 +517,20 @@ subsection "Types de Statut"
 datatype statut_C =
     ExcluHOL        (* ¬prime(C) — exclusion formelle *)
   | AncragePossible (* prime(C) à n=10, unicité à vérifier *)
-  | PCertifié       (* prime(C) et positionné — P peut être annoncé *)
+  | PCertifie       (* prime(C) et positionné — P peut être annoncé *)
   | CNonDecide      (* C > 10^12, primalité non certifiable *)
-  | Bloqué          (* aucun ancrage disponible *)
+  | Bloque          (* aucun ancrage disponible *)
 
 (* -----------------------------------------------------------------------
    DÉFINITION : Chaîne de validation pour un candidat C
    Implémente la logique de l'onglet «Validation HOL Générale»
    ----------------------------------------------------------------------- *)
 definition valider_candidat :: "nat \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> statut_C" where
-  "valider_candidat C n est_premier est_positionné =
+  "valider_candidat C n est_premier est_positionne =
      (if C \<le> 1 then ExcluHOL
       else if \<not> est_premier then ExcluHOL
       else if n = 10 then AncragePossible
-      else if est_positionné then PCertifié
+      else if est_positionne then PCertifie
       else CNonDecide)"
 
 (* -----------------------------------------------------------------------
@@ -548,8 +547,8 @@ qed
 (* -----------------------------------------------------------------------
    THÉORÈME : P_CERTIFIÉ implique primalité et position
    ----------------------------------------------------------------------- *)
-theorem certifie_implique_premier_et_positionné:
-  assumes "valider_candidat C n True True = PCertifié"
+theorem certifie_implique_premier_et_positionne:
+  assumes "valider_candidat C n True True = PCertifie"
       and "n \<noteq> 10"
   shows "prime C \<and> True"
 proof -
@@ -636,9 +635,9 @@ lemma prime_368939:
 (* -----------------------------------------------------------------------
    LEMME : Les trois autres branches sont composées
    ----------------------------------------------------------------------- *)
-lemma composé_369095: "\<not> prime (369095 :: nat)" by norm_num
-lemma composé_369121: "\<not> prime (369121 :: nat)" by norm_num
-lemma composé_369277: "\<not> prime (369277 :: nat)" by norm_num
+lemma compose_369095: "\<not> prime (369095 :: nat)" by norm_num
+lemma compose_369121: "\<not> prime (369121 :: nat)" by norm_num
+lemma compose_369277: "\<not> prime (369277 :: nat)" by norm_num
 
 (* -----------------------------------------------------------------------
    THÉORÈME : Unicité de l'ancrage k=13
@@ -648,9 +647,9 @@ theorem ancrage_k13_unique:
   "\<exists>! (C :: nat). C \<in> {368939, 369095, 369121, 369277} \<and> prime C"
 proof -
   have "prime (368939 :: nat)" by (rule prime_368939)
-  moreover have "\<not> prime (369095 :: nat)" by (rule composé_369095)
-  moreover have "\<not> prime (369121 :: nat)" by (rule composé_369121)
-  moreover have "\<not> prime (369277 :: nat)" by (rule composé_369277)
+  moreover have "\<not> prime (369095 :: nat)" by (rule compose_369095)
+  moreover have "\<not> prime (369121 :: nat)" by (rule compose_369121)
+  moreover have "\<not> prime (369277 :: nat)" by (rule compose_369277)
   ultimately show ?thesis by auto
 qed
 
@@ -671,25 +670,25 @@ definition branches_k81 :: "(nat \<times> bool) list" where
     (3486259601, False)   (* A8− : 11×127×2495533 — EXCLU HOL *)
   ]"
 
-lemma composé_3486252959: "\<not> prime (3486252959 :: nat)" by norm_num
-lemma composé_3486253121: "\<not> prime (3486253121 :: nat)" by norm_num
-lemma composé_3486246479: "\<not> prime (3486246479 :: nat)" by norm_num
-lemma composé_3486259601: "\<not> prime (3486259601 :: nat)" by norm_num
+lemma compose_3486252959: "\<not> prime (3486252959 :: nat)" by norm_num
+lemma compose_3486253121: "\<not> prime (3486253121 :: nat)" by norm_num
+lemma compose_3486246479: "\<not> prime (3486246479 :: nat)" by norm_num
+lemma compose_3486259601: "\<not> prime (3486259601 :: nat)" by norm_num
 
 (* -----------------------------------------------------------------------
    THÉORÈME : k=81 BLOQUÉ — aucun ancrage à n=10
    ----------------------------------------------------------------------- *)
-theorem k81_bloqué:
+theorem k81_bloque:
   "\<forall> C :: nat. C \<in> {3486252959, 3486253121, 3486246479, 3486259601} \<longrightarrow>
    \<not> prime C"
-  using composé_3486252959 composé_3486253121
-        composé_3486246479 composé_3486259601
+  using compose_3486252959 compose_3486253121
+        compose_3486246479 compose_3486259601
   by auto
 
 corollary k81_aucun_ancrage:
   "\<nexists> C :: nat. C \<in> {3486252959, 3486253121, 3486246479, 3486259601}
                \<and> prime C"
-  using k81_bloqué by blast
+  using k81_bloque by blast
 
 (* ============================================================================
    SECTION 14 : VÉRIFICATIONS DE COHÉRENCE GLOBALE
@@ -736,13 +735,13 @@ POINTS VALIDÉS :
 
 NOUVEAUTÉS v7.5 — EXCLUSION DES COMPOSÉS C :
   ✓ composite_exclusion_HOL       : ¬prime(C) ⟹ ∀i. C ≠ prime_i(i)
-  ✓ composé_exclu_toute_position  : corollaire universel
+  ✓ compose_exclu_toute_position  : corollaire universel
   ✓ chaine_coherente_exclusion    : ExcluHOL ⟺ ¬prime(C)
   ✓ certifie_implique_premier     : P_CERTIFIÉ ⟺ prime(C) ∧ positionné
   ✓ certificat_absurde_k2         : contrôle domaine ℕ (x=11,603… ∉ ℕ)
   ✓ interdiction_C_non_decide_est_P : interdiction formelle HOL
   ✓ ancrage_k13_unique            : unicité de l'ancrage 368939 (1/13)
-  ✓ k81_bloqué / k81_aucun_ancrage : exemple de blocage (1/81)
+  ✓ k81_bloque / k81_aucun_ancrage : exemple de blocage (1/81)
   ✓ contrat_gabriel               : locale formelle du contrat de réponse
 
 ANCRAGES CATALOGUE v7.5 :

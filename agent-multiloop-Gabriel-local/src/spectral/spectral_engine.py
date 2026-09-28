@@ -292,3 +292,6 @@ def autoverifier(verbose: bool = True) -> bool:
 
 if __name__ == "__main__":
     autoverifier()
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

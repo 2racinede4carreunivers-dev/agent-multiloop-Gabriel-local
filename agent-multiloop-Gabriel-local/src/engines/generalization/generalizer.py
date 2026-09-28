@@ -99,3 +99,6 @@ class Generalizer:
             "Extensions possibles : rapport 1/5, 1/6 (analogues), suites a coefficients differents, "
             "et passage explicite a la concordance Riemann-Savard via le plan trifocal."
         )
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

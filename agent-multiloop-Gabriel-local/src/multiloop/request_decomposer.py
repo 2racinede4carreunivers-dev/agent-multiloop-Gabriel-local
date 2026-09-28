@@ -1,4 +1,4 @@
-﻿"""
+"""
 RequestDecomposer CORRECTED — Decoupe une requete utilisateur en segments logiques.
 
 CORRECTION MAJEURE : Capturer les nombres NÉGATIFS
@@ -422,3 +422,5 @@ class RequestDecomposer:
             coherent=True,
         )
 
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

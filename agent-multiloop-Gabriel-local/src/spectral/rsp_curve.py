@@ -206,3 +206,6 @@ def summarize_curve(points: list[dict[str, Any]]) -> str:
         f"  k=1 -> RsP    : {valid[0]['RsP_decimal']:.4f}\n"
         f"  k={valid[-1]['k']} -> RsP   : {valid[-1]['RsP_decimal']:.4f}"
     )
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

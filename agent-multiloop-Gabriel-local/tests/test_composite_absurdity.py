@@ -359,3 +359,6 @@ def test_e2e_philippe_original_query():
     assert "methode_spectral.thy" in txt
     assert result.confidence == 1.0
     assert result.structured_data["rejection_type"] == "composite_detected"
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

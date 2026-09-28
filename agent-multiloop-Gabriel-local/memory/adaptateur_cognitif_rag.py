@@ -195,3 +195,6 @@ def preparer_requete_avec_rag(requete: str) -> dict[str, Any]:
         "matched_keywords": analyse.matched_keywords,
         "nombre_regimes": analyse.nombre_regimes,
     }
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

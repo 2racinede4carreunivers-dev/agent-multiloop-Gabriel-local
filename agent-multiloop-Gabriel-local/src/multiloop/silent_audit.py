@@ -168,3 +168,6 @@ Produis maintenant la reponse corrigee, complete, factuelle, en francais.
         except Exception as exc:
             logger.error("[AUDIT] Erreur re-prompt LLM : %s", exc)
             return ""
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

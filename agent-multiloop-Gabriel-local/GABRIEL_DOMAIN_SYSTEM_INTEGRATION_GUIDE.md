@@ -352,3 +352,6 @@ Résultat attendu:
 5. 🔲 Documenter cas d'usage pour Philippe
 
 **Attends-tu que je modifie slow_motion_debugger.py maintenant ?**
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

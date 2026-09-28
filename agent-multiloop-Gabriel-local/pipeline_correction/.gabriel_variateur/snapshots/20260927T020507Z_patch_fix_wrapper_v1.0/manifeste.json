@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "horodatage": "2026-09-27T02:05:07.758067+00:00",
+  "contrat": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local/pipeline_correction/patch_fix_wrapper_v1.0.json",
+  "repo_root": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local/pipeline_correction",
+  "dossier_sauvegarde": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local/pipeline_correction/.gabriel_variateur/snapshots/20260927T020507Z_patch_fix_wrapper_v1.0",
+  "fichiers": [
+    {
+      "rel": "C:/agent-multiloop-Gabriel-local/pipeline_cognitif/gabriel_geometric_wrapper_v74.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/b24ffd5f8a_gabriel_geometric_wrapper_v74.py.bak"
+    }
+  ]
+}

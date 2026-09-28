@@ -35,3 +35,6 @@ def is_known_prime(p: int) -> bool:
 def max_position() -> int:
     """Position max disponible dans la table."""
     return len(PRIMES)
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

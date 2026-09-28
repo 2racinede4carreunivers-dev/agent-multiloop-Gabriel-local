@@ -226,3 +226,6 @@ print()
 
 print(f"✓ RÉSULTAT ATTENDU : Entre 3 et 47 = {gap_int} nombres")
 print()
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

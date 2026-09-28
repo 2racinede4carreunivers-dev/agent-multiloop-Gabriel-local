@@ -192,3 +192,6 @@ def test_1_14_summary_anti_hallucination_non_determiné(summary):
     """Ni « Candidat: Non déterminé », ni « Non déterminé » ne figurent dans le resume."""
     assert "candidat: non déterminé" not in summary.lower()
     assert "non déterminé" not in summary.lower()
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

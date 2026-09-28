@@ -353,3 +353,6 @@ def _wrap_text(text: str, width: int = 115) -> str:
     for para in text.split("\n"):
         lines.extend(textwrap.wrap(para, width=width) or [""])
     return "\n".join(lines)
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

@@ -181,3 +181,6 @@ class TestConversationalCoverage:
             assert result.is_conversational, (
                 f"Pattern '{name}' non declenche par : '{question}'"
             )
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

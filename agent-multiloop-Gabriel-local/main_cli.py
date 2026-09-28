@@ -222,3 +222,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

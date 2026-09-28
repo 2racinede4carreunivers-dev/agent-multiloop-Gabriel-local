@@ -134,3 +134,6 @@ def get_openai_key() -> str | None:
 
 def get_ollama_url() -> str:
     return os.environ.get("OLLAMA_HOST", "http://ollama:11434")
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

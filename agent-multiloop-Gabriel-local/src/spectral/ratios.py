@@ -272,3 +272,6 @@ def compute_spectral_ratio(
         "expected_float": float(expected),
         "matches_expected": ratio == expected,
     }
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

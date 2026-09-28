@@ -79,3 +79,6 @@ def test_summarize_curve():
 def test_render_handles_empty():
     text = render_ascii_curve([])
     assert "aucun" in text.lower()
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

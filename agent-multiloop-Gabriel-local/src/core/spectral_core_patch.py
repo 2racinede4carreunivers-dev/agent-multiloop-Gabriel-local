@@ -129,3 +129,6 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     patch_spectral_core()
     print("Patch appliqué!")
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

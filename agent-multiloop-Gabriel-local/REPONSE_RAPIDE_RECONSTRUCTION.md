@@ -88,3 +88,6 @@ Vous aurez alors:
 - ✅ Export multiple
 - ✅ 3 syntaxes de commande
 - ✅ Tout fonctionne!
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

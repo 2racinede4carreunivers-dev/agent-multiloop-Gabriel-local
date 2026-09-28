@@ -166,3 +166,6 @@ class RefinementLoop:
             parts.append(REFINEMENT_INSTRUCTION.format(critique=last_critique, score="precedent"))
         parts.append("\nReponds en francais, de maniere structuree et complete.")
         return "\n\n".join(parts)
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

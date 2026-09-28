@@ -13,3 +13,6 @@ Pour configurer Gabriel:
 2. Configurez le budget Claude avec `CLAUDE_BUDGET_GUIDE.md`
 3. Utilisez PowerShell ISE ou jEdit selon votre préférence
 4. Consultez `.env` pour les variables d'environnement
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

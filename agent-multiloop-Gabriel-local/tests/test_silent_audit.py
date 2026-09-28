@@ -202,3 +202,6 @@ async def test_silent_audit_max_retries_then_gives_up():
     assert mock_llm.calls == 2, f"Devrait etre 2 retries, got {mock_llm.calls}"
     assert result.structured_data.get("audit_failed") is True
     assert "audit_violations" in result.structured_data
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

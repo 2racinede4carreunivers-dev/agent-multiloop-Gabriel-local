@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "horodatage": "2026-09-25T15:01:09.049582+00:00",
+  "contrat": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local/pipeline_correction/patch_direct.json",
+  "repo_root": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local",
+  "dossier_sauvegarde": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local/.gabriel_variateur/snapshots/20260925T150109Z_patch_direct",
+  "fichiers": [
+    {
+      "rel": "src/core/spectral_core.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/89fd5fc954_spectral_core.py.bak"
+    }
+  ]
+}

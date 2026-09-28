@@ -168,3 +168,6 @@ def test_kernel_has_new_configurations():
     assert k.get("KERNEL_CONFIG_NXN_SYM") is not None
     assert k.get("KERNEL_CONFIG_ASYM_ORD") is not None
     assert k.get("KERNEL_CONFIG_ASYM_CHAOS") is not None
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

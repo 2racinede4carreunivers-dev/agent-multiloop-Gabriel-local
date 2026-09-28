@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "horodatage": "2026-09-28T01:28:40.294831+00:00",
+  "contrat": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local/pipeline_correction/patch_v7.9_raccourci_n10.json",
+  "repo_root": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local/pipeline_correction",
+  "dossier_sauvegarde": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local/pipeline_correction/.gabriel_variateur/snapshots/20260928T012840Z_patch_v7.9_raccourci_n10",
+  "fichiers": [
+    {
+      "rel": "C:/agent-multiloop-Gabriel-local/pipeline_cognitif/multi_ratio_dispatcher.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/3626492536_multi_ratio_dispatcher.py.bak"
+    }
+  ]
+}

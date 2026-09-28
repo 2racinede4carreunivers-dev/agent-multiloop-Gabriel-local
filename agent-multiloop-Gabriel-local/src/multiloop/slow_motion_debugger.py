@@ -790,3 +790,6 @@ class SlowMotionDebugger:
                 "citations": [],
                 "method": "modest_solve (erreur)",
             }
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

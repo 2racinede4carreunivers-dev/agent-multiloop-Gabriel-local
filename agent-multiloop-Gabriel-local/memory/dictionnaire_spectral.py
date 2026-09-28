@@ -761,3 +761,6 @@ def regime_count() -> int:
 def total_lemmes() -> int:
     """Total des lemmes certifies sur tous les regimes."""
     return sum(len(r.lemmes_certifies) for r in DICTIONNAIRE_SPECTRAL.values())
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

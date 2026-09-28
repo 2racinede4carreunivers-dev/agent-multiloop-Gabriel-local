@@ -528,3 +528,6 @@ def _auto_scale(core: SpectralMethodCore, k: CurveKind, n_min: int, n_max: int) 
 def list_supported_kinds() -> list[str]:
     """Retourne la liste des courbes supportees (pour aide CLI)."""
     return [k.value for k in CurveKind]
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

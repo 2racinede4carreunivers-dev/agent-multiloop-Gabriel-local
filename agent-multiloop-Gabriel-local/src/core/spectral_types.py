@@ -90,3 +90,6 @@ class PipelineStep(str, Enum):
     HOL_GENERATION = "hol_generation"
     ISABELLE_VALIDATION = "isabelle_validation"
     RESPONSE = "response"
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

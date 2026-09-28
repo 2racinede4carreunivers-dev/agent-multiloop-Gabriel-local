@@ -366,3 +366,6 @@ class TestCLIIntegration:
         from src.ui.cli import HELP_TEXT
         assert "debat" in HELP_TEXT.lower()
         assert "personas" in HELP_TEXT.lower() or "persona" in HELP_TEXT.lower()
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

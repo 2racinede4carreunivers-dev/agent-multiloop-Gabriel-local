@@ -291,3 +291,6 @@ def test_engine_without_spectral_core():
     assert len(rsp.results_by_model) == 3
     gap = e.compute_gap_all_models(11, 23)
     assert len(gap.results_by_model) == 3
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

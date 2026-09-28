@@ -1,4 +1,4 @@
-﻿"""
+"""
 Pipeline cognitif principal : orchestre les 5 moteurs + multiloop + spectral.
 
 Flow :
@@ -1214,3 +1214,6 @@ REGLE SPECTRALE APPLICABLE (RAPPEL OBLIGATOIRE):
   Ne JAMAIS inventer ces sommes : prends-les telles quelles depuis les
   « CHIFFRES CALCULES » fournis ci-dessous.
 """
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

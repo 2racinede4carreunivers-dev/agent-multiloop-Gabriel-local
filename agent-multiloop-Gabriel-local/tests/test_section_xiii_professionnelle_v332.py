@@ -176,3 +176,6 @@ class TestSectionXIIIProfessionnelle:
         assert "ensemble_savard" in section_xiii
         # Universalite mentionnee
         assert "UNIVERSALITE" in section_xiii or "universel" in section_xiii.lower()
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

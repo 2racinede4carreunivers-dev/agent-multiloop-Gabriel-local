@@ -508,3 +508,6 @@ def detect_visualization_intent(question: str) -> Optional[VisualizationIntent]:
         matched_keywords=matched,
         rsp_config=rsp_cfg,
     )
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

@@ -1,7 +1,6 @@
 #!/usr/bin/env powershell
 # =============================================================================
-#  start-agent.ps1 v4.1 - CORRIGÉ AVEC TERMINAL SÉPARÉ ET LOGS COMPLETS
-#  Ouvre Gabriel dans un terminal PowerShell distinct avec affichage complet
+#  start-agent.ps1 v4.1 
 # =============================================================================
 
 param(

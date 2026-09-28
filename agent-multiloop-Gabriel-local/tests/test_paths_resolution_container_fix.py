@@ -156,3 +156,6 @@ class TestDockerComposeMounts:
         assert "/home/agent/app/memory" in content, (
             "docker-compose.yml doit monter memory/ (fix v3.9bis)."
         )
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

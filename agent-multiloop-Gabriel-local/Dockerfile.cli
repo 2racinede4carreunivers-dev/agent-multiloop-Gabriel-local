@@ -1,12 +1,5 @@
 # =============================================================================
-# Multi-Loop Math Agent - Dockerfile.cli (SLIM) v5.0
-#
-# Améliorations :
-#   - Inclus toutes les composantes nécessaires au fonctionnement complet de Gabriel
-#   - Ajout des dépendances système requises pour sockets, monitoring, scripts
-#   - Maintien du modèle SLIM (aucune installation d’Isabelle ici)
-#   - Optimisation du cache pip
-#   - Compatibilité totale avec docker-compose v5.3
+# Multi-Loop Math Agent - Dockerfile.cli (SLIM) v5.1
 # =============================================================================
 
 FROM python:3.11-slim AS base
@@ -17,11 +10,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     LANG=C.UTF-8 \
-    LC_ALL=C.UTF-8
+    LC_ALL=C.UTF-8 \
+    PYTHONPATH="/home/agent/app:/home/agent/app/src:/home/agent/app/memory" \
+    GABRIEL_TESTS_DIR="/home/agent/app/tests"
 
-# ============================================================================
-# Dépendances système minimales + utilitaires nécessaires pour Gabriel
-# ============================================================================
+# Dépendances système minimales
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
         ca-certificates \
@@ -34,35 +27,34 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-venv \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# ============================================================================
 # User non-root
-# ============================================================================
 RUN useradd --create-home --shell /bin/bash agent
 WORKDIR /home/agent/app
 
-# ============================================================================
-# Cache layer : requirements.txt en premier
-# ============================================================================
-COPY requirements.txt .
+# Cache layer : requirements.txt
+COPY agent-multiloop-Gabriel-local/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
     && find /usr/local/lib/python3.11 -name "*.pyc" -delete \
     && find /usr/local/lib/python3.11 -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
-# ============================================================================
-# Code applicatif
-# ============================================================================
-COPY --chown=agent:agent main.py main_cli.py config.yaml config_optimized.yaml ./
-COPY --chown=agent:agent src/ ./src/
-COPY --chown=agent:agent theories/ ./theories/
-COPY --chown=agent:agent memory/ ./memory/
-COPY --chown=agent:agent scripts/ ./scripts/
+# Code applicatif (Copie depuis agent-multiloop-Gabriel-local/)
+COPY --chown=agent:agent agent-multiloop-Gabriel-local/main.py agent-multiloop-Gabriel-local/main_cli.py agent-multiloop-Gabriel-local/config.yaml agent-multiloop-Gabriel-local/config_optimized.yaml ./
+COPY --chown=agent:agent agent-multiloop-Gabriel-local/src/ ./src/
+COPY --chown=agent:agent pipeline_cognitif/ ./pipeline_cognitif/
+COPY --chown=agent:agent pipeline_correction/ ./pipeline_correction/
+COPY --chown=agent:agent backend/ ./backend/
+COPY --chown=agent:agent agent-multiloop-Gabriel-local/theories/ ./theories/
+COPY --chown=agent:agent agent-multiloop-Gabriel-local/memory/ ./memory/
+COPY --chown=agent:agent agent-multiloop-Gabriel-local/scripts/ ./scripts/
+COPY --chown=agent:agent agent-multiloop-Gabriel-local/tests/ ./tests/
+
+# Théories à la racine absolue pour le certainty_kernel
+COPY --chown=agent:agent agent-multiloop-Gabriel-local/theories/ /theories/
 
 # Helpers runtime
-COPY --chown=agent:agent gabriel_launcher.py port_cleanup.py socket_cleanup.py ./
+COPY --chown=agent:agent agent-multiloop-Gabriel-local/gabriel_launcher.py agent-multiloop-Gabriel-local/port_cleanup.py agent-multiloop-Gabriel-local/socket_cleanup.py ./
 
-# ============================================================================
 # Dossiers runtime
-# ============================================================================
 RUN mkdir -p data logs && chown -R agent:agent .
 
 USER agent

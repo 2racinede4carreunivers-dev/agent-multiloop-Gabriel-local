@@ -556,3 +556,6 @@ class DebugSession:
                 except (TypeError, ValueError):
                     return None
         return None
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

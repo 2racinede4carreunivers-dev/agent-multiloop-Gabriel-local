@@ -1326,3 +1326,6 @@ if __name__ == "__main__":
 def premier_pour_n(rapport: object, n: int) -> Optional[int]:
     """Premier reconstruit pour une quantité de termes n (sens Savard)."""
     return _premier_10_n(extraire_k(rapport), n)
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

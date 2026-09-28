@@ -96,3 +96,6 @@ class TestParserTuplesRobuste:
     def test_extraction_robuste(self, text, expected):
         from src.multiloop.request_decomposer import RequestDecomposer
         assert RequestDecomposer._extract_tuples(text) == expected
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

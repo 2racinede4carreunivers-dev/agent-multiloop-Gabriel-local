@@ -621,3 +621,6 @@ class PipelineWithGapDetection:
         lines.append(f"**RÉSULTAT** : {result.gap_count} nombres entre {result.p1} et {result.p2}")
         
         return "\n".join(lines)
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

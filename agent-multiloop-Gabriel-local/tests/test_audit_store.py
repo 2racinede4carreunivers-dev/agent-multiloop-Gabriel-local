@@ -336,3 +336,6 @@ async def test_debug_session_creates_manual_audit(tmp_store: AuditStore):
     assert rec.position == 26
     # Verifier la signature
     assert tmp_store.verify(rec) is True
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

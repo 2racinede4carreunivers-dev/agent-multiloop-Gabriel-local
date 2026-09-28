@@ -194,3 +194,6 @@ class TestCriticalSummaryTruncation:
         )
         assert len(c.critical_summary) == 750
         assert not c.critical_summary.endswith("...")
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

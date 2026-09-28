@@ -177,3 +177,6 @@ def test_three_tools_agree_on_position_26():
     assert sp_report["identity_verified"] is True
     assert mp_report["identity_verified"] is True
     assert z3_report["all_proven"] is True
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

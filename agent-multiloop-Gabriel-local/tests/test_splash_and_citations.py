@@ -74,3 +74,6 @@ class TestCommandesSplashAbout:
         assert "splash" in HELP_TEXT
         assert "about" in HELP_TEXT
         assert "citation" in HELP_TEXT
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

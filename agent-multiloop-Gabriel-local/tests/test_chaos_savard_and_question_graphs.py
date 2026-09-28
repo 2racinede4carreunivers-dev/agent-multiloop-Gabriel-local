@@ -299,3 +299,6 @@ class TestCLIIntegration:
         params = list(sig.parameters.keys())
         assert "qcode" in params
         assert "params" in params
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

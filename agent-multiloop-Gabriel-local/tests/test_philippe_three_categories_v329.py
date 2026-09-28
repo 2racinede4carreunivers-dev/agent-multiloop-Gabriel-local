@@ -126,3 +126,6 @@ class TestGapSpectral:
     def test_invalid_ratio_returns_error(self, core):
         r = core.compute_gap_spectral(10, ratio="1/5")
         assert "error" in r
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

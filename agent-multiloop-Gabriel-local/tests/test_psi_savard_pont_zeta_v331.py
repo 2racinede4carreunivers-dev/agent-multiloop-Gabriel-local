@@ -216,3 +216,6 @@ class TestIsabelleTheorySection:
         # Le locale doit etre reference comme cadre formel
         assert "ensemble_savard" in section_xiii
         assert "satisfaisabilit" in section_xiii.lower() or "SATISFAISABILITE" in section_xiii
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

@@ -250,3 +250,6 @@ __all__ = [
     "is_prime",
     "nearest_primes",
 ]
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

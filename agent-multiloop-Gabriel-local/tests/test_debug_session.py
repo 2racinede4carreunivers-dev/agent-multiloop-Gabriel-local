@@ -177,3 +177,6 @@ async def test_session_unknown_command_ignored_then_execute():
         result = await session.run("Reconstruis le 5eme premier en rapport 1/2")
     assert result is not None
     assert "11" in result.answer_text  # 5e premier = 11
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

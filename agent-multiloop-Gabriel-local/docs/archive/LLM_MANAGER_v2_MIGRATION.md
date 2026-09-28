@@ -264,3 +264,6 @@ Ollama (10s) → Claude (60s) ← NOUVEAU → OpenAI (90s)
 **Status**: ✅ Activé immédiatement
 
 Prochaine requête: Claude sera appelé après Ollama timeout! 🎯
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "horodatage": "2026-09-27T04:04:50.236793+00:00",
+  "contrat": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local/pipeline_correction/patch_multi_ratio_k_infinite_clean_v1.0.json",
+  "repo_root": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local/pipeline_correction",
+  "dossier_sauvegarde": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local/pipeline_correction/.gabriel_variateur/snapshots/20260927T040450Z_patch_multi_ratio_k_infinite_clean_v1.0",
+  "fichiers": [
+    {
+      "rel": "C:/agent-multiloop-Gabriel-local/pipeline_cognitif/multi_ratio_dispatcher.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/ea61a0cf24_multi_ratio_dispatcher.py.bak"
+    }
+  ]
+}

@@ -446,3 +446,6 @@ class CertaintyModel:
                 return (True, f"Intent '{intent}' : ratio par defaut 1/2 utilise.")
             return (False, f"Intent '{intent}' incompatible avec ratio '{ratio}'.")
         return (True, f"Intent '{intent}' : compatibilite ratio non verifiable.")
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

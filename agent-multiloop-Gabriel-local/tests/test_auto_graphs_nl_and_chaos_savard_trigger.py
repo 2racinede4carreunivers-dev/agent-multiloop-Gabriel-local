@@ -215,3 +215,6 @@ class TestEndToEndChaosSavardViz:
             assert abs(y - 0.5) < 0.01, f"Devrait converger vers 1/2, recu {y}"
         # La cible est 1/2
         assert curve.target_line == 0.5
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

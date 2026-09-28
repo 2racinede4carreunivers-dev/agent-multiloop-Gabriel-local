@@ -175,3 +175,6 @@ if __name__ == "__main__":
     print(f"Reconstruction test (cas non-entier): {result}")
     
     print("\nTous les tests passent!")
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

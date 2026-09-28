@@ -271,3 +271,6 @@ class TestSlowMotionIntegration:
         # Verifier que c'est optionnel (defaut None)
         param = sig.parameters["llm_reformulations"]
         assert param.default is None
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

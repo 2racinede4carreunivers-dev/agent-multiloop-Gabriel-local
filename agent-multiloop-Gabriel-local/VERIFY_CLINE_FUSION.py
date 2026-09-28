@@ -142,3 +142,6 @@ print("   Puis tapez: gabriel> aide\n")
 print("="*70 + "\n")
 
 sys.exit(0)
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

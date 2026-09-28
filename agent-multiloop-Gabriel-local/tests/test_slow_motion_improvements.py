@@ -201,3 +201,6 @@ class TestStaleDataCleaned:
         assert res.structured_data.get("other_field") == "preserve_me"
         # Et le slow_motion_triggered est present
         assert res.structured_data["slow_motion_triggered"] is True
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

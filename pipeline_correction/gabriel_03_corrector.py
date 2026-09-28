@@ -952,3 +952,48 @@ if __name__ == "__main__":
     print(f"Gabriel Corrector — Script 3/3")
     print(f"Rapport défaillances : {path}")
     run(path)
+
+# --- SYSTEME CONVOLUTIF 1/K (Section XIV / Isabelle/HOL) ---
+
+def compute_savard_constants(k):
+    """Calcul des 4 constantes Savard universelles pour tout k >= 2 (Section XIV.1 / PDF)."""
+    alpha_a = 2.0 * (k**4 - k**2 + 1) / ((k - 1) * k**3)
+    alpha_b = k * alpha_a
+    offset_a = k / (k - 1)
+    offset_b = (k**7 - k**6 + k) / (k - 1)
+    return alpha_a, alpha_b, offset_a, offset_b
+
+def somme_A_conv(k, n):
+    """Somme fermee exacte de la suite A pour tout k >= 2 (Section XIV.2)."""
+    alpha_a, _, offset_a, _ = compute_savard_constants(k)
+    return (alpha_a / 2.0) * (k**n) - offset_a
+
+def somme_B_conv(k, n):
+    """Somme fermee exacte de la suite B pour tout k >= 2 (Section XIV.2)."""
+    _, alpha_b, _, offset_b = compute_savard_constants(k)
+    return (alpha_b / 2.0) * (k**n) - offset_b
+
+def terme_b_conv(k, n, i):
+    """Construction terme a terme avec saut Zeta en position 6 (Section XIV.4)."""
+    if k < 2 or n < 1 or i < 1 or i > n:
+        return 0
+    if n <= 7:
+        return terme_a_conv(k, n, i)
+    if i <= 5:
+        return k**i
+    elif i == 6:
+        return k**7
+    elif i <= n - 2:
+        return k**(i + 1)
+    elif i == n - 1:
+        return k**n - k**(n - 2)
+    else:
+        return k**(n + 1) - k**(n - 1)
+
+def reconstruire_premier_conv(k, n, prime_table, rang_base, premier_base):
+    """Regle de reconstruction : Ancrage n=10 + Decalage de rang pour n != 10 (Section XIV.6)."""
+    if n == 10:
+        return premier_base
+    rang_cible = rang_base + n - 10
+    P_cible = prime_table[rang_cible - 1]
+    return P_cible

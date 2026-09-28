@@ -345,3 +345,6 @@ def list_models() -> list[str]:
 def all_models() -> list[SpectralModel]:
     """Renvoie tous les modeles instancies."""
     return list(_REGISTRY.values())
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

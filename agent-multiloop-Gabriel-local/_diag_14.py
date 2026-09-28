@@ -61,3 +61,6 @@ def run(k_str, n):
 run('1/14', 19)
 run('1/50', 16)
 run('1/23', 27)
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

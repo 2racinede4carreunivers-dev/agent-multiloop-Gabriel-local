@@ -210,3 +210,6 @@ def test_canonical_windows_path_checks_known_mounts(monkeypatch: pytest.MonkeyPa
     )
 
     assert resolved == expected
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

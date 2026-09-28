@@ -142,3 +142,6 @@ def test_invariant_1_2_on_chaotic_combos():
         if r.get("near_half"):
             near += 1
     assert near >= 80, f"Seulement {near}/100 configs chaotiques proches de 1/2"
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

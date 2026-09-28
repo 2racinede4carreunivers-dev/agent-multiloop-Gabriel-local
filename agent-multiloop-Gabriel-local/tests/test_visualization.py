@@ -209,3 +209,6 @@ def test_curve_summary_for_audit(core):
     assert s["n_points"] == 50
     assert "y_first" in s and "y_last" in s
     assert s["formula"]
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

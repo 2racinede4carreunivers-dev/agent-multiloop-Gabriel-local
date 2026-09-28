@@ -70,3 +70,6 @@ if __name__ == "__main__":
     else:
         print("\n❌ CERTAINS TESTS ONT ÉCHOUÉ")
         sys.exit(1)
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

@@ -322,3 +322,6 @@ class _WorkingState:
             tuple_B=list(decomposed.tuple_B) if decomposed.tuple_B else None,
             symmetric=decomposed.announced_symmetric,
         )
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

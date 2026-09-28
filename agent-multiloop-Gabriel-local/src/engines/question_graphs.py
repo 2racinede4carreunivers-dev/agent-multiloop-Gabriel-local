@@ -288,3 +288,6 @@ def detect_rsp_question(case: str) -> str:
         return "Q1.d"
     # Tout ce qui ressemble a chaotique -> Q1.c
     return "Q1.c"
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

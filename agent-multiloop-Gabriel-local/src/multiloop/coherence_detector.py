@@ -121,3 +121,6 @@ class CoherenceDetector:
             signals=signals,
             best_candidate_score=best_cand_score,
         )
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

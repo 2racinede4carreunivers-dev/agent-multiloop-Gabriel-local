@@ -321,3 +321,6 @@ class GeometrieSpectraleEngine:
     def list_supported_models(self) -> list[str]:
         """Liste des 3 modeles supportes."""
         return list(self.models.keys())
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

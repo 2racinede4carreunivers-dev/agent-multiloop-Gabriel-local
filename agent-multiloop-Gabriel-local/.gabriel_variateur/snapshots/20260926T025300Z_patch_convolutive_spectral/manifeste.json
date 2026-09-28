@@ -1,0 +1,409 @@
+{
+  "version": "1.0",
+  "horodatage": "2026-09-26T02:53:00.740377+00:00",
+  "contrat": "C:/agent-multiloop-Gabriel-local/patch_convolutive_spectral.json",
+  "repo_root": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local",
+  "dossier_sauvegarde": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local/.gabriel_variateur/snapshots/20260926T025300Z_patch_convolutive_spectral",
+  "fichiers": [
+    {
+      "rel": "GABRIEL_DOMAIN_SYSTEM_INTEGRATION_GUIDE.md",
+      "existed_before": true,
+      "backup_relatif": "fichiers/dc535efb75_GABRIEL_DOMAIN_SYSTEM_INTEGRATION_GUIDE.md.bak"
+    },
+    {
+      "rel": "REPONSE_RAPIDE_RECONSTRUCTION.md",
+      "existed_before": true,
+      "backup_relatif": "fichiers/b8f37a49fd_REPONSE_RAPIDE_RECONSTRUCTION.md.bak"
+    },
+    {
+      "rel": "VERIFY_CLINE_FUSION.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/192762ae3d_VERIFY_CLINE_FUSION.py.bak"
+    },
+    {
+      "rel": "_diag_14.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/deec005056__diag_14.py.bak"
+    },
+    {
+      "rel": "docs/archive/LLM_MANAGER_v2_MIGRATION.md",
+      "existed_before": true,
+      "backup_relatif": "fichiers/356e72f3b6_LLM_MANAGER_v2_MIGRATION.md.bak"
+    },
+    {
+      "rel": "gabriel_p4_bridge.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/9093d4c3ca_gabriel_p4_bridge.py.bak"
+    },
+    {
+      "rel": "guide_utilisateur/08_CONFIGURATION/INDEX.md",
+      "existed_before": true,
+      "backup_relatif": "fichiers/ff939b8a8a_INDEX.md.bak"
+    },
+    {
+      "rel": "main.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/93583e7a81_main.py.bak"
+    },
+    {
+      "rel": "main_cli.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/ef7f6771b2_main_cli.py.bak"
+    },
+    {
+      "rel": "memory/adaptateur_cognitif_rag.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/72400aa6e4_adaptateur_cognitif_rag.py.bak"
+    },
+    {
+      "rel": "memory/dictionnaire_spectral.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/890885ca37_dictionnaire_spectral.py.bak"
+    },
+    {
+      "rel": "src/adapters/corpus/certainty_kernel.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/d72095dc41_certainty_kernel.py.bak"
+    },
+    {
+      "rel": "src/core/config.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/d088195e46_config.py.bak"
+    },
+    {
+      "rel": "src/core/pipeline.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/f47f7d020f_pipeline.py.bak"
+    },
+    {
+      "rel": "src/core/pipeline_with_gap_detection.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/eb6e325c99_pipeline_with_gap_detection.py.bak"
+    },
+    {
+      "rel": "src/core/spectral_core.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/5ed943cbe4_spectral_core.py.bak"
+    },
+    {
+      "rel": "src/core/spectral_core_patch.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/6620ec18cf_spectral_core_patch.py.bak"
+    },
+    {
+      "rel": "src/core/spectral_types.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/a84adecdde_spectral_types.py.bak"
+    },
+    {
+      "rel": "src/core/test_gabriel_zeta_validation.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/858ed4fda4_test_gabriel_zeta_validation.py.bak"
+    },
+    {
+      "rel": "src/core/test_zeta_correction.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/c1518ddecc_test_zeta_correction.py.bak"
+    },
+    {
+      "rel": "src/core/zeta_denominator_core.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/8175999e0e_zeta_denominator_core.py.bak"
+    },
+    {
+      "rel": "src/engines/generalization/generalizer.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/3a3668da98_generalizer.py.bak"
+    },
+    {
+      "rel": "src/engines/geometrie_spectrale_engine.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/288fe962de_geometrie_spectrale_engine.py.bak"
+    },
+    {
+      "rel": "src/engines/question_graphs.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/d89dbbb1a4_question_graphs.py.bak"
+    },
+    {
+      "rel": "src/multiloop/certainty_model.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/424d2ca2b9_certainty_model.py.bak"
+    },
+    {
+      "rel": "src/multiloop/coherence_detector.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/1c78feccf3_coherence_detector.py.bak"
+    },
+    {
+      "rel": "src/multiloop/logical_loop.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/3d02341ba7_logical_loop.py.bak"
+    },
+    {
+      "rel": "src/multiloop/refinement_loop.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/a4f243a071_refinement_loop.py.bak"
+    },
+    {
+      "rel": "src/multiloop/request_decomposer.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/db5a27c7e7_request_decomposer.py.bak"
+    },
+    {
+      "rel": "src/multiloop/silent_audit.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/abd7cbe1a2_silent_audit.py.bak"
+    },
+    {
+      "rel": "src/multiloop/slow_motion_debugger.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/7f83f5b358_slow_motion_debugger.py.bak"
+    },
+    {
+      "rel": "src/spectral/composite_absurdity_prover.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/5792abe26e_composite_absurdity_prover.py.bak"
+    },
+    {
+      "rel": "src/spectral/gap_validation.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/a8dbadaaf4_gap_validation.py.bak"
+    },
+    {
+      "rel": "src/spectral/prime_table.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/5ee500d8ca_prime_table.py.bak"
+    },
+    {
+      "rel": "src/spectral/rapports_non_typiques.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/a3fafe8c40_rapports_non_typiques.py.bak"
+    },
+    {
+      "rel": "src/spectral/ratios.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/210354f475_ratios.py.bak"
+    },
+    {
+      "rel": "src/spectral/rsp_command.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/2769ccf887_rsp_command.py.bak"
+    },
+    {
+      "rel": "src/spectral/rsp_curve.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/8edd81e60a_rsp_curve.py.bak"
+    },
+    {
+      "rel": "src/spectral/spectral_engine.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/89f804a2ff_spectral_engine.py.bak"
+    },
+    {
+      "rel": "src/spectral/spectral_models.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/684349f8a8_spectral_models.py.bak"
+    },
+    {
+      "rel": "src/spectral/tchebychev_savard_pipeline.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/f164f9aa5b_tchebychev_savard_pipeline.py.bak"
+    },
+    {
+      "rel": "src/ui/cli.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/62b32bdc3e_cli.py.bak"
+    },
+    {
+      "rel": "src/ui/debug_session.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/8d9cff2e9e_debug_session.py.bak"
+    },
+    {
+      "rel": "src/visualization/auto_trigger.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/3f7b9a502f_auto_trigger.py.bak"
+    },
+    {
+      "rel": "src/visualization/curves.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/d34b1fea7e_curves.py.bak"
+    },
+    {
+      "rel": "src/visualization/png_renderer.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/252949fe4a_png_renderer.py.bak"
+    },
+    {
+      "rel": "tests/test_1_14_facteur_k6.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/3c69905cb9_test_1_14_facteur_k6.py.bak"
+    },
+    {
+      "rel": "tests/test_adaptive_scale_v336.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/3553bd91c9_test_adaptive_scale_v336.py.bak"
+    },
+    {
+      "rel": "tests/test_audit_store.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/92ed123ade_test_audit_store.py.bak"
+    },
+    {
+      "rel": "tests/test_auto_graphs_nl_and_chaos_savard_trigger.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/03490f6954_test_auto_graphs_nl_and_chaos_savard_trigger.py.bak"
+    },
+    {
+      "rel": "tests/test_bloc_chaotique_ordonne_v330.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/3ff3fbaabf_test_bloc_chaotique_ordonne_v330.py.bak"
+    },
+    {
+      "rel": "tests/test_certainty_model_and_logical_loop.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/e488a0288b_test_certainty_model_and_logical_loop.py.bak"
+    },
+    {
+      "rel": "tests/test_chaos_savard_and_question_graphs.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/4bd07c0e03_test_chaos_savard_and_question_graphs.py.bak"
+    },
+    {
+      "rel": "tests/test_composite_absurdity.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/5e2d63cdd6_test_composite_absurdity.py.bak"
+    },
+    {
+      "rel": "tests/test_conversational_mode.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/00fe65cafe_test_conversational_mode.py.bak"
+    },
+    {
+      "rel": "tests/test_criteres_convolutifs_deux_niveaux.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/5dca9673ee_test_criteres_convolutifs_deux_niveaux.py.bak"
+    },
+    {
+      "rel": "tests/test_debat_orchestrator.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/2a56092864_test_debat_orchestrator.py.bak"
+    },
+    {
+      "rel": "tests/test_debug_session.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/37ea90793e_test_debug_session.py.bak"
+    },
+    {
+      "rel": "tests/test_debug_toolkit.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/47209528ad_test_debug_toolkit.py.bak"
+    },
+    {
+      "rel": "tests/test_gabriel_certification.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/f7539dd817_test_gabriel_certification.py.bak"
+    },
+    {
+      "rel": "tests/test_gap_compute.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/15ef2abdbe_test_gap_compute.py.bak"
+    },
+    {
+      "rel": "tests/test_generic_prime_i_query.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/8c40f3ce31_test_generic_prime_i_query.py.bak"
+    },
+    {
+      "rel": "tests/test_geometrie_spectrale_engine.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/fd8ad6e1b2_test_geometrie_spectrale_engine.py.bak"
+    },
+    {
+      "rel": "tests/test_graph_enrichment_v325.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/6938d25fc6_test_graph_enrichment_v325.py.bak"
+    },
+    {
+      "rel": "tests/test_image_command_windows_routing.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/30a8c1a78a_test_image_command_windows_routing.py.bak"
+    },
+    {
+      "rel": "tests/test_llm_reformulator.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/656f248947_test_llm_reformulator.py.bak"
+    },
+    {
+      "rel": "tests/test_paths_resolution_container_fix.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/8c683769c3_test_paths_resolution_container_fix.py.bak"
+    },
+    {
+      "rel": "tests/test_philippe_three_categories_v329.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/f31b3ab48b_test_philippe_three_categories_v329.py.bak"
+    },
+    {
+      "rel": "tests/test_psi_savard_pont_zeta_v331.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/d7991870d6_test_psi_savard_pont_zeta_v331.py.bak"
+    },
+    {
+      "rel": "tests/test_rapports_non_typiques_equations.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/08fbe40fff_test_rapports_non_typiques_equations.py.bak"
+    },
+    {
+      "rel": "tests/test_rsp_command.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/b0592a1608_test_rsp_command.py.bak"
+    },
+    {
+      "rel": "tests/test_rsp_curve.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/adaeb4086d_test_rsp_curve.py.bak"
+    },
+    {
+      "rel": "tests/test_section_xiii_professionnelle_v332.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/de29f6e2a4_test_section_xiii_professionnelle_v332.py.bak"
+    },
+    {
+      "rel": "tests/test_silent_audit.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/1de66aa988_test_silent_audit.py.bak"
+    },
+    {
+      "rel": "tests/test_slow_motion_debugger.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/91a9013d6d_test_slow_motion_debugger.py.bak"
+    },
+    {
+      "rel": "tests/test_slow_motion_improvements.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/0839b825fd_test_slow_motion_improvements.py.bak"
+    },
+    {
+      "rel": "tests/test_spectral_ratio_configurations.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/7d7269a1b1_test_spectral_ratio_configurations.py.bak"
+    },
+    {
+      "rel": "tests/test_splash_and_citations.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/a95fe13bec_test_splash_and_citations.py.bak"
+    },
+    {
+      "rel": "tests/test_ui_pro_banner_and_memoire.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/67f997e6ed_test_ui_pro_banner_and_memoire.py.bak"
+    },
+    {
+      "rel": "tests/test_visualization.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/1a579872b4_test_visualization.py.bak"
+    }
+  ]
+}

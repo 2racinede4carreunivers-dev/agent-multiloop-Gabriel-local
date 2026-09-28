@@ -140,3 +140,6 @@ class TestAutoTriggerLargeRange:
         assert intent is not None
         assert intent.n_max == 1000
         assert intent.rsp_config == "ord"
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

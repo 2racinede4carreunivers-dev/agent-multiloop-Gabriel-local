@@ -214,3 +214,6 @@ if __name__ == "__main__":
     
     print(f"\nDifférence: {result2['difference']:.6f}")
     print(f"Les deux convergent vers x = 102")
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

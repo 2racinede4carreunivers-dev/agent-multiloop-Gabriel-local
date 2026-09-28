@@ -87,3 +87,6 @@ def random_combo(core: SpectralMethodCore, config: str, max_position: int = 1000
         b = random.sample(primes, size_b)
         return a, b
     raise ValueError(f"Config inconnue : {config}")
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

@@ -158,3 +158,6 @@ def test_prompt_non_typique_transmet_les_faits_convolutifs_sans_regle_1_2() -> N
     assert "A(n) =" in rendered
     assert '"reference_n10"' in rendered
     assert '"cible"' in rendered
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

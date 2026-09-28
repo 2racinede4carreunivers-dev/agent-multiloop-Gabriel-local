@@ -735,3 +735,6 @@ if __name__ == "__main__":
         asyncio.run(demo())
         print("\n  ✅ Pipeline cognitif Gabriel complet (P1→P2→P3→P4)")
         print("="*70 + "\n")
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

@@ -3579,3 +3579,6 @@ def run_cli() -> None:
 from .cli_cline_extension import integrate_cline_in_cli
 
 integrate_cline_in_cli(CLIInterface)
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

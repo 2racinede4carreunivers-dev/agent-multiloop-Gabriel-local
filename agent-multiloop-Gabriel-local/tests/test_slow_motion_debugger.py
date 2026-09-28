@@ -347,3 +347,6 @@ def test_slowmo_unknown_intent_falls_back_to_summary():
     )
     # Doit contenir un resume du domaine 1/3 ou general
     assert result.structured_data["certified"]["citations"]
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

@@ -461,3 +461,6 @@ class CertaintyKernel:
             if keyword in line:
                 return i
         return 0
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

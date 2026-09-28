@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "horodatage": "2026-09-27T22:52:41.698499+00:00",
+  "contrat": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local/pipeline_correction/patch_multi_ratio_cognitif_v1.0.json",
+  "repo_root": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local/pipeline_correction",
+  "dossier_sauvegarde": "C:/agent-multiloop-Gabriel-local/agent-multiloop-Gabriel-local/pipeline_correction/.gabriel_variateur/snapshots/20260927T225241Z_patch_multi_ratio_cognitif_v1.0",
+  "fichiers": [
+    {
+      "rel": "C:/agent-multiloop-Gabriel-local/pipeline_cognitif/__init__.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/1aecf575d4___init__.py.bak"
+    },
+    {
+      "rel": "C:/agent-multiloop-Gabriel-local/pipeline_cognitif/gabriel_geometric_wrapper_v74.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/4e44a32345_gabriel_geometric_wrapper_v74.py.bak"
+    },
+    {
+      "rel": "C:/agent-multiloop-Gabriel-local/pipeline_cognitif/multi_ratio_dispatcher.py",
+      "existed_before": true,
+      "backup_relatif": "fichiers/a704d7a167_multi_ratio_dispatcher.py.bak"
+    }
+  ]
+}

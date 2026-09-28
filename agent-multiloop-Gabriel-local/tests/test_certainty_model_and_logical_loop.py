@@ -230,3 +230,6 @@ class TestSlowMotionIntegration:
         # (configuration asymetrique apres sursaut)
         assert mc["summary"]
         assert "Rapport spectral" in mc["summary"] or "RsP" in mc["summary"]
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

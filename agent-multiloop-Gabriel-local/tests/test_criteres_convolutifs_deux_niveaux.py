@@ -165,3 +165,6 @@ def test_aucun_premier_non_certifie_n_est_annonce() -> None:
     assert rapport["premier_indetermine"] is True
     assert rapport["cible"]["premier"] is None
     assert rapport["aucun_ancrage"] is True
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

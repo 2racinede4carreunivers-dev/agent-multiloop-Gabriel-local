@@ -95,3 +95,6 @@ def test_compute_gap_D_calculation():
     # delta_D = D2 - D1
     expected_delta = result.point2.D - result.point1.D
     assert abs(result.delta_D - expected_delta) < 1e-6
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

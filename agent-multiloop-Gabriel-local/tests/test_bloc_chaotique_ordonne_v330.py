@@ -140,3 +140,6 @@ class TestEndToEndComputation:
         assert dec.tuple_B == [29, 17, 13]
         assert dec.detected_intent == "ratio_spectral_nxn"
         assert dec.announced_symmetric is True
+
+# --- PIPELINE COGNITIF CONVOLUTIF ---
+# Chargement dynamique de la base SQLite et regle de concisite multi-rapports

@@ -242,7 +242,7 @@ agent-multiloop-Gabriel-local/
 
 ```bash
 # Via Docker Compose
-docker-compose up -d
+docker compose up -d --build
 
 # Vérifier
 docker ps | grep gabriel
@@ -250,6 +250,12 @@ docker ps | grep gabriel
 # Accéder
 http://localhost:8080
 ```
+
+Le service `llm-agent-multiloop` monte également en lecture seule `../pipeline_cognitif`,
+`../pipeline_correction` et les fichiers `../Le-systeme-convolutif-Gabriel.tex` et
+`../Le-systeme-convolutif-Gabriel.pdf` depuis la racine du dépôt. Les modifications de ces
+fichiers sont donc visibles sans reconstruire l’image. Les théories Isabelle conservent leur
+montage existant en écriture; les données d’exécution restent dans les volumes Docker nommés.
 
 Voir **README_FINAL_v5.4.md** pour guide complet PowerShell.
 

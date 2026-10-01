@@ -150,26 +150,26 @@ class CertaintyKernel:
              "VALIDATION: Formule digamma correcte = B(n) - 64*P (avec soustraction obligatoire)",
              "digamma_validation n p = B_validation n - 64 * (real p)", "ratio_1_2"),
             ("validation_prime_reconstruction",
-             "VALIDATION: Reconstruction premiere = (B(n) - digamma(n,p)) / 64 = p",
-             "prime_nth_reconstruction n = (B_validation n - digamma_validation n n) / 64", "ratio_1_2"),
+             "Identité formelle seulement: la reconstruction vaut n et ne certifie pas que n est premier",
+             "prime_nth_reconstruction n = real n", "ratio_1_2"),
             ("validation_A_growth",
              "VALIDATION: A(n) croit exponentiellement et strictement",
              "∀ n m. n < m ⟶ A_validation n < A_validation m", "ratio_1_2"),
             ("validation_B_growth",
              "VALIDATION: B(n) croit exponentiellement et strictement",
              "∀ n m. n < m ⟶ B_validation n < B_validation m", "ratio_1_2"),
-            ("validation_RSA_convergence",
-             "VALIDATION: Rapport Spectral Asymetrique (RSA) converge vers 1/2",
+            ("rsa_convergence_is_definition_only",
+             "La convergence RSA est définie comme prédicat, mais aucun théorème de convergence ne la prouve ici",
              "rsa_converges_to_half blockA blockB", "ratio_1_2"),
             ("validation_Sr2_normalization",
              "VALIDATION: Constante Sr2 = 1.5 agit comme facteur de normalisation",
              "Sr2_validation = 3 / 2", "ratio_1_2"),
             ("validation_riemann_eigenvalues",
-             "VALIDATION: Zeros Riemann correspondent a des eigenvalues (Hilbert-Polya)",
-             "riemann_zeros_as_eigenvalues", "geometry"),
+             "Le modèle ne démontre pas la correspondance: le théorème formel réfute la propriété pour l’opérateur défini",
+             "¬ riemann_zeros_as_eigenvalues", "geometry"),
             ("validation_coherence_A_B",
              "VALIDATION: Coherence prouvee entre A(n) et B(n) dans la geometrie",
-             "A_validation n + 64 = B_validation n + 68", "ratio_1_2"),
+             "2 * A_validation n = B_validation n + 62", "ratio_1_2"),
         ]
         for key, statement, formula, domain in entries:
             keyword = key.split("_")[1] if "_" in key else key
@@ -323,18 +323,18 @@ class CertaintyKernel:
         self.certainties["KERNEL_CONFIG_NXN_SYM"] = Certainty(
             key="KERNEL_CONFIG_NXN_SYM",
             statement=(
-                "Configuration symetrique n*n : pour deux blocs A et B de meme longueur n>=2, "
-                "le rapport RsP_nn(A,B) = sum(SA(A)) / sum(SB(B)) est attendu proche de 1/2 "
-                "(generalisation du cas 1*1)."
+                "Hypothese experimentale : pour deux blocs A et B de meme longueur n>=2, "
+                "le rapport RsP_nn(A,B) est attendu proche de 1/2; ce n'est pas un resultat "
+                "demontre par validation_hol_unifiee.thy."
             ),
             formula="RsP_nn(A,B) = sum_list(map SA A) / sum_list(map SB B), avec |A|=|B|",
             provenance=[
                 "methode_spectral.thy::RsP_nn (definition formelle)",
-                "validation_hol_unifiee.thy::validation_RSA_convergence",
+                "validation_hol_unifiee.thy::rsa_converges_to_half (definition seulement)",
                 "analyse_hypothese_riemann_savard.pdf::page_26",
             ],
             domain="ratio_1_2",
-            confidence=0.95,
+            confidence=0.5,
         )
         self.certainties["KERNEL_CONFIG_ASYM_ORD"] = Certainty(
             key="KERNEL_CONFIG_ASYM_ORD",

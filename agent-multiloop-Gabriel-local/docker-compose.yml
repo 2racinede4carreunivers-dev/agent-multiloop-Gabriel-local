@@ -14,8 +14,8 @@ services:
 
   llm-agent-multiloop:
     build:
-      context: .
-      dockerfile: Dockerfile.cli
+      context: ..
+      dockerfile: agent-multiloop-Gabriel-local/Dockerfile.cli
     container_name: llm-agent-multiloop-run
     restart: "no"
 
@@ -48,6 +48,10 @@ services:
       - ./tests:/home/agent/app/tests:ro
       - ./scripts:/home/agent/app/scripts
       - ./theories:/home/agent/app/theories
+      - ../pipeline_cognitif:/home/agent/app/pipeline_cognitif:ro
+      - ../pipeline_correction:/home/agent/app/pipeline_correction:ro
+      - ../Le-systeme-convolutif-Gabriel.tex:/home/agent/app/Le-systeme-convolutif-Gabriel.tex:ro
+      - ../Le-systeme-convolutif-Gabriel.pdf:/home/agent/app/Le-systeme-convolutif-Gabriel.pdf:ro
       - ./CONFIG_ENV_GUIDE.md:/home/agent/app/CONFIG_ENV_GUIDE.md
       - ./.github:/home/agent/app/.github
       - ./docker-compose.yml:/home/agent/app/docker-compose.yml

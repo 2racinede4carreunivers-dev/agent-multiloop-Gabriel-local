@@ -150,7 +150,7 @@ def detecter_entites_hol(question: str, mots_cles: list[str]) -> list[str]:
         "synthese_pont_savard", "alignement_central", "conclusion_ensemble",
         "RsP_un_demi_general", "RsP_un_tiers_constant", "RsP_un_quart_constant",
         "prime_equation_for_primes_pos", "spectral_postulate_pos",
-        "reconstruction_premier_pos", "RSA_convergence_main",
+        "reconstruction_premier_pos", "RSA_convergence_implies_distance_decreasing",
         "global_consistency", "riemann_zeros_eigenvalues_correspondence",
     ]
     q_low = question.lower()

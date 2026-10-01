@@ -113,7 +113,9 @@ definition spectral_hilbert_operator :: "real \<Rightarrow> complex" where
   "spectral_hilbert_operator t =
      Complex (1/2) (ln (2 * pi * t))"
 
-(* Propriété: Zéros Riemann comme eigenvalues *)
+(* Hypothèse candidate: toutes les valeurs propres de l'opérateur seraient
+   des zéros critiques de Riemann. Cette propriété doit être démontrée et
+   n'est pas impliquée par le seul fait d'être sur la droite critique. *)
 definition riemann_zeros_as_eigenvalues :: "bool" where
   "riemann_zeros_as_eigenvalues =
      (\<forall>(\<nu> :: real). (\<exists>t. 0 < t \<and>
@@ -138,11 +140,11 @@ lemma B_validation_coherence:
 
 lemma Sr2_validation_coherence:
   "Sr2_validation = 3/2"
-  by (unfold Sr2_validation_def; norm_num)
+  by (simp add: Sr2_validation_def)
 
 lemma rsr_validation_coherence:
   "rsr_validation = 1/2"
-  by (unfold rsr_validation_def; norm_num)
+  by (simp add: rsr_validation_def)
 
 subsection "Vérification Croissance Exponentielle"
 
@@ -151,8 +153,8 @@ lemma A_validation_strict_growth:
 proof (intro allI impI)
   fix n m :: nat
   assume "n < m"
-  have "2^n < 2^m"
-    using \<open>n < m\<close> by (simp add: power_strict_increasing)
+  have "(2::real)^n < 2^m"
+    using power_strict_increasing[of n m "2::real"] \<open>n < m\<close> by simp
   then show "A_validation n < A_validation m"
     unfolding A_validation_def by linarith
 qed
@@ -162,8 +164,8 @@ lemma B_validation_strict_growth:
 proof (intro allI impI)
   fix n m :: nat
   assume "n < m"
-  have "2^n < 2^m"
-    using \<open>n < m\<close> by (simp add: power_strict_increasing)
+  have "(2::real)^n < 2^m"
+    using power_strict_increasing[of n m "2::real"] \<open>n < m\<close> by simp
   then show "B_validation n < B_validation m"
     unfolding B_validation_def by linarith
 qed
@@ -173,8 +175,8 @@ lemma A_validation_positive:
 proof (intro allI impI)
   fix n :: nat
   assume "n \<ge> 1"
-  have "2^n \<ge> (2::real)"
-    using \<open>n \<ge> 1\<close> by (simp add: power_increasing)
+  have "(2::real) \<le> 2^n"
+    using power_increasing[of 1 n "2::real"] \<open>n \<ge> 1\<close> by simp
   then show "A_validation n > 0"
     unfolding A_validation_def by linarith
 qed
@@ -184,8 +186,8 @@ lemma B_validation_positive:
 proof (intro allI impI)
   fix n :: nat
   assume "n \<ge> 5"
-  have "2^n \<ge> (32::real)"
-    using \<open>n \<ge> 5\<close> by (simp add: power_increasing)
+  have "(32::real) \<le> 2^n"
+    using power_increasing[of 5 n "2::real"] \<open>n \<ge> 5\<close> by simp
   then show "B_validation n > 0"
     unfolding B_validation_def by linarith
 qed
@@ -214,10 +216,10 @@ lemma digamma_at_position:
 
 section "Théorèmes Centraux"
 
-subsection "Reconstruction Première Valide"
+subsection "Identité de Reconstruction (sans certificat de primalité)"
 
 (* -----------------------------------------------------------------------
-   THÉORÈME: prime_nth_reconstruction produit des entiers strictement positifs
+   THÉORÈME: prime_nth_reconstruction renvoie l'indice n
 
    Preuve algébrique :
      prime_nth_reconstruction n
@@ -225,7 +227,8 @@ subsection "Reconstruction Première Valide"
        = (B(n) - (B(n) - 64 * real n)) / 64
        = (64 * real n) / 64
        = real n
-   Témoin existentiel : p = n, et n > 0 par hypothèse.
+   La valeur obtenue est n; cela ne démontre pas que n est premier ni que
+   la formule reconstruit le n-ième nombre premier.
    ----------------------------------------------------------------------- *)
 theorem prime_reconstruction_validity:
   assumes h: "n > 0"
@@ -241,10 +244,38 @@ qed
 
 subsection "Zéros Riemann et Eigenvalues"
 
+lemma spectral_hilbert_operator_on_critical_line:
+  "Re (spectral_hilbert_operator t) = 1/2"
+  by (simp add: spectral_hilbert_operator_def)
+
+lemma spectral_hilbert_operator_has_zero_imaginary_value:
+  "\<exists>t. 0 < t \<and>
+       spectral_hilbert_operator t = Complex (1/2) 0"
+proof
+  have t_pos: "0 < 1 / (2 * pi)"
+    by (simp add: pi_gt_zero)
+  have product: "2 * pi * (1 / (2 * pi)) = (1::real)"
+    using pi_gt_zero by (field_simp; ring)
+  show "0 < 1 / (2 * pi) \<and>
+        spectral_hilbert_operator (1 / (2 * pi)) = Complex (1/2) 0"
+    using t_pos product
+    by (simp add: spectral_hilbert_operator_def)
+qed
+
 theorem riemann_zeros_eigenvalues_correspondence:
-  shows "riemann_zeros_as_eigenvalues \<longrightarrow>
-         (\<forall> \<nu>. riemann_zero_critical (Complex (1/2) \<nu>))"
-  by (unfold riemann_zeros_as_eigenvalues_def; simp)
+  "\<not> riemann_zeros_as_eigenvalues"
+proof -
+  have eigenvalue:
+    "\<exists>t. 0 < t \<and>
+       spectral_hilbert_operator t = Complex (1/2) 0"
+    by (rule spectral_hilbert_operator_has_zero_imaginary_value)
+  have not_critical:
+    "\<not> riemann_zero_critical (Complex (1/2) 0)"
+    by (simp add: riemann_zero_critical_def)
+  show ?thesis
+    unfolding riemann_zeros_as_eigenvalues_def
+    using eigenvalue not_critical by blast
+qed
 
 subsection "Normalisation par Sr2"
 
@@ -261,17 +292,17 @@ section "Lemmes de Support"
 lemma RSA_ratio_well_defined:
   assumes "length blockB > 0"
   shows "RSA_ratio blockA blockB k \<in> \<real>"
-  by (unfold RSA_ratio_def alternating_block_sum_def; simp)
+  by (rule Reals_of_real)
 
 lemma distance_to_half_metric:
   "\<forall> x y. dist (x :: real) (1/2) + dist y (1/2) \<ge> dist x y"
-  by (simp add: dist_triangle)
+  by (intro allI; metis dist_triangle dist_commute)
 
 lemma RSA_convergence_implies_distance_decreasing:
   assumes "rsa_converges_to_half blockA blockB"
   shows "(\<forall>\<epsilon>. 0 < \<epsilon> \<longrightarrow> (\<exists>N. \<forall>k. N \<le> k \<longrightarrow>
     dist (RSA_ratio blockA blockB k) (1/2) < \<epsilon>))"
-  by (unfold rsa_converges_to_half_def; exact assms)
+  using assms unfolding rsa_converges_to_half_def .
 
 (* ============================================================================
    SECTION 7 : VÉRIFICATIONS DE COHÉRENCE
@@ -301,17 +332,19 @@ qed
 
 lemma global_consistency:
   "A_validation 0 = -1 \<and>
-   B_validation 0 = -60.25 \<and>
+   B_validation 0 = -62.75 \<and>
    Sr2_validation = 1.5 \<and>
    rsr_validation = 0.5"
-  by (simp [A_validation_def, B_validation_def,
-            Sr2_validation_def, rsr_validation_def]; norm_num)
+  by (simp add: A_validation_def B_validation_def
+            Sr2_validation_def rsr_validation_def)
 
 (* ============================================================================
    SECTION 8 : CATALOGUE D'ANCRAGES v7.5
    ============================================================================
    Source : onglet «Validation HOL Générale» du fichier Excel v7.5.
-   Les ancrages sont les premiers certifiés à n=10 pour chaque rapport 1/k.
+   Les ancrages ci-dessous sont des données du catalogue de la méthode;
+   les prédicats de cette section vérifient seulement leur admissibilité
+   locale et ne prouvent pas le rapport k, le rang indiqué ou la branche.
    Modifications v7.5 :
      k=11 → P=1611851 rang=121982 (règle spéciale PDF)
      k=13 → P=368939  rang=31452  (A8+, corrigé)
@@ -321,22 +354,37 @@ lemma global_consistency:
 
 section "Catalogue d'Ancrages v7.5"
 
-(* Type : ancrage certifié = (k, premier_ancrage, rang_ancrage, branche) *)
+(* Tuple documentaire (k, candidat, rang, branche); la validation ci-dessous
+   ne relie pas formellement ces champs entre eux. *)
 
 definition ancrage_valide :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> string \<Rightarrow> bool" where
   "ancrage_valide k p rang branche =
      (p > 1 \<and> rang > 0 \<and> prime p)"
 
-(* Catalogue des ancrages validés — propriété de cohérence *)
-lemma ancrage_k3 :  "ancrage_valide 3  227       49      ''A8-''"  by (unfold ancrage_valide_def; norm_num)
-lemma ancrage_k4 :  "ancrage_valide 4  947       161     ''A8+''"  by (unfold ancrage_valide_def; norm_num)
-lemma ancrage_k5 :  "ancrage_valide 5  2999      430     ''A7+''"  by (unfold ancrage_valide_def; norm_num)
-lemma ancrage_k6 :  "ancrage_valide 6  7529      954     ''A8+''"  by (unfold ancrage_valide_def; norm_num)
-lemma ancrage_k7 :  "ancrage_valide 7  16519     1913    ''A8-''"  by (unfold ancrage_valide_def; norm_num)
-lemma ancrage_k8 :  "ancrage_valide 8  32327     3468    ''A8-''"  by (unfold ancrage_valide_def; norm_num)
-lemma ancrage_k9 :  "ancrage_valide 9  58337     5906    ''A7-''"  by (unfold ancrage_valide_def; norm_num)
-lemma ancrage_k13:  "ancrage_valide 13 368939    31452   ''A8+''"  by (unfold ancrage_valide_def; norm_num)
-lemma ancrage_k18:  "ancrage_valide 18 1883429   140885  ''A8+''"  by (unfold ancrage_valide_def; norm_num)
+lemma prime_368939:
+  "prime (368939 :: nat)"
+  by eval
+
+(* Contrôles locaux du catalogue : primalité de p et rang strictement positif.
+   Ils ne certifient pas l'association entre k, p, rang et branche. *)
+lemma ancrage_k3 :  "ancrage_valide 3  227       49      ''A8-''"
+  by (unfold ancrage_valide_def; eval)
+lemma ancrage_k4 :  "ancrage_valide 4  947       161     ''A8+''"
+  by (unfold ancrage_valide_def; eval)
+lemma ancrage_k5 :  "ancrage_valide 5  2999      430     ''A7+''"
+  by (unfold ancrage_valide_def; eval)
+lemma ancrage_k6 :  "ancrage_valide 6  7529      954     ''A8+''"
+  by (unfold ancrage_valide_def; eval)
+lemma ancrage_k7 :  "ancrage_valide 7  16519     1913    ''A8-''"
+  by (unfold ancrage_valide_def; eval)
+lemma ancrage_k8 :  "ancrage_valide 8  32327     3468    ''A8-''"
+  by (unfold ancrage_valide_def; eval)
+lemma ancrage_k9 :  "ancrage_valide 9  58337     5906    ''A7-''"
+  by (unfold ancrage_valide_def; eval)
+lemma ancrage_k13:  "ancrage_valide 13 368939    31452   ''A8+''"
+  by (simp add: ancrage_valide_def prime_368939)
+lemma ancrage_k18:  "ancrage_valide 18 1883429   140885  ''A8+''"
+  by (unfold ancrage_valide_def; eval)
 
 (* ============================================================================
    SECTION 9 : EXCLUSION FORMELLE DES COMPOSÉS C (NOUVEAUTÉ v7.5)
@@ -392,7 +440,7 @@ proof (rule allI)
   proof (rule notI)
     assume eq: "C = prime_i i"
     have "prime (prime_i i)"
-      by (simp add: prime_i_is_prime)
+      by (metis prime_i_is_prime)
     with eq not_prime show False by simp
   qed
 qed
@@ -437,7 +485,7 @@ lemma toutes_branches_composees_implique_bloque:
     verdict_branche k b (case b of
       A7plus  \<Rightarrow> C1 | A7moins \<Rightarrow> C2 |
       A8plus  \<Rightarrow> C3 | A8moins \<Rightarrow> C4) = ''EXCLU_HOL''"
-  by (auto simp: verdict_branche_def assms)
+  by (cases b; simp add: verdict_branche_def assms)
 
 (* ============================================================================
    SECTION 10 : CONTRÔLE DE DOMAINE — CERTIFICAT PAR L'ABSURDE (NOUVEAUTÉ v7.5)
@@ -465,7 +513,7 @@ definition inverser_SA_k2 :: "real \<Rightarrow> real" where
    ----------------------------------------------------------------------- *)
 theorem certificat_absurde_k2:
   fixes C :: "nat"
-  assumes composé: "\<not> prime C"
+  assumes not_prime_C: "\<not> prime C"
       and n0: "n0 = 11"
       and C_val: "C = 24"
   shows "\<exists> x :: real. x = inverser_SA_k2 (abs (real (6590 - 64 * C)))
@@ -473,9 +521,9 @@ theorem certificat_absurde_k2:
 proof -
   have "inverser_SA_k2 (abs (real (6590 - 64 * 24))) =
         inverser_SA_k2 5054"
-    by norm_num
+    by simp
   moreover have "inverser_SA_k2 5054 \<notin> \<nat>"
-    by (unfold inverser_SA_k2_def; norm_num)
+    by (unfold inverser_SA_k2_def; simp)
   ultimately show ?thesis
     using C_val by auto
 qed
@@ -493,14 +541,14 @@ lemma domaine_entier_requis:
 proof
   assume "\<exists> n :: nat. real n = x"
   then obtain n where "real n = x" by blast
-  then have "x \<in> \<nat>" by (simp add: Nats_def)
+  then have "x \<in> \<nat>" by (metis rangeI)
   with assms show False by contradiction
 qed
 
 (* Interdiction : un composé ne peut être rebaptisé premier *)
 theorem interdiction_C_non_decide_est_P:
   "\<not> (\<exists> C :: nat. \<not> prime C \<and> (\<exists> i. prime_i i = C))"
-  by (simp add: prime_i_is_prime)
+  by (metis prime_i_is_prime)
 
 (* ============================================================================
    SECTION 11 : CHAÎNE DE VALIDATION COMPLÈTE (NOUVEAUTÉ v7.5)
@@ -541,19 +589,20 @@ theorem chaine_coherente_exclusion:
   shows "\<not> prime C"
 proof -
   from assms show "\<not> prime C"
-    by (unfold valider_candidat_def; split if_splits; simp_all)
+    by (auto simp: valider_candidat_def)
 qed
 
 (* -----------------------------------------------------------------------
    THÉORÈME : P_CERTIFIÉ implique primalité et position
    ----------------------------------------------------------------------- *)
 theorem certifie_implique_premier_et_positionne:
-  assumes "valider_candidat C n True True = PCertifie"
-      and "n \<noteq> 10"
-  shows "prime C \<and> True"
+  assumes valid: "valider_candidat C n est_premier est_positionne = PCertifie"
+      and premier_flag_sound: "est_premier = prime C"
+  shows "prime C \<and> est_positionne"
 proof -
-  from assms show "prime C \<and> True"
-    by (unfold valider_candidat_def; split if_splits; simp_all)
+  from valid premier_flag_sound
+  show "prime C \<and> est_positionne"
+    by (auto simp: valider_candidat_def)
 qed
 
 subsection "Résumé HOL pour le Contrat Gabriel"
@@ -618,30 +667,33 @@ section "Exemple Positif — Ancrage Certifié 1/13"
 
 (* Les quatre branches de 1/13 à n=10 *)
 definition branches_k13 :: "(nat \<times> bool) list" where
-  "branches_k13 = [
-    (369095, False),   (* A7+ : 5×73819 — EXCLU HOL *)
-    (369121, False),   (* A7− : 17×21713 — EXCLU HOL *)
-    (368939, True),    (* A8+ : premier certifié — ANCRAGE POSSIBLE *)
-    (369277, False)    (* A8− : 179×2063 — EXCLU HOL *)
-  ]"
+  "branches_k13 = [(369095, False), (369121, False),
+                   (368939, True), (369277, False)]"
 
-(* -----------------------------------------------------------------------
-   LEMME : 368939 est premier (ancrage k=13)
-   ----------------------------------------------------------------------- *)
-lemma prime_368939:
-  "prime (368939 :: nat)"
-  by norm_num
+lemma not_prime_of_proper_divisor:
+  fixes d n :: nat
+  assumes dvd: "d dvd n" and greater: "1 < d" and smaller: "d < n"
+  shows "\<not> prime n"
+proof
+  assume "prime n"
+  then have "d = 1 \<or> d = n"
+    using dvd by (auto simp: prime_nat_iff)
+  with greater smaller show False by auto
+qed
 
 (* -----------------------------------------------------------------------
    LEMME : Les trois autres branches sont composées
    ----------------------------------------------------------------------- *)
-lemma compose_369095: "\<not> prime (369095 :: nat)" by norm_num
-lemma compose_369121: "\<not> prime (369121 :: nat)" by norm_num
-lemma compose_369277: "\<not> prime (369277 :: nat)" by norm_num
+lemma compose_369095: "\<not> prime (369095 :: nat)"
+  by (rule not_prime_of_proper_divisor[where d=5]; eval)
+lemma compose_369121: "\<not> prime (369121 :: nat)"
+  by (rule not_prime_of_proper_divisor[where d=17]; eval)
+lemma compose_369277: "\<not> prime (369277 :: nat)"
+  by (rule not_prime_of_proper_divisor[where d=179]; eval)
 
 (* -----------------------------------------------------------------------
-   THÉORÈME : Unicité de l'ancrage k=13
-   Une seule branche produit un premier — ancrage certifié sans ambiguïté.
+   THÉORÈME : Unicité du candidat premier dans l'ensemble k=13
+   Ce résultat n'établit pas l'association du candidat au rang ou à la branche.
    ----------------------------------------------------------------------- *)
 theorem ancrage_k13_unique:
   "\<exists>! (C :: nat). C \<in> {368939, 369095, 369121, 369277} \<and> prime C"
@@ -663,17 +715,17 @@ qed
 section "Exemple Négatif — Blocage 1/81"
 
 definition branches_k81 :: "(nat \<times> bool) list" where
-  "branches_k81 = [
-    (3486252959, False),  (* A7+ : 7×498036137 — EXCLU HOL *)
-    (3486253121, False),  (* A7− : 13×17×15774901 — EXCLU HOL *)
-    (3486246479, False),  (* A8+ : 47×487×152311 — EXCLU HOL *)
-    (3486259601, False)   (* A8− : 11×127×2495533 — EXCLU HOL *)
-  ]"
+  "branches_k81 = [(3486252959, False), (3486253121, False),
+                   (3486246479, False), (3486259601, False)]"
 
-lemma compose_3486252959: "\<not> prime (3486252959 :: nat)" by norm_num
-lemma compose_3486253121: "\<not> prime (3486253121 :: nat)" by norm_num
-lemma compose_3486246479: "\<not> prime (3486246479 :: nat)" by norm_num
-lemma compose_3486259601: "\<not> prime (3486259601 :: nat)" by norm_num
+lemma compose_3486252959: "\<not> prime (3486252959 :: nat)"
+  by (rule not_prime_of_proper_divisor[where d=7]; eval)
+lemma compose_3486253121: "\<not> prime (3486253121 :: nat)"
+  by (rule not_prime_of_proper_divisor[where d=13]; eval)
+lemma compose_3486246479: "\<not> prime (3486246479 :: nat)"
+  by (rule not_prime_of_proper_divisor[where d=47]; eval)
+lemma compose_3486259601: "\<not> prime (3486259601 :: nat)"
+  by (rule not_prime_of_proper_divisor[where d=11]; eval)
 
 (* -----------------------------------------------------------------------
    THÉORÈME : k=81 BLOQUÉ — aucun ancrage à n=10
@@ -707,11 +759,11 @@ qed
 
 lemma global_consistency_v75:
   "A_validation 0 = -1 \<and>
-   B_validation 0 = -60.25 \<and>
+   B_validation 0 = -62.75 \<and>
    Sr2_validation = 1.5 \<and>
    rsr_validation = 0.5"
-  by (simp [A_validation_def, B_validation_def,
-            Sr2_validation_def, rsr_validation_def]; norm_num)
+  by (simp add: A_validation_def B_validation_def
+            Sr2_validation_def rsr_validation_def)
 
 (* ============================================================================
    SECTION 15 : RÉSUMÉ ET CONCLUSIONS v7.5
@@ -721,42 +773,29 @@ section "Résumé et Conclusions v7.5"
 
 text "
 ╭────────────────────────────────────────────────────────────────────────╮
-│           VALIDATION HOL UNIFIÉE v7.5 — CONCLUSIONS                   │
+│            VALIDATION HOL UNIFIÉE v7.5 — PORTÉE                       │
 ╰────────────────────────────────────────────────────────────────────────╯
 
-POINTS VALIDÉS :
-  ✓ Fonctions A(n) et B(n) croissent exponentiellement
-  ✓ Formule digamma = B(n) - 64*P est correcte et cohérente
-  ✓ Reconstruction : prime_nth = (B(n) - digamma(n,n)) / 64 = real n [sans sorry]
-  ✓ Rapport Spectral Asymétrique (RSA) converge vers 1/2
-  ✓ Constante normalisatrice Sr2 = 1.5
-  ✓ Zéros Riemann correspondent à eigenvalues (Hilbert-Pólya)
-  ✓ Cohérence globale avec methode_spectral.thy
+ÉNONCÉS ET LIMITES DU MODÈLE :
+  - A_validation et B_validation ont les propriétés de croissance énoncées.
+  - digamma_validation n p = B_validation n - 64 * real p.
+  - prime_nth_reconstruction n = real n; cela ne certifie pas que n est premier.
+  - rsa_converges_to_half est défini, mais sa convergence n'est pas démontrée ici.
+  - Sr2_validation = 3/2; la propriété prouvée est une identité scalaire.
+  - L'opérateur défini a son image sur Re(s)=1/2, mais la correspondance
+    riemann_zeros_as_eigenvalues est réfutée pour cet opérateur.
+  - L'exclusion composite concerne les valeurs de prime_i, conformément
+    aux hypothèses et définitions de la théorie.
+  - certifie_implique_premier_et_positionne exige un indicateur de primalité
+    explicitement relié à prime C par premier_flag_sound.
 
-NOUVEAUTÉS v7.5 — EXCLUSION DES COMPOSÉS C :
-  ✓ composite_exclusion_HOL       : ¬prime(C) ⟹ ∀i. C ≠ prime_i(i)
-  ✓ compose_exclu_toute_position  : corollaire universel
-  ✓ chaine_coherente_exclusion    : ExcluHOL ⟺ ¬prime(C)
-  ✓ certifie_implique_premier     : P_CERTIFIÉ ⟺ prime(C) ∧ positionné
-  ✓ certificat_absurde_k2         : contrôle domaine ℕ (x=11,603… ∉ ℕ)
-  ✓ interdiction_C_non_decide_est_P : interdiction formelle HOL
-  ✓ ancrage_k13_unique            : unicité de l'ancrage 368939 (1/13)
-  ✓ k81_bloque / k81_aucun_ancrage : exemple de blocage (1/81)
-  ✓ contrat_gabriel               : locale formelle du contrat de réponse
-
-ANCRAGES CATALOGUE v7.5 :
-  ✓ k=3..9   : ancrages standards validés
-  ✓ k=11     : 1611851 rang=121982 (règle spéciale PDF)
-  ✓ k=13     : 368939  rang=31452  (A8+ corrigé)
-  ✓ k=18     : 1883429 rang=140885 (A8+ corrigé)
-  ✓ k=27     : 14330707 rang=930152 (règle spéciale S_A−(2k^8−k^6))
-
-ZÉRO sorry — AUCUN ARTEFACT RÉSIDUEL
-
-STATUT :
-  ✓ Formellement validée en Isabelle/HOL
-  ✓ Compatible avec rapports_non_typiques.py v7.5
-  ✓ Référence : systeme_convolutif_spectral_general.xlsx v7.5
+HISTORIQUE DU BUILD :
+  - Le CI a signalé une syntaxe mal formée dans l'ancienne liaison accentuée
+    « composé »; elle a été renommée not_prime_C sans changer l'énoncé.
+  - Une tentative locale antérieure a expiré pendant la construction de la
+    session HOL-Computational_Algebra.
+  - Le statut courant des preuves est celui du dernier build complet réussi
+    de la session Methode_Spectral.
 
 Auteur : Philippe Thomas Savard
 Date   : 06 septembre 2026

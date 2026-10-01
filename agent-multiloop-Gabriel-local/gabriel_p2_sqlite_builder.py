@@ -215,7 +215,7 @@ SPHERES = [
     ("1/x", "1/x — zeta / Extensions géométriques",
      "1/x = 1/y1 + 1/y2 + 1/y3  (décomposition de zeta)",
      "validation_hol_unifiee.thy : RSA_ratio, riemann_zero_critical, "
-     "spectral_hilbert_operator. Zéros de Riemann comme valeurs propres.",
+     "spectral_hilbert_operator. Correspondance aux zéros de Riemann réfutée pour cet opérateur.",
      "(3) 1/y2 = 1/ms3 — Re(ρ) = 1/2 = RsP = 1/2", 70),
 ]
 
@@ -248,7 +248,7 @@ CERCLES = [
      "A_validation, B_validation, digamma_validation, spectral_equation, "
      "prime_nth_reconstruction, Sr2_validation, rsr_validation"),
     ("1/x", 2, "Rapports spectraux asymétriques RSA",
-     "alternating_block_sum, RSA_ratio, rsa_converges_to_half, RSA_convergence_main, "
+     "alternating_block_sum, RSA_ratio, rsa_converges_to_half, RSA_convergence_implies_distance_decreasing, "
      "RSA_ratio_well_defined"),
     ("1/x", 3, "Zéros de Riemann — opérateur de Hilbert",
      "riemann_zero_critical, spectral_hilbert_operator, riemann_zeros_as_eigenvalues, "
@@ -299,17 +299,15 @@ LIENS_HOL = [
     ("SA",                             "A_validation",                     "correspond_a","validation_hol_unifiee.thy"),
     ("SB",                             "B_validation",                     "correspond_a","validation_hol_unifiee.thy"),
     ("digamma_calc",                   "digamma_validation",               "correspond_a","validation_hol_unifiee.thy"),
-    ("prime_equation",                 "prime_nth_reconstruction",         "correspond_a","validation_hol_unifiee.thy"),
-    ("RsP",                            "RSA_ratio",                        "correspond_a","validation_hol_unifiee.thy"),
-    ("RsP",                            "rsa_converges_to_half",            "implique",  "validation_hol_unifiee.thy"),
+    ("prime_equation",                 "prime_nth_reconstruction",         "correspondance_non_etablie","validation_hol_unifiee.thy"),
+    ("RsP",                            "RSA_ratio",                        "analogie_non_etablie","validation_hol_unifiee.thy"),
+    ("RSA_convergence_implies_distance_decreasing", "rsa_converges_to_half", "requiert", "validation_hol_unifiee.thy"),
     # 1/x → cohérence globale
-    ("RSA_convergence_main",           "global_consistency",               "implique",  "validation_hol_unifiee.thy"),
-    ("prime_reconstruction_validity",  "consistency_digamma_reconstruction","valide",   "validation_hol_unifiee.thy"),
-    ("riemann_zeros_eigenvalues_correspondence","riemann_zero_critical",   "utilise",   "validation_hol_unifiee.thy"),
-    ("spectral_hilbert_operator",      "riemann_zeros_as_eigenvalues",     "implique",  "validation_hol_unifiee.thy"),
+    ("prime_reconstruction_validity",  "consistency_digamma_reconstruction","identite_algebrique_sans_primalite","validation_hol_unifiee.thy"),
+    ("spectral_hilbert_operator_on_critical_line", "riemann_zero_critical", "localise_sur", "validation_hol_unifiee.thy"),
+    ("riemann_zeros_eigenvalues_correspondence", "riemann_zeros_as_eigenvalues", "refute", "validation_hol_unifiee.thy"),
     # Pont Savard ↔ 1/x (Re(ρ) = 1/2)
     ("synthese_pont_savard",           "riemann_zero_critical",            "valide",    "methode_spectral.thy"),
-    ("pont_spectral_direct_final",     "RSA_convergence_main",             "correspond_a","validation_hol_unifiee.thy"),
     ("alignement_central",             "global_consistency",               "implique",  "validation_hol_unifiee.thy"),
 ]
 

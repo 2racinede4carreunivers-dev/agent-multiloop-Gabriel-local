@@ -453,7 +453,7 @@ class DiagramConnector:
     from_box: Optional[DiagramBox] = None
     to_box: Optional[DiagramBox] = None
     label: str = ""
-    arrow_type: str = "->  # ->, <-, <->, --
+    arrow_type: str = "->"  # ->, <-, <->, --
 
 
 class DiagramDetector:

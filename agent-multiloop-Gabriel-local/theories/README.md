@@ -27,22 +27,22 @@
 
 ## 1. Vue d'ensemble du projet
 
-Ce dépôt contient la formalisation complète en **Isabelle/HOL** de la **Méthode Spectrale** — une approche géométrique originale de la distribution des nombres premiers développée par **Philippe Thomas Savard**.
+Ce dépôt contient plusieurs théories **Isabelle/HOL** explorant et formalisant des propositions de la **Méthode Spectrale**, développée par **Philippe Thomas Savard**. Il ne constitue pas, à lui seul, une preuve complète de toutes les affirmations de cette méthode. Certaines théories s'appuient explicitement sur des axiomes ou hypothèses; les conclusions doivent être lues avec leurs prémisses et confirmées par un build réussi de la session concernée.
 
-L'idée centrale : chaque nombre premier `p` peut être reconstruit comme selon le modèle du système convolutif :
+Une identité algébrique du modèle principal est :
 
 ```
-p = (SB(k, n) − Γ_c) / k⁶
+p = (SB(n) − digamma_calc(n, p)) / 64
 ```
 
-où `SA` et `SB` sont deux suites spectrales paramétrées par un rapport `1/k`, et `Γ_c` (le Digamma calculé) est une valeur résiduelle extraite de `SA` facteur de correction applicable +/- à la suite A et est de 1 à 4 des possibilités de la 7ième où de la 8ième position.
+Cette égalité réutilise `p` dans la définition de `digamma_calc`; elle ne calcule pas un nombre premier à partir de `n` et ne prouve pas que `p` est premier.
 
 **Résultat central :** Le rapport des différences consécutives est un invariant constant :
 ```
 RsP(k, n1, n2) = (SA(k,n1) − SA(k,n2)) / (SB(k,n1) − SB(k,n2)) = 1/k
 ```
 
-Ce résultat est **prouvé formellement dans Isabelle/HOL et le pipeline HOL incluant 3 validation mthode_spectral.thy la validation principal et les deux contre validation validant dans le même sens que la validation principale validation_hol_unifie.thy et validation_zeta_lean.thy** pour tous les régimes 1/k et la valeur générsalisée de n associée a ces régimes.
+Les identités de rapport formalisées dans le dépôt s'appliquent selon les définitions, hypothèses et prémisses de chaque théorème. Elles ne démontrent pas, par elles-mêmes, la primalité, une reconstruction du n-ième premier ou un lien avec les zéros de Riemann. La session `Methode_Spectral` regroupe les théories actives; son statut est celui du dernier build complet réussi.
 
 ---
 
@@ -262,9 +262,7 @@ Si q≠1,S=1+q+q^2+q^3…q^n=(1-q^(n+1))/(1-q).
 
 ## 1. Règle fondamentale : reconstruction initiale pour n = 10
 
-Pour chaque rapport non-typique 1/k, la reconstruction du premier se fait toujours en
-premier pour n = 10. Cette valeur sert d’ancre pour déterminer ensuite les premiers
-pour n > 10 (ordre croissant) et n < 10 (ordre décroissant).
+La documentation du modèle propose `n = 10` comme ancrage pour les rapports non-typiques. Cette règle n'est pas, à elle seule, une preuve qu'un premier est reconstruit. Dans `validation_hol_unifiee.thy`, l'identité `prime_nth_reconstruction n = real n` renvoie l'indice `n` et ne certifie pas sa primalité.
 
 ## 2. Méthode standard (entiers naturels)
 
@@ -805,7 +803,7 @@ RsP = Re(ρ) = 1/2
 
 ### validation_hol_unifiee.thy — v7.5 (6 septembre 2026)
 
-Contre-validation **indépendante** de `methode_spectral.thy`.
+Théorie auxiliaire avec des définitions distinctes. Certaines identités y sont vérifiées algébriquement; cela ne constitue pas une preuve indépendante de toutes les affirmations de `methode_spectral.thy`.
 
 **Redéfinitions indépendantes :**
 ```isabelle
@@ -862,6 +860,13 @@ theorem conclusion_pont_savard_valide:
 ---
 
 ## 14. Catalogue d'ancrages v7.5
+
+Les valeurs ci-dessous sont reprises du catalogue documentaire du modèle.
+Dans `validation_hol_unifiee.thy`, `ancrage_valide` vérifie seulement que
+`p > 1`, que `rang > 0` et que `p` est premier. Les lemmes `ancrage_k*`
+n'établissent pas que `p` est à ce rang, ni que la paire `(k, branche)` produit
+ce premier. Les colonnes sont donc des données proposées, pas des résultats
+certifiés par ces lemmes HOL.
 
 | k | n_ancrage | Branche Digamma | P ancré | Rang | RsP |
 |---|-----------|----------------|---------|------|-----|

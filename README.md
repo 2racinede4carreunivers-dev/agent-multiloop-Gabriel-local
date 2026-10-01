@@ -29,15 +29,15 @@
 
 ##  Buts et raisons d'existence
 
-L'agent multiloop **Gabriel** est un **assistant mathématique expert HOL/Lean** entièrement dédié à un objectif unique et précis : **assister l'auteur, Philippe Thomas Savard, à construire un outil géométrique dynamique permettant d'apporter une réponse à l'énigme de Bernhard Riemann et à la conjecture de la fonction zêta de Riemann.**
+L'agent multiloop **Gabriel** est un **assistant mathématique HOL/Lean** consacré à l'exploration et à la formalisation des propositions de la géométrie du spectre des nombres premiers, notamment celles qui se rapportent à la fonction zêta de Riemann. Il ne prétend pas résoudre l'hypothèse de Riemann.
 
-L'outil en question — la **géométrie du spectre des nombres premiers** — n'est pas une simple visualisation : c'est **la construction formelle elle-même**, formalisée dans Isabelle/HOL, qui incarne la réponse constructive à l'énigme. Cette géométrie est l'objet mathématique central de la théorie *L'Univers est au carré* développée par l'auteur.
+La **géométrie du spectre des nombres premiers** est l'objet mathématique central de la théorie *L'Univers est au carré* développée par l'auteur. Les formaliser dans Isabelle/HOL permet de vérifier les énoncés effectivement encodés et leurs preuves; cela ne valide pas automatiquement les hypothèses, les liens avec la fonction zêta ni les conclusions qui ne sont pas démontrées.
 
 Gabriel existe donc pour trois raisons :
 
-1. **Assister la formalisation** en Isabelle/HOL des théorèmes de la Méthode Spectrale (13 régimes, Section XIII / Pont Savard, universalité entière naturelle du régime central 1/2).
-2. **Vérifier numériquement** en temps réel les calculs spectraux (`RsP`, `psi_savard`, reconstruction du n-ième premier, exclusion des composés).
-3. **Documenter et raisonner** de façon rigoureuse sur la géométrie du spectre en s'appuyant sur un fichier de preuve unique et compilable : `methode_spectral.thy`.
+1. **Assister la formalisation** en Isabelle/HOL des énoncés de la Méthode Spectrale (13 régimes, Section XIII / Pont Savard), en distinguant théorèmes, hypothèses et axiomes.
+2. **Calculer et examiner** les quantités spectrales (`RsP`, `psi_savard` et les identités dites de reconstruction), sans présenter un calcul ou une identité algébrique comme certificat de primalité.
+3. **Documenter et analyser** les théories Isabelle du dépôt. Leur compilation doit être confirmée par un build réussi de la session correspondante.
 
 ---
 
@@ -113,7 +113,7 @@ Voici des exemples concrets de requêtes traitées par Gabriel :
 | Théorie avancée | *« Explique le lien entre la Section XIII, le Pont Savard et Re(ρ) = 1/2 »* | TRÈS COMPLEXE |
 | Comparaison | *« Compare psi_savard(228, 49) et Chebyshev sur le premier 227 »* | TRÈS COMPLEXE |
 | Résumé | *« Résume les 3 concordances C1, C2, C3 en un tableau »* | RAPIDE |
-| Formel HOL | *« Génère le script Isabelle vérifiant la reconstruction du 10ᵉ premier »* | STANDARD |
+| Formel HOL | *« Vérifie l'identité prime_nth_reconstruction n = real n et précise ce qu'elle ne démontre pas »* | STANDARD |
 
 Toute réponse est **ancrée sur `methode_spectral.thy`** (empreinte SHA256 tracée par audit) et peut être exportée vers un PDF citable (roadmap).
 
@@ -145,7 +145,7 @@ Cette mise en contexte fait partie intégrante de l'expérience utilisateur : el
 
 **Gabriel ne répond qu'aux questions portant sur la géométrie du spectre des nombres premiers.** Cette limitation est volontaire et incarne la vocation de l'agent :
 
-- ✅ Questions sur `RsP`, `SA`, `SB`, `A_1_3`, `B_1_3`, `A_1_4`, `B_1_4`, `psi_savard`, `digamma_calc`, les 13 régimes, la Section XIII, le Pont Savard, les 3 concordances, l'universalité entière naturelle, la reconstruction du n-ième premier, l'exclusion des composés.
+- ✅ Questions sur `RsP`, `SA`, `SB`, `A_1_3`, `B_1_3`, `A_1_4`, `B_1_4`, `psi_savard`, `digamma_calc`, les 13 régimes, la Section XIII, le Pont Savard, les 3 concordances, les identités de reconstruction et leurs limites, ainsi que les énoncés sur les composés.
 - ✅ Analyse discursive de sections, lemmes, théorèmes, preuves formelles du fichier `methode_spectral.thy`.
 - ❌ Questions généralistes hors mathématiques.
 - ❌ Aide sur d'autres théories mathématiques non liées au spectre des premiers.
@@ -182,8 +182,9 @@ Cette focalisation garantit que Gabriel reste un **assistant compétent** plutô
 ```bash
 git clone https://github.com/2racinede4carreunivers-dev/agent-multiloop-Gabriel-local.git
 cd agent-multiloop-Gabriel-local
-docker-compose up -d
-docker exec -it gabriel_cli python -m src.ui.cli
+cd agent-multiloop-Gabriel-local
+docker compose up -d --build
+docker compose attach llm-agent-multiloop
 ```
 
 ### Compilation Isabelle locale

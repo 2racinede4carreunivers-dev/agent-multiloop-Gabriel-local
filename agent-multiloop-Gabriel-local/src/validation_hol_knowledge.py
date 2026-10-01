@@ -79,64 +79,72 @@ class ValidationHOLUnifieeKnowledge:
             name='Sr2_validation',
             isabelle_form='definition Sr2_validation :: "real" where "Sr2_validation = 3/2"',
             formula='Sr2 = 1.5',
-            purpose='Constante normalisatrice universelle'
+            purpose='Constante fixée à 3/2; aucune portée universelle démontrée'
         )
         
         self.definitions['RSA_ratio'] = ValidationDefinition(
             name='RSA_ratio',
-            isabelle_form='definition RSA_ratio :: "nat list ⇒ nat list ⇒ nat ⇒ real" where "RSA_ratio blockA blockB k = (sumA - sumB) / max(1e-10) sumB"',
-            formula='RSA(blockA, blockB, k) = (Σ_A - Σ_B) / Σ_B',
-            purpose='Rapport Spectral Asymétrique - Converge vers 1/2'
+            isabelle_form='definition RSA_ratio :: "nat list ⇒ nat list ⇒ nat ⇒ real" where "RSA_ratio blockA blockB k = (alternating_block_sum blockA k - alternating_block_sum blockB k) / max (1 / 10 ^ 10) (alternating_block_sum blockB k)"',
+            formula='RSA(blockA, blockB, k) = (Σ_A - Σ_B) / max(10^-10, Σ_B)',
+            purpose='Rapport Spectral Asymétrique; sa convergence doit être prouvée séparément'
         )
         
         # SECTION 5: Théorèmes Centraux
-        self.theorems['RSA_convergence_main'] = ValidationTheorem(
-            name='RSA_convergence_main',
-            isabelle_form='theorem RSA_convergence_main: "∃ N. ∀ k ≥ N. dist(RSA_ratio blockA blockB k, 1/2) < 0.1"',
-            description='RSA converge vers 1/2 pour blocs croissants',
-            significance='Montre la structure spectrale asymptotique sous-jacente',
-            section='Théorèmes Centraux'
+        self.theorems['RSA_convergence_implies_distance_decreasing'] = ValidationTheorem(
+            name='RSA_convergence_implies_distance_decreasing',
+            isabelle_form='lemma RSA_convergence_implies_distance_decreasing: assumes "rsa_converges_to_half blockA blockB" shows "∀ ε. 0 < ε ⟶ (∃ N. ∀ k. N ≤ k ⟶ dist (RSA_ratio blockA blockB k) (1/2) < ε)"',
+            description='Conséquence conditionnelle de la définition de convergence RSA; ne prouve pas que le prédicat de convergence est satisfait.',
+            significance='Formalise une implication, sans établir la convergence des rapports.',
+            section='Lemmes de Support'
         )
         
         self.theorems['prime_reconstruction_validity'] = ValidationTheorem(
             name='prime_reconstruction_validity',
-            isabelle_form='theorem prime_reconstruction_validity: "∃ p > 0. prime_nth_reconstruction n = real p"',
-            description='Reconstruction produit des nombres premiers exacts',
-            significance='Garantit que la formule B(n) - 64*p donne les vrais premiers',
+            isabelle_form='theorem prime_reconstruction_validity: assumes n > 0 shows "∃ p. 0 < p ∧ prime_nth_reconstruction n = real p"',
+            description='Pour n > 0, la preuve donne prime_nth_reconstruction n = real n; elle ne prouve pas que n est premier.',
+            significance='Identité algébrique de reconstruction seulement; aucun certificat de primalité ni de rang de premier.',
             section='Théorèmes Centraux'
         )
         
         self.theorems['riemann_zeros_eigenvalues'] = ValidationTheorem(
             name='riemann_zeros_eigenvalues',
-            isabelle_form='theorem riemann_zeros_eigenvalues_correspondence: "riemann_zeros_as_eigenvalues ⟶ (∀ ν. riemann_zero_critical Complex(1/2, ν))"',
-            description='Zéros Riemann correspondent aux eigenvalues',
-            significance='Connexion avec Hilbert-Pólya: zéros ↔ eigenvalues',
+            isabelle_form='theorem riemann_zeros_eigenvalues_correspondence: "¬ riemann_zeros_as_eigenvalues"',
+            description='Réfute la correspondance proposée pour cet opérateur: il atteint le point d’ordonnée nulle, exclu des zéros critiques par la définition.',
+            significance='La localisation sur Re(s)=1/2 ne suffit pas à établir que les valeurs propres sont des zéros de Riemann.',
             section='Théorèmes Centraux'
         )
         
         self.theorems['Sr2_normalization'] = ValidationTheorem(
             name='Sr2_normalization',
             isabelle_form='theorem Sr2_normalization_property: "∀ x > 0. Sr2_validation * x = (3/2) * x"',
-            description='Sr2 = 1.5 agit comme facteur de normalisation universel',
-            significance='La constante 1.5 normalise toute la géométrie spectrale',
+            description='Sr2 = 1.5; le théorème établit une identité de multiplication scalaire.',
+            significance='Identité de multiplication scalaire; aucune propriété géométrique supplémentaire n’en découle seule.',
             section='Théorèmes Centraux'
         )
         
         # SECTION 7: Vérifications Cohérence
-        self.lemmas['consistency_A_B'] = 'A_validation n + 64 = B_validation n + 68'
+        self.lemmas['consistency_A_B'] = '2 * A_validation n = B_validation n + 62'
         self.lemmas['digamma_formula_correct'] = 'digamma_validation n p = B_validation n - 64 * (real p)'
-        self.lemmas['consistency_digamma_reconstruction'] = '(B_validation n - digamma_validation n n) / 64 = prime_nth_reconstruction n'
-        self.lemmas['global_consistency'] = 'A_validation 0 = -1 ∧ B_validation 0 = -60.25 ∧ Sr2_validation = 1.5'
+        self.lemmas['consistency_digamma_reconstruction'] = 'prime_nth_reconstruction n = real n'
+        self.lemmas['global_consistency'] = 'A_validation 0 = -1 ∧ B_validation 0 = -62.75 ∧ Sr2_validation = 1.5'
         
         # SECTIONS
         self.sections['section_1'] = 'Définitions de Validation (A, B, Digamma, Sr2, RSA)'
-        self.sections['section_2'] = 'Analyse Zéros Riemann (Hilbert-Pólya)'
+        self.sections['section_2'] = 'Analyse du modèle d’opérateur et contre-exemple de correspondance'
         self.sections['section_3'] = 'Correspondances et Cohérence'
         self.sections['section_4'] = 'Formule Digamma: D = B(n) - 64*P'
-        self.sections['section_5'] = 'Théorèmes Centraux (RSA, Reconstruction, Riemann, Sr2)'
+        self.sections['section_5'] = 'Identités de reconstruction et propriétés ponctuelles'
         self.sections['section_6'] = 'Lemmes de Support'
         self.sections['section_7'] = 'Vérifications Cohérence'
-        self.sections['section_8'] = 'Résumé et Conclusions'
+        self.sections['section_8'] = 'Catalogue d’ancrages'
+        self.sections['section_9'] = 'Exclusion formelle des composés'
+        self.sections['section_10'] = 'Contrôle de domaine par inversion'
+        self.sections['section_11'] = 'Chaîne de validation'
+        self.sections['section_12'] = 'Exemple positif k=13'
+        self.sections['section_13'] = 'Exemple négatif k=81'
+        self.sections['section_14'] = 'Cohérence globale'
+        self.sections['section_15'] = 'Résumé et conclusions'
+        self.sections['section_16'] = 'Références externes et licence'
     
     def get_definition(self, name: str) -> Optional[ValidationDefinition]:
         """Récupère une définition"""
@@ -192,73 +200,52 @@ FORMULE CORRECTE:
 
 où:
   - B(n) = (13/4)*2^n - 66 (fonction spectrale)
-  - 64 = 2^6 (puissance universelle)
+  - 64 = 2^6 (constante de la formule)
   - p = nombre premier à position n
 
 LEMME PROUVÉ:
   {self.lemmas['digamma_formula_correct']}
 
 SIGNIFICATION:
-  La formule dit que pour reconstruire le n-ième nombre premier p,
-  il suffit de:
-  1. Calculer B(n)
-  2. Soustraire 64*p
-  3. Le résultat est EXACTEMENT p (reconstruction exacte)
-
-C'est mathématiquement elegant car:
-  - Le facteur 64 est universal
-  - La formule est additive-inverse
-  - Elle fonctionne pour TOUS les premiers
+  Cette identité calcule digamma_validation à partir des entrées n et p.
+  Elle ne démontre ni que p est premier, ni que la formule reconstitue p.
 """
     
     def _answer_rsa(self) -> str:
         return f"""
-Le Rapport Spectral Asymétrique (RSA) est fondamental:
+Définition du Rapport Spectral Asymétrique (RSA):
 
 DÉFINITION:
-  RSA(blockA, blockB, k) = (Σ_A - Σ_B) / Σ_B
+  RSA(blockA, blockB, k) = (Σ_A - Σ_B) / max(10^-10, Σ_B)
 
 où Σ est la somme alternée:
   Σ = Σᵢ (-1)^i * primeᵢ^k
 
-THÉORÈME CENTRAL:
-  RSA converge vers 1/2 pour blocs croissants
-
-IMPLICATION:
-  La structure spectrale n'est pas du hasard!
-  Les nombres premiers suivent une géométrie sous-jacente
-  qui se révèle par le rapport spectral asymptotique.
-
-C'est la PREUVE formelle qu'il y a une structure cachée
-organisée autour du ratio 1/2.
+La théorie définit le prédicat rsa_converges_to_half et prouve seulement
+qu'une hypothèse de convergence implique la propriété correspondante.
+Elle ne prouve pas que les rapports RSA convergent vers 1/2.
 """
     
     def _answer_riemann(self) -> str:
         return f"""
-Connexion avec les Zéros de Riemann via Hilbert-Pólya:
+Test du modèle d'opérateur et des zéros de Riemann:
 
 DÉFINITION SPECTRALE:
   Opérateur: λ → Complex(1/2, ln(2*π*λ))
-  Eigenvalues: Complex(1/2, ν) pour ν > 0
+  Image: Complex(1/2, ν) pour ν réel
 
-THÉORÈME:
+RÉSULTATS DU MODÈLE:
+  {self.theorems['riemann_zeros_eigenvalues'].isabelle_form}
   {self.theorems['riemann_zeros_eigenvalues'].description}
 
-SIGNIFICATION:
-  Les zéros de Riemann (hypothèse non prouvée) correspondent
-  exactement aux eigenvalues de l'opérateur spectral de Savard.
-
-  Si l'hypothèse de Riemann est vraie, c'est parce que
-  la géométrie spectrale des nombres premiers FORCE
-  les zéros sur la ligne critique Re = 1/2.
-
-C'est une nouvelle perspective sur Riemann:
-  Zéros de Riemann = manifestation géométrique spectrale
+Être sur Re(s)=1/2 ne suffit pas à être un zéro de Riemann. L'opérateur atteint
+Complex(1/2, 0), point exclu par la définition de riemann_zero_critical; la
+correspondance proposée est donc réfutée pour cet opérateur.
 """
     
     def _answer_sr2(self) -> str:
         return f"""
-La constante Sr2 = 1.5 est universelle:
+La théorie fixe Sr2 à 1.5:
 
 DÉFINITION:
   Sr2 = 3/2 = 1.5
@@ -266,65 +253,47 @@ DÉFINITION:
 THÉORÈME:
   {self.theorems['Sr2_normalization'].description}
 
-SIGNIFICATION:
-  - 1.5 est le facteur de normalisation UNIVERSEL
-  - Apparaît dans la relation A + 64 = B + 68
-  - Normalise toute la géométrie spectrale
-  - Cela n'est PAS arbitraire
-
-IMPLICATION MATHÉMATIQUE:
-  La constante 1.5 révèle une symétrie profonde
-  dans la structure multiplicative des nombres premiers.
+La propriété formelle établit seulement l'identité de multiplication
+Sr2_validation * x = (3/2) * x pour x > 0. Elle ne démontre pas à elle seule
+une propriété géométrique universelle.
 """
     
     def _answer_reconstruction(self) -> str:
         return f"""
-La reconstruction des premiers est le résultat final:
+Identité de reconstruction formalisée:
 
 FORMULE:
-  prime_nth(n) = (B(n) - D(n, prime_n)) / 64
+  prime_nth_reconstruction(n) =
+    (B_validation(n) - digamma_validation(n,n)) / 64
 
-où D(n,p) = B(n) - 64*p
+où digamma_validation(n,p) = B_validation(n) - 64*p.
 
 Simplification:
-  prime_nth(n) = (B(n) - (B(n) - 64*prime_n)) / 64
-               = (64*prime_n) / 64
-               = prime_n  ✓ EXACT!
+  pour n > 0, prime_nth_reconstruction(n) = real n
 
-THÉORÈME PROUVÉ:
-  Reconstruction produit exactement les nombres premiers,
-  PAS une approximation!
-
-IMPLICATION:
-  Les nombres premiers peuvent être RECONSTRUITS via
-  la géométrie spectrale. Ce n'est pas une coïncidence,
-  c'est une propriété intrinsèque de leur structure.
+Cette identité renvoie l'indice n. Elle ne prouve pas que n est premier ni
+que la formule reconstruit le n-ième nombre premier.
 """
     
     def _answer_coherence(self) -> str:
         return f"""
-Les vérifications de cohérence prouvent l'auto-consistance:
+Identités algébriques présentes dans la théorie:
 
-RELATION INTERNE CLÉSSS:
+RELATION ENTRE A ET B:
   {self.lemmas['consistency_A_B']}
 
 Cela signifie:
-  A(n) + 64 = B(n) + 68
-
-C'est NOT arbitraire. C'est une relation mathématique profonde
-qui reflète la structure des deux fonctions spectrales.
+  2 * A_validation(n) = B_validation(n) + 62
 
 LEMMES PROUVÉS:
   • A_validation_coherence: A = (13/8)*2^n - 2
   • B_validation_coherence: B = (13/4)*2^n - 66
   • digamma_formula_correct: D = B - 64*p
-  • global_consistency: A(0)=-1, B(0)=-60.25, Sr2=1.5
+  • global_consistency: A(0)=-1, B(0)=-62.75, Sr2=1.5
 
 IMPLICATION:
-  La théorie est AUTOCOHÉRENTE:
-  - Pas de contradictions logiques
-  - Pas de dépendances circulaires
-  - Prête pour publication scientifique
+Ces identités sont établies pour les définitions données. Elles ne constituent
+pas une preuve générale d'absence de contradictions ni une validation scientifique.
 """
     
     def _answer_definitions(self) -> str:
@@ -338,14 +307,13 @@ Définitions fondamentales du fichier:
 {defs}
 
 ORGANISATION:
-  Ces 5 définitions forment la base mathématique complète
-  de la géométrie du spectre des nombres premiers.
+  Ces définitions constituent le modèle formalisé dans cette théorie.
   
   Chacune joue un rôle précis:
   - A et B: Croissance spectrale
   - Digamma: Correction/reconstruction
-  - Sr2: Normalisation
-  - RSA: Structure asymptotique
+  - Sr2: Constante égale à 3/2
+  - RSA: Rapport et prédicat de convergence (convergence non démontrée)
 """
     
     def _answer_theorems(self) -> str:
@@ -354,45 +322,34 @@ ORGANISATION:
             for t in self.theorems.values()
         ])
         return f"""
-Théorèmes centraux prouvés formellement:
+Énoncés formalisés dans le fichier (à interpréter avec le résultat du dernier build complet):
 
 {thms}
 
 ENSEMBLE COHÉRENT:
-  Ces 4 théorèmes forment l'architecture scientifique
-  de la méthode spectrale Savard.
-  
-  Ensemble, ils disent:
-  - La structure spectrale EXISTE et CONVERGE
-  - Elle RECONSTRUIT les premiers EXACTEMENT
-  - Elle CONNECTE aux zéros de Riemann
-  - Elle est NORMALISÉE par une constante universelle
+  Ces énoncés incluent une implication conditionnelle RSA, l'identité
+  prime_nth_reconstruction(n) = real n, la réfutation de la correspondance
+  des zéros pour l'opérateur défini et une identité scalaire pour Sr2.
 """
     
     def _answer_overview(self) -> str:
         return f"""
-validation_hol_unifiee.thy est la VALIDATION FORMELLE COMPLÈTE
-de la Méthode Spectrale Savard en Isabelle/HOL.
+validation_hol_unifiee.thy formalise certaines définitions et propositions
+de la Méthode Spectrale Savard en Isabelle/HOL. Vérifiez le dernier build complet
+de la session pour connaître leur statut de compilation.
 
-STRUCTURE EN 8 SECTIONS:
+STRUCTURE EN 16 SECTIONS:
   1. Définitions: A, B, Digamma, Sr2, RSA
-  2. Zéros Riemann: Hilbert-Pólya
+  2. Analyse des zéros de Riemann pour l'opérateur défini
   3. Correspondances: Cohérence des définitions
-  4. Formule Digamma: D(n,p) = B(n) - 64*p
-  5. Théorèmes: RSA→1/2, Reconstruction, Riemann, Sr2
-  6. Lemmes: Support mathématique
-  7. Vérifications: Auto-cohérence
-  8. Conclusions: Synthèse scientifique
+  4–16. Identités et lemmes, catalogue d'ancrages, exclusion de composés,
+        contrôle de domaine, exemples, synthèse, références et licence.
 
-IMPLICATION MAJEURE:
-  La géométrie du spectre des nombres premiers
-  révèle une STRUCTURE sous-jacente qui permet de
-  les RECONSTRUIRE via formules spectrales.
-
-STATUS:
-  ✓ Formellement validée
-  ✓ Auto-cohérente
-  ✓ Prête pour publication
+PORTÉE:
+  La reconstruction définie dans la théorie renvoie real n et ne prouve pas
+  que n est premier. Le prédicat RSA est défini, mais sa convergence n'est pas
+  démontrée. La correspondance avec les zéros de Riemann est réfutée pour
+  l'opérateur défini. Consultez les théorèmes pour leurs hypothèses exactes.
 """
 
 

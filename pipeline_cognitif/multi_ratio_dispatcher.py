@@ -35,7 +35,7 @@ Auteur : Philippe Savard 2026
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from sympy import isprime, prime, primepi
 
@@ -126,6 +126,7 @@ class ResultatRatioUnique:
     reconstruction_reussie: bool
     ancrage_dynamique: bool = False
     message: str = ""
+    candidats_ancre_n10: List[Tuple[int, int, int]] = field(default_factory=list)
 
     def __repr__(self):
         s   = "OK" if self.reconstruction_reussie else "ECHEC"
@@ -180,10 +181,11 @@ class ResultatMultiRatio:
         return "\n".join(L)
 
     def tableau_texte(self) -> str:
-        sep = "-" * 76
+        sep = "-" * 128
         L = [f"Tableau comparatif v7.9 - n={self.n}", sep,
              f"{'Rapport':>16} | {'Type':>11} | {'Ancre n=10':>16} | "
-             f"{'P(n)':>16} | {'Digamma':>18} | Src",
+             f"{'P(n)':>16} | {'Digamma':>18} | {'Statut':>10} | "
+             f"{'Branches premières':<54} | Src",
              sep]
         for k, r in self.resultats.items():
             t   = "typique" if r.typique else "non typique"
@@ -191,9 +193,20 @@ class ResultatMultiRatio:
             p   = str(r.premier_n)         if r.premier_n          is not None else "ECHEC"
             d   = str(r.digamma_calcule)   if r.digamma_calcule     is not None else "?"
             src = "DYN" if r.ancrage_dynamique else "REF"
+            statut = (
+                "AMBIGU" if len(r.candidats_ancre_n10) > 1 and r.ancrage_dynamique
+                else "CATALOGUE" if len(r.candidats_ancre_n10) > 1
+                else "UNIQUE" if r.candidats_ancre_n10
+                else "ABSENT"
+            )
+            branches = ", ".join(
+                f"A({pos}){'+' if signe > 0 else '-'}={premier}"
+                for pos, signe, premier in r.candidats_ancre_n10
+            ) or "-"
             L.append(
                 f"{'1/'+str(k):>16} | {t:>11} | {a:>16} | "
-                f"{p:>16} | {d:>18} | {src}"
+                f"{p:>16} | {d:>18} | {statut:>10} | "
+                f"{branches:<54} | {src}"
             )
         L.append(sep)
         return "\n".join(L)
@@ -223,7 +236,7 @@ class MultiRatioDispatcher:
     def __init__(self, verbose: bool = False, k_max_override: Optional[int] = None):
         self.verbose = verbose
         self.k_max   = k_max_override if k_max_override is not None else K_MAX_RECORD
-        self._cache_ancres: Dict[int, Optional[int]] = {}
+        self._cache_ancres: Dict[int, List[Tuple[int, int, int]]] = {}
 
     def requete(self, n: int, liste_k: Optional[List[int]] = None) -> ResultatMultiRatio:
         valider_n(n)
@@ -262,9 +275,43 @@ class MultiRatioDispatcher:
                 message=f"Erreur calculateur : {exc}",
             )
 
-        premier_ancre = self._ancre_n10_cached(k=k, res_10=res_10)
+        candidats_ancre = self._ancre_n10_cached(k=k, res_10=res_10)
+        premier_ancre = None
         premier_n = digamma_n = position = None
         message = ""
+
+        if k in ANCHORS_N10:
+            ancre_catalogue = ANCHORS_N10[k]
+            if any(premier == ancre_catalogue for _, _, premier in candidats_ancre):
+                premier_ancre = ancre_catalogue
+                if len(candidats_ancre) > 1:
+                    branches = ", ".join(
+                        f"A({pos}){'+' if signe > 0 else '-'}={premier}"
+                        for pos, signe, premier in candidats_ancre
+                    )
+                    message = (
+                        f"Ancrage du catalogue sélectionné explicitement : "
+                        f"{ancre_catalogue}; {len(candidats_ancre)} candidats "
+                        f"premiers sont conservés ({branches})."
+                    )
+            else:
+                message = (
+                    f"Ancre de catalogue {ancre_catalogue} absente des "
+                    f"candidats premiers calculés pour k={k}."
+                )
+        elif len(candidats_ancre) == 1:
+            premier_ancre = candidats_ancre[0][2]
+        elif len(candidats_ancre) > 1:
+            branches = ", ".join(
+                f"A({pos}){'+' if signe > 0 else '-'}={premier}"
+                for pos, signe, premier in candidats_ancre
+            )
+            message = (
+                f"Ancrage ambigu : {len(candidats_ancre)} candidats premiers "
+                f"({branches}); confirmation requise."
+            )
+        elif not candidats_ancre and not typique:
+            message = "Aucun candidat premier parmi les quatre essais Digamma."
 
         if typique:
             # Rapport 1/2 : n = position dans P
@@ -305,7 +352,8 @@ class MultiRatioDispatcher:
                                 f"(rang ancre={pos_ancre} a n=10)."
                             )
             else:
-                message = f"Ancrage n=10 echoue pour k={k} (4 Digamma testes)."
+                if not candidats_ancre and not message:
+                    message = f"Ancrage n=10 echoue pour k={k} (4 Digamma testes)."
 
         ok = premier_n is not None and _est_premier(premier_n)
         return ResultatRatioUnique(
@@ -316,19 +364,19 @@ class MultiRatioDispatcher:
             reconstruction_reussie=ok,
             ancrage_dynamique=ancrage_dynamique,
             message=message,
+            candidats_ancre_n10=candidats_ancre,
         )
 
-    def _ancre_n10_cached(self, k: int, res_10) -> Optional[int]:
+    def _ancre_n10_cached(self, k: int, res_10) -> List[Tuple[int, int, int]]:
         if k in self._cache_ancres:
             return self._cache_ancres[k]
-        ancre = self._ancre_n10(k=k, res_10=res_10)
-        self._cache_ancres[k] = ancre
-        return ancre
+        candidats = self._candidats_ancre_n10(k=k, res_10=res_10)
+        self._cache_ancres[k] = candidats
+        return candidats
 
-    def _ancre_n10(self, k: int, res_10) -> Optional[int]:
-        if k in ANCHORS_N10:
-            return ANCHORS_N10[k]
+    def _candidats_ancre_n10(self, k: int, res_10) -> List[Tuple[int, int, int]]:
         k6 = k ** 6
+        candidats = []
         for (pos_exp, signe) in ORDRE_DIGAMMA:
             try:
                 digamma = res_10.somme_A + signe * (k ** pos_exp)
@@ -336,10 +384,10 @@ class MultiRatioDispatcher:
                 if k6 != 0 and num % k6 == 0:
                     P = num // k6
                     if P > 1 and _est_premier(P):
-                        return P
+                        candidats.append((pos_exp, signe, P))
             except (OverflowError, ZeroDivisionError):
                 continue
-        return None
+        return candidats
 
     def tableau_comparatif(self, n: int, liste_k: Optional[List[int]] = None) -> str:
         return self.requete(n=n, liste_k=liste_k).tableau_texte()

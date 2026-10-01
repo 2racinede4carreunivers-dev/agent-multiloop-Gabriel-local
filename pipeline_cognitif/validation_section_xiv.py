@@ -43,9 +43,9 @@ except ImportError:  # execution directe du script
     )
 
 try:
-    from .gabriel_geometric_wrapper_v74 import PipelineCognitifNiveaux
+    from .multi_ratio_dispatcher import MultiRatioDispatcher
 except ImportError:  # execution directe du script
-    from gabriel_geometric_wrapper_v74 import PipelineCognitifNiveaux
+    from multi_ratio_dispatcher import MultiRatioDispatcher
 
 ECARTS = []
 
@@ -255,45 +255,41 @@ def section_F():
 
 
 def section_G():
-    """G) Pipeline generalise : ordre prescrit, tout 1/k et tout n >= 1."""
+    """G) Contrat du dispatcher multi-rapports et cas d'ancrage ambigus."""
     print()
     print("=" * 92)
     print(" G) PIPELINE GENERALISE 1/k (typique et non typique), ordre prescrit")
     print("=" * 92)
+    dispatcher = MultiRatioDispatcher()
     # Rapport typique 1/2 : n = position du premier dans P.
-    t = PipelineCognitifNiveaux(k=2)
-    r = t.reconstruire(10)
-    check(r['premier'] == 29 and r['position_dans_P'] == 10,
+    r = dispatcher.requete(n=10, liste_k=[2]).resultats[2]
+    check(r.premier_n == 29 and r.position_dans_P == 10,
           "typique 1/2 : n=10 -> 29 (10e premier)")
-    r = t.reconstruire(9)
-    check(r['premier'] == 23 and r['digamma_calcule_n'] == 126,
+    r = dispatcher.requete(n=9, liste_k=[2]).resultats[2]
+    check(r.premier_n == 23 and r.digamma_calcule == 126,
           "typique 1/2 : n=9 -> 23, Digamma = 126")
     # Rapports non typiques : ancrage n=10 + decalage de rang.
     for k, n, attendu in [(3, 17, 263), (7, 10, 16519),
                           (7, 17, 16603), (8, 34, 32537)]:
-        r = PipelineCognitifNiveaux(k=k).reconstruire(n)
-        check(r['premier'] == attendu,
-              f"non typique 1/{k} : n={n} -> {attendu} (obtenu {r['premier']})")
-        v = r['verification_equations_au_n']
-        check(v['A'] and v['B'],
-              f"1/{k} : equations generalisees exactes a n={n}")
-    # Etapes prescrites exposees dans la sortie.
-    r = PipelineCognitifNiveaux(k=5).reconstruire(12)
-    check('sommes_n9' in r and len(r.get('ordre_pipeline', [])) == 7,
-          "etapes prescrites exposees (sommes n=9 + ordre 7 etapes)")
-    s9 = CalculateurNiveau1Entiers(k=5).calculer(9)
-    check(r['sommes_n9']['somme_A'] == s9.somme_A
-          and r['sommes_n9']['somme_B'] == s9.somme_B,
-          "sommes n=9 coherentes avec le calculateur niveau 1")
-    check(r['niveau_1']['somme_A'] == CalculateurNiveau1Entiers(k=5).calculer(12).somme_A,
-          "sommes au n demande (12) coherentes avec le calculateur niveau 1")
+        r = dispatcher.requete(n=n, liste_k=[k]).resultats[k]
+        check(r.premier_n == attendu,
+              f"non typique 1/{k} : n={n} -> {attendu} (obtenu {r.premier_n})")
+        check(r.digamma_calcule == r.somme_B - attendu * k ** 6,
+              f"1/{k} : Digamma exact a n={n}")
+    # Les rapports ambigus sont exposes sans choix automatique.
+    for k, nombre in ((10, 3), (20, 2)):
+        r = dispatcher.requete(n=10, liste_k=[k]).resultats[k]
+        check(r.premier_ancre_n10 is None
+              and len(r.candidats_ancre_n10) == nombre
+              and "ambigu" in r.message.lower(),
+              f"1/{k} : {nombre} candidats conserves, aucun ancrage choisi")
     # Gardes-fous.
     for mauvais_k in (0, 1, 2.5):
         try:
-            PipelineCognitifNiveaux(k=mauvais_k)
+            dispatcher.requete(n=10, liste_k=[mauvais_k])
             check(False, f"k={mauvais_k} aurait du etre rejete")
-        except ValueError:
-            check(True, f"k={mauvais_k} rejete (ValueError)")
+        except (TypeError, ValueError):
+            check(True, f"k={mauvais_k} rejete")
 
 
 def main():

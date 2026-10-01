@@ -2615,196 +2615,6 @@ lemma ecart_947_881_1_4_via_gap_equation:
                 D_947_val_def D_881_val_def)
 
 
-(**************************************************************)
-(* CHAPITRE DEUXIEME : Axiomatisation analytique (zeta) et spectrale *)
-(**************************************************************)
-
-text \<open>
-  Mise en garde concernant la presente section.
-
-  La section qui suit est fournie exclusivement a titre de reference conceptuelle.
-  Elle ne fait pas partie de l'oeuvre propre de l'auteur Philippe Thomas Savard et
-  n'est employee ici qu'en tant qu'exemple informatif destine a situer certains
-  elements analytiques dans un cadre logique compatible avec Isabelle/HOL.
-
-  Les contenus, notions ou structures evoques dans cette section ne constituent
-  pas une contribution originale de l'auteur et ne doivent pas etre interpretes
-  comme faisant partie integrante de la methode_spectral.thy. Ils ne sont cites
-  qu'a titre d'illustration conceptuelle, sans garantie, sans validation interne
-  et sans pretention a l'exactitude analytique ou historique.
-
-  Il est explicitement affirme que :
-
-    - la presente section ne limite, ne contraint, n'altere ni ne modifie en
-      aucune maniere la nature, la portee, la validite ou l'evolution des
-      references externes auxquelles elle fait allusion ;
-
-    - la methode_spectral.thy demeure une entite autonome, complete dans sa
-      propre structure, et ne depend en aucune maniere des exemples, axiomes ou
-      formulations presentes dans cette section ;
-
-    - la presente section ne cree aucune forme d'autoreference, de dependance
-      circulaire ou d'interaction logique entre la methode spectrale et les
-      references externes : chacune de ces entites demeure independante, valide
-      par elle-meme, et libre dans sa nature propre, sans restriction temporelle
-      ou conceptuelle ;
-
-    - aucune des deux entites - ni la methode_spectral.thy, ni les exemples
-      analytiques presentes ici - ne possede la capacite d'annuler, d'invalider
-      ou de restreindre l'autre, que ce soit par leur contenu, leur structure ou
-      leur interpretation.
-
-  En resume, la presente section constitue un exemple conceptuel independant,
-  sans effet contraignant, sans interaction logique obligatoire, et sans
-  influence sur la validite intrinseque de la methode spectrale ou des
-  references externes auxquelles elle renvoie.
-\<close>
-(**************************************************************)
-(* CHAPITRE DEUXIEME : Axiomatisation analytique (zeta) et spectrale *)
-(**************************************************************)
-
-section "Axiomatisation analytique et geometrique de la position des nombres premiers"
-
-text \<open>
-  Dans cette section, nous introduisons, sous forme axiomatique, le lien classique
-  de la theorie analytique des nombres entre les zeros de la fonction zeta de Riemann
-  et la position des nombres premiers. Cette axiomatisation n'est pas une creation
-  originale de l'auteur de la methode spectrale (Philippe Thomas Savard), mais une
-  abstraction inspiree des formules explicites de la theorie des nombres, telles
-  que celles de Riemann, von Mangoldt et leurs successeurs.
-\<close>
-text \<open>
-  1. Axiomatisation (abstraite) de la fonction zeta et de ses zeros.
-
-  On introduit un type abstrait pour representer les zeros non triviaux de zeta,
-  ainsi qu'une fonction donnant leur partie reelle. On ne formalise pas ici la
-  fonction zeta elle-meme, ni la formule explicite complete, mais on encode le fait
-  que les zeros determinent la position des nombres premiers, comme le suggerent
-  les formules explicites de Riemann/von Mangoldt.
-\<close>
-typedecl zero_zeta
-
-consts
-  Re_zero_zeta :: "zero_zeta => real"
-  Im_zero_zeta :: "zero_zeta => real"
-
-text \<open>
-  La fonction suivante represente, de maniere abstraite, la contribution d'un zero
-  de zeta a la determination de la position du n-ieme nombre premier. Elle est inspiree
-  des formules explicites (de type Riemann/von Mangoldt) qui expriment des fonctions
-  arithmetiques liees aux nombres premiers en termes de sommes sur les zeros de zeta.
-\<close>
-consts
-  prime_position_from_zero :: "zero_zeta => nat => bool"
-
-axiomatization where
-  explicit_formula_axiom:
-    "ALL n. EX r::zero_zeta. prime_position_from_zero r n"
-
-text \<open>
-  Interpretation : pour chaque entier naturel n, il existe au moins un zero non trivial
-  de zeta qui intervient dans la determination de la position du n-ieme nombre premier.
-  Cet axiome formalise, de maniere abstraite, l'idee que les zeros de zeta determinent
-  la position des nombres premiers, telle qu'on la trouve dans la theorie analytique
-  classique (formules explicites).
-\<close>
-text \<open>
-  2. Axiomatisation de l'evidence spectrale issue de la methode de Savard.
-
-  La methode spectrale, telle que developpee dans les sections precedentes, repose
-  sur les faits suivants (formules ici de maniere synthetique) :
-
-  - Quand n >= 1 et n <= -1 (au sens de la structure spectrale consideree),
-    tous les n ramenent a un nombre premier P.
-  - La valeur de n est determinee par la quantite de termes dans les suites A et B.
-  - Tous les nombres premiers P entre eux respectent le rapport spectral 1/k.
-  - Ce rapport 1/k est numeriquement valide mais algebriquement incoherent.
-
-  Nous encapsulons cette evidence sous forme de constantes et d'axiomes abstraits.
-\<close>
-typedecl indice_spectral   (* type abstrait pour les n de la methode spectrale *)
-typedecl premier_spectral  (* type abstrait pour les P de la methode spectrale *)
-consts
-  A_suite_ZeroZeta :: "indice_spectral => nat"
-  B_suite_ZeroZeta :: "indice_spectral => nat"
-  P_spectral       :: "indice_spectral => premier_spectral"
-  rapport_spectral :: "premier_spectral => premier_spectral => rat"
-
-text \<open>
-  Axiome : chaque indice spectral n (dans le domaine considere) ramene a un nombre
-  premier spectral P, et la valeur de n est determinee par la quantite de termes
-  dans les suites A et B. Le detail constructif est donne dans les sections precedentes
-  de la methode spectrale ; ici, nous en donnons une abstraction logique.
-\<close>
-
-axiomatization where
-  spectral_index_to_prime:
-    "ALL n::indice_spectral. EX P::premier_spectral. P_spectral n = P" and
-
-  spectral_index_from_suites:
-    "ALL n::indice_spectral. A_suite_ZeroZeta n + B_suite_ZeroZeta n >= 1"
-
-text \<open>
-  Axiome : tous les nombres premiers spectraux P entre eux respectent un rapport
-  spectral 1/k, numeriquement valide mais algebriquement incoherent. On encode
-  cela en imposant que le rapport entre deux premiers spectraux soit toujours
-  de la forme 1/k pour un certain entier k >= 1.
-\<close>
-
-consts
-  k_spectral :: "premier_spectral => premier_spectral => nat"
-
-axiomatization where
-  rapport_spectral_forme:
-    "ALL P Q::premier_spectral. k_spectral P Q >= 1
-      --> rapport_spectral P Q = 1 / (of_nat (k_spectral P Q))"
-
-text \<open>
-  Interpretation : le rapport spectral entre deux nombres premiers (ou groupes de
-  nombres premiers asymetriques ordonnes ou chaotiques, ou symetriques en paire
-  1*1 ou n*n) spectraux P et Q est toujours de la forme 1/k, avec k un entier
-  naturel >= 1. Ce rapport est numeriquement bien defini (dans Q), mais ne
-  correspond pas a une relation algebrique classique entre nombres premiers,
-  d'ou l'expression algebriquement incoherent dans le texte conceptuel.
-\<close>
-text \<open>
-  3. Axiomatisation du lien entre la fonction zeta et la geometrie spectrale.
-
-  Nous introduisons maintenant un axiome de concordance : la structure spectrale
-  issue de la methode de Savard est compatible, sur le plan conceptuel, avec
-  la structure analytique donnee par les zeros de zeta. Plus precisement, nous
-  postulons qu'a chaque indice spectral n correspond un zero de zeta qui intervient
-  dans la determination de la position du nombre premier associe.
-\<close>
-consts
-  zero_associe :: "indice_spectral => zero_zeta"
-
-axiomatization where
-  concordance_spectrale:
-    "ALL n::indice_spectral.
-       prime_position_from_zero (zero_associe n)
-         (A_suite_ZeroZeta n + B_suite_ZeroZeta n)"
-
-
-text \<open>
-  Interpretation : pour chaque indice spectral n, il existe un zero de zeta (ici
-  represente par \<open>zero_associe n\<close>) qui intervient, via la fonction abstraite
-  \<open>prime_position_from_zero\<close>, dans la determination de la position du nombre
-  premier correspondant (code ici par la quantite de termes A_suite_ZeroZeta n + B_suite_ZeroZeta n).
-
-  Cet axiome formalise le parallele conceptuel entre :
-
-  - la theorie analytique de la fonction zeta de Riemann, ou les zeros determinent
-    la position des nombres premiers (formules explicites) ;
-  - la geometrie du spectre des nombres premiers de la methode de Savard,
-    ou les indices spectraux n, les suites A et B, et le rapport 1/k organisent
-    la position des nombres premiers dans une structure spectrale coherente.
-
-  Cette section ne pretend pas demontrer l'hypothese de Riemann, ni reconstruire
-  la theorie analytique complete de zeta, mais elle etablit, dans le langage
-  d'Isabelle/HOL, une concordance axiomatique entre la methode spectrale et la
-  vision analytique classique de la distribution des nombres premiers.
-\<close>
 (****************************************************************************
  * SECTION XI. REGLES DE CONSTRUCTION DES SUITES A_i / B_i (8+ TERMES)
  * POUR RAPPORT SPECTRAL RsP = 1/k_i
@@ -4445,8 +4255,11 @@ text \<open>
   Démonstration Formelle et Système Général du tableur.
 
   RÈGLE DE RECONSTRUCTION (ancrage n=10 + décalage de rang) :
-    1. À n=10 : tester les quatre Digamma ΣA ± A(7) et ΣA ± A(8) ;
-       le seul candidat entier premier constitue l'ancrage du rapport.
+     1. À n=10 : tester les quatre Digamma ΣA ± A(7) et ΣA ± A(8) ;
+       un candidat unique peut être retenu automatiquement. Une branche
+       explicitement inscrite au catalogue peut aussi être utilisée, mais
+       toutes les autres branches premières doivent rester visibles.
+       Sans catalogue, zéro ou plusieurs candidats ne donnent aucun ancrage.
     2. Pour n \<noteq> 10 : rang cible = rang base + n - 10 ;
        P cible = tblPremiers[rang cible] ;
        Digamma calculé = ΣB(k,n) - P_cible × k^6.
@@ -4859,7 +4672,9 @@ text \<open>
 
   Formellement, le rang base et le premier base sont modélisés par
   deux constantes axiomatisées par rapport (ils sont donnés par le
-  catalogue des ancrages du tableur).
+  catalogue des ancrages du tableur). Cette axiomatisation fournit des
+  données d'entrée pour les cas listés; elle ne prouve ni leur génération
+  par les quatre essais, ni une règle d'ancrage pour tout k.
 \<close>
 
 consts
@@ -4998,6 +4813,11 @@ text \<open>
 
   Ce postulat généralise le spectral_postulate_pos (k=2) aux rapports
   non-typiques validés numériquement dans le tableur (k=3..9).
+
+  Portée logique : reconstruction_conv_identity démontre une identité issue
+  de la définition de digamma_calcule_conv. Le corollaire ci-dessous est
+  donc redondant; il ne prouve pas que premier_cible_conv est premier, que
+  les rangs catalogués sont corrects, ni une conjecture sur les zéros de zêta.
 \<close>
 
 axiomatization where
@@ -5045,27 +4865,85 @@ text \<open>
     dans la suite B). Validées numériquement pour k=8, n=10.
 
   NIVEAU 5 — MÉCANISME D'ANCRAGE ET DÉCALAGE
-    À n=10 : quatre essais Digamma (position 7 ou 8, signe ±) ;
-             l'unique candidat premier constitue l'ancrage.
-    À n\<noteq>10 : rang_cible = rang_base + n - 10 ; P = nth_prime(rang_cible) ;
-             Digamma = ΣB - P×k^6. Validé exactement pour k=8, n=34.
+    À n=10 : calculer les quatre candidats dans l'ordre
+             A(8)-, A(8)+, A(7)+, A(7)- et conserver chaque branche première.
+             Hors catalogue, ne retenir automatiquement qu'un candidat unique.
+             Toute sélection de catalogue doit être explicite et garder visibles
+             les branches alternatives.
+    À n\<noteq>10 : pour une ancre choisie, rang_cible = rang_base + n - 10 ;
+             P = prime_i(rang_cible) ; Digamma = ΣB - P×k^6.
+             Le cas k=8, n=34 vérifie l'identité arithmétique exacte.
 
   NIVEAU 6 — VALIDATION EXACTE
     k=8, n=34 : (ΣB - Digamma) / 262144 = 32537 ✓
     (Arithmétique entière exacte, sans limite de 15 chiffres d'Excel.)
 
-  POSITION DANS L'ARCHITECTURE SAVARD :
-    Le système convolutif est la réalisation formelle du niveau 1/ms1
-    (reconstruction du i-ème premier) pour les rapports non-typiques 1/k.
-    Combiné au théorème RsP_conv_constant (niveau 1/ms3) et à l'exclusion
-    des composés par l'absurde (niveau 1/ms2, Sections IX-X), il complète
-    le Troisième Pilier de la Méthode Spectrale étendue aux régimes k >= 3.
+  NIVEAU 7 — REQUÊTES MULTI-RAPPORTS
+    Pour un n commun, chaque k est évalué séparément. Le rapport doit conserver
+    la liste des branches premières et leur statut : ancre unique, choix explicite
+    du catalogue, ambiguïté sans décision, ou aucun candidat standard.
+    Les journaux 1/k pour k=2..1001 et k=1002..10001 sont des sorties du
+    dispatcher v7.9 ; ils ne forment pas une preuve HOL et n'établissent pas
+    l'unicité des ancres qu'ils affichent.
 
-  Le rapport spectral 1/k de ce système n'est pas une coïncidence
-  algébrique : il émerge de la structure même des suites convolutives
-  A et B, dont les termes sont des puissances entières de k combinées
-  selon les règles de la Section XI. C'est la primaute du numérique réel
-  sur l'algébrique (Foundations.4) à l'échelle de tout k >= 2.
+  POSITION DANS L'ARCHITECTURE SAVARD :
+    RsP_conv_constant prouve l'invariant 1/k des formules fermées.
+    reconstruction_conv_identity prouve que la définition de Digamma restitue
+    premier_cible_conv par simplification. Les rangs des ancrages sont fournis
+    par l'axiomatisation ancrages_conv pour k=3..9 ; ils ne sont pas dérivés
+    des quatre essais Digamma. Le tableau k=10..111 et les listes multi-k
+    ne sont pas formalisés ni vérifiés par ces résultats HOL.
+
+  PORTÉE DES RÉSULTATS : la preuve RsP_conv_constant est algébrique et porte
+  sur les fonctions définies ici. L'identité reconstruction_conv_identity
+  porte sur premier_cible_conv fourni en entrée ; à elle seule, elle ne prouve
+  ni sa primalité, ni l'exactitude des rangs catalogués, ni l'hypothèse de
+  Riemann. Les affirmations de portée plus large dans le corpus restent des
+  positions de l'auteur ou des hypothèses explicitement déclarées.
+\<close>
+
+subsection "XIV.11 — Portée des ancrages et cas ambigus (PDF, classeur et journaux)"
+
+text \<open>
+  La source Word/PDF fournie comporte 36 pages physiques. Le système généralisé
+  apparaît aux pages imprimées 22..28 ; les exemples k=13, 42 et 54 occupent
+  les pages 29..36. Le PDF compilé depuis le .tex local est un autre artefact
+  (27 pages PDF, pagination imprimée jusqu'à 26). Il n'existe pas de pages
+  37..49 dans la source fournie.
+
+  Le tableau PDF k=10..111 distingue trois états, qui ne doivent pas être
+  ramenés à un seul résultat automatique :
+
+    - un candidat standard premier unique : ancrage admissible ;
+    - plusieurs candidats premiers (C_MULTIPLE) : hors branche explicitement
+      cataloguée, conserver chaque branche et demander une confirmation sans
+      en retenir une par ordre ; une sélection de catalogue doit être tracée
+      et afficher les branches alternatives ;
+    - aucun candidat premier (AUCUN P) : déclarer l'absence d'ancrage standard.
+
+  Le document compte 38 cas uniques, 20 multiples et 44 sans candidat pour
+  k=10..111. Il donne aussi des règles spéciales, notamment pour k=11 et k=27.
+  Elles ne doivent pas être extrapolées aux autres rapports. La table PDF
+  Les constantes rang_base_k et premier_base_k ci-dessus ne couvrent que
+  k=3..9; cette section ne formalise pas le catalogue étendu. Les pages
+  k=10..111 et les deux journaux multi-k ne sont donc pas des théorèmes de
+  la présente session Isabelle.
+
+  La feuille « Validation Convolutive » inscrit 16 421 comme premier PDF
+  pour 1/7. Le calcul exact confirme qu'il s'agit de la branche A(8)+ ;
+  16 519 est la branche A(8)- explicitement retenue par le catalogue XIV.6.
+  Ces valeurs sont deux candidats distincts, et non une erreur d'arrondi.
+  Le rapport cognitif doit afficher leur branche et distinguer la sélection
+  explicite du catalogue d'une sélection dynamique unique.
+
+  Enfin, les deux journaux multi-k couvrent respectivement k=2..1001
+  (1 000 requêtes, 423 succès rapportés) et k=1002..10001
+  (9 000 requêtes, 2 604 succès rapportés). Ils ont été produits par le
+  dispatcher v7.9, qui retenait le premier candidat premier rencontré et
+  n'enregistrait pas toutes les branches premières. Ce sont des résultats
+  d'exécution à reprendre avec le dispatcher qui conserve les candidats ;
+  ils ne certifient ni l'unicité de leurs ancres, ni une proposition HOL,
+  ni un résultat sur l'hypothèse de Riemann.
 \<close>
 
 

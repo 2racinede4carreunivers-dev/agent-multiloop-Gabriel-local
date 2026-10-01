@@ -1557,27 +1557,4 @@
   1/986            (non typique) [DYN] | ancre=None | P(n=10)=None | [ECHEC]
     Note: Ancrage n=10 echoue pour k=986 (4 Digamma testes).
   1/987            (non typique) [DYN] | ancre=936667209955721 | P(n=10)=936667209955721 | [PREMIER TROUVE]
-  1/988            (non typique) [DYN] | ancre=941421858025739 | P(n=10)=941421858025739 | [PREMIER TROUVE]
-  1/989            (non typique) [DYN] | ancre=None | P(n=10)=None | [ECHEC]
-    Note: Ancrage n=10 echoue pour k=989 (4 Digamma testes).
-  1/990            (non typique) [DYN] | ancre=950989079602979 | P(n=10)=950989079602979 | [PREMIER TROUVE]
-  1/991            (non typique) [DYN] | ancre=None | P(n=10)=None | [ECHEC]
-    Note: Ancrage n=10 echoue pour k=991 (4 Digamma testes).
-  1/992            (non typique) [DYN] | ancre=None | P(n=10)=None | [ECHEC]
-    Note: Ancrage n=10 echoue pour k=992 (4 Digamma testes).
-  1/993            (non typique) [DYN] | ancre=965485602843521 | P(n=10)=965485602843521 | [PREMIER TROUVE]
-  1/994            (non typique) [DYN] | ancre=970356863377397 | P(n=10)=970356863377397 | [PREMIER TROUVE]
-  1/995            (non typique) [DYN] | ancre=975247769038019 | P(n=10)=975247769038019 | [PREMIER TROUVE]
-  1/996            (non typique) [DYN] | ancre=980158373233031 | P(n=10)=980158373233031 | [PREMIER TROUVE]
-  1/997            (non typique) [DYN] | ancre=985088739379777 | P(n=10)=985088739379777 | [PREMIER TROUVE]
-  1/998            (non typique) [DYN] | ancre=None | P(n=10)=None | [ECHEC]
-    Note: Ancrage n=10 echoue pour k=998 (4 Digamma testes).
-  1/999            (non typique) [DYN] | ancre=None | P(n=10)=None | [ECHEC]
-    Note: Ancrage n=10 echoue pour k=999 (4 Digamma testes).
-  1/1000           (non typique) [DYN] | ancre=None | P(n=10)=None | [ECHEC]
-    Note: Ancrage n=10 echoue pour k=1000 (4 Digamma testes).
-  1/1001           (non typique) [DYN] | ancre=None | P(n=10)=None | [ECHEC]
-    Note: Ancrage n=10 echoue pour k=1001 (4 Digamma testes).
-================================================================================
- Succes : 423/1000 | Global : PARTIEL/ECHEC
-================================================================================
+ c

@@ -15,7 +15,7 @@ import logging
 from fractions import Fraction
 from dataclasses import dataclass
 
-from ratio_dispatcher import dispatch_from_prompt, UnknownRatioError
+from ..dispatch.ratio_dispatcher import dispatch_from_prompt, UnknownRatioError
 
 logger = logging.getLogger("gabriel.spectral_core")
 

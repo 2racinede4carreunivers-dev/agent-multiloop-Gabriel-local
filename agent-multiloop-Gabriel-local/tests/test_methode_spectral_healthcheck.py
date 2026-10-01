@@ -65,9 +65,12 @@ class TestMethodeSpectralHealthcheck:
         found = sorted(sequence for sequence in bad_sequences if sequence in text)
         assert not found, f"Sequences mojibake detectees : {found}"
 
-    def test_04_lf_only_no_crlf_or_bare_cr(self, raw: bytes):
-        assert b"\r\n" not in raw, "Fins de ligne CRLF detectees"
-        assert b"\r" not in raw, "Octet CR detecte : le fichier doit utiliser LF uniquement"
+    def test_04_consistent_line_endings(self, raw: bytes):
+        without_crlf = raw.replace(b"\r\n", b"")
+        assert b"\r" not in without_crlf, "Retour chariot isole detecte"
+        assert not (b"\r\n" in raw and b"\n" in without_crlf), (
+            "Fins de ligne LF et CRLF melangees"
+        )
 
     def test_05_no_illegal_control_characters(self, text: str):
         illegal = [

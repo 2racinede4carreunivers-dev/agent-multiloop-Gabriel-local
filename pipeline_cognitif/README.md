@@ -10,8 +10,9 @@ systeme convolutif spectral :
   `a1 x terme entier`, donc le facteur s'annule dans
   `(Somme_B - Digamma) / k^6` : **les deux niveaux ont les memes utilites**.
 
-Dossier autonome : il suffit de le copier tel quel. Seule dependance
-tierce : `numpy` (utilisee par `metaphore_geometrique.py`).
+Dépendances : `sympy` pour les tests de primalité et les rangs du dispatcher;
+`numpy` est utilisé par `metaphore_geometrique.py`. Le healthcheck lit aussi le
+classeur avec `openpyxl` et inspecte le PDF avec `pypdf`.
 
 ## Contenu
 
@@ -19,36 +20,28 @@ tierce : `numpy` (utilisee par `metaphore_geometrique.py`).
 |---|---|
 | `suites_geometriques_niveau2.py` | Coeur : calculateurs niveaux 1 et 2, Digamma, formes fermees, ancrages XIV |
 | `reconstruction_premiers_1_sur_k.py` | Reconstructeur de reference 1/7 (16519 via `S_A - 7^8`) |
-| `gabriel_geometric_wrapper_v74.py` | `PipelineCognitifNiveaux` : wrapper unifie (typique 1/2, non typiques 1/k) |
+| `multi_ratio_dispatcher.py` | API multi-rapports publique, rapports typiques et non typiques |
+| `gabriel_geometric_wrapper_v74.py` | Wrapper `reconstruire_multi_k` autour du dispatcher |
 | `Suites_geometriques_AB.py` | Suites A/B geometriques generales |
 | `fallback_geometrique.py` | Repli geometrique si l'approche algebrique echoue |
 | `metaphore_geometrique.py` | Bloc « Structure Geometrique Spatiale » des reponses |
 | `validation_section_xiv.py` | Validation de conformite a la Section XIV (exit 0 = conforme) |
+| `Healthcheck_convolutif_HOL.py` | Healthcheck des sources, dependances, calculs et session Isabelle |
 
 ## Usage
 
 ```python
 from pipeline_cognitif import (
-    PipelineCognitifNiveaux, CalculateurNiveau1Entiers,
-    CalculateurNiveau2Geometrique, Reconstructeur1Sur7,
+  MultiRatioDispatcher, CalculateurNiveau1Entiers,
+  CalculateurNiveau2Geometrique,
 )
 
-# Pipeline unifie : typique 1/2 (n = position dans P) ou non typique 1/k
-p = PipelineCognitifNiveaux(k=7)
-r = p.reconstruire(10)     # premier = 16519, ancre rang 1913
-r = p.reconstruire(12)     # premier = 16547 (rang 1913 + 2)
-
-# Rapport ordonne suivant l'ordre prescrit (7 etapes) :
-print(p.rapport_pipeline(12))
-#   [1] sommes A/B a n=10          [2] 4 possibilites Digamma
-#   [3] sommes A/B a n=9           [4] coefficients (S(10)-S(9))/k^8
-#   [5] (Reste+x) -> blocs A/B     [6] equations generalisees (n > 0)
-#   [7] sommes A/B au n demande + premier consequent
-
-# Cles principales du dict retourne par reconstruire(n) :
-#   ancrage_n10, sommes_n9, coefficients_niveau_1, niveau_1, niveau_2,
-#   premier, position_dans_P (typique) / position_ancre_dans_P (non typique),
-#   digamma_calcule_n, verification_equations_au_n, ordre_pipeline
+# Une requete groupe plusieurs rapports 1/k pour un meme n.
+p = MultiRatioDispatcher()
+r = p.requete(n=10, liste_k=[2, 7, 10, 20])
+print(r.rapport_texte())
+# k=2 et k=7 utilisent leurs branches cataloguees ; k=10 et k=20
+# exposent plusieurs candidats sans en choisir un automatiquement.
 
 # Niveau 1 direct
 calc = CalculateurNiveau1Entiers(k=7)
@@ -58,6 +51,9 @@ res = calc.calculer(10)    # S_A = 322966112, S_B = 2260645142
 #   python -m pipeline_cognitif.validation_section_xiv
 # ou, en execution directe :
 #   python pipeline_cognitif/validation_section_xiv.py
+# Healthcheck des dependances et de la session Isabelle :
+#   python pipeline_cognitif/Healthcheck_convolutif_HOL.py
+#   python pipeline_cognitif/Healthcheck_convolutif_HOL.py --build-hol
 ```
 
 
@@ -93,9 +89,10 @@ telle quelle (`SEUIL_FORMES_FERMEES = 8` dans `suites_geometriques_niveau2.py`).
 
 ### Convention Digamma (XIV.5)
 
-Ordre d'ancrage unifie aux deux niveaux : `(8,-1), (8,+1), (7,+1), (7,-1)`
-— le premier candidat entier premier dans cet ordre reproduit les huit
-ancrages du tableau XIV.6.
+Ordre d'evaluation : `(8,-1), (8,+1), (7,+1), (7,-1)`. Les branches
+premieres sont toutes conservees. Pour les rapports k=2..9, le catalogue
+choisit explicitement l'ancre documentee; hors catalogue, plusieurs branches
+premieres produisent un statut ambigu, sans selection automatique.
 
 ## Notes
 
